@@ -1,0 +1,45 @@
+{
+  "name": "yum-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@iconify/json": "^2.2.481",
+    "@iconify/tailwind4": "^1.2.3",
+    "apexcharts": "^5.13.0",
+    "clsx": "^2.1.1",
+    "dropzone": "^6.0.0-beta.2",
+    "flatpickr": "^4.6.13",
+    "lucide": "^0.545.0",
+    "lucide-react": "^1.17.0",
+    "next": "16.2.6",
+    "nouislider": "^15.8.1",
+    "preline": "^3.2.3",
+    "quill": "^2.0.3",
+    "react": "19.2.4",
+    "react-apexcharts": "^2.1.0",
+    "react-dom": "19.2.4",
+    "react-flatpickr": "^4.0.11",
+    "simplebar": "^6.3.3",
+    "simplebar-react": "^3.3.2",
+    "swiper": "^12.2.0",
+    "tailwind-merge": "^3.6.0",
+    "wnumb": "^1.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

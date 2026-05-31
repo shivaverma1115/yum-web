@@ -1,0 +1,54 @@
+/*  */
+
+html {
+    @apply relative scroll-smooth;
+}
+
+body {
+    font-size: 15px;
+    -webkit-tap-highlight-color: transparent;
+    @apply font-poppins overflow-x-hidden antialiased text-base bg-white text-default-800 dark:bg-default-50;
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+    cursor: pointer;
+}
+
+::selection {
+    @apply bg-primary text-white;
+}
+
+::marker {
+    @apply opacity-40;
+}
+
+.container {
+    @apply mx-auto lg:max-w-[1536px] md:max-w-[1024px] sm:max-w-[768px] px-4;
+}
+
+.hs-overlay-backdrop {
+    @apply !bg-default-900/20;
+}
+
+/* Swiper */
+
+.swiper-button-prev svg {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    transform-origin: center;
+    fill: currentColor;
+    pointer-events: none;
+    color: white;
+}
+
+.swiper-button-next svg {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    transform-origin: center;
+    fill: currentColor;
+    pointer-events: none;
+    color: white;
+}
