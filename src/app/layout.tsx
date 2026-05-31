@@ -20,10 +20,11 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-const themeInitScript = `(function(){try{var config=localStorage.getItem("__FOOD_CONFIG__");if(!config)return;var theme=JSON.parse(config).theme;if(theme==="dark")document.documentElement.classList.add("dark");}catch(e){}})();`;
-
 export const metadata: Metadata = {
-  title: "Yum - Food Delivery",
+  title: {
+    default: "Yum - Food Delivery",
+    template: "%s | Yum",
+  },
   description: "Yum - Multipurpose Food Tailwind CSS Template",
 };
 
@@ -35,12 +36,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${poppins.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="min-h-full flex flex-col">
         <AppProviders>{children}</AppProviders>
       </body>

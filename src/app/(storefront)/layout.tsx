@@ -11,7 +11,6 @@ export default function StorefrontLayout({
 }) {
   return (
     <>
-      <Preloader />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
