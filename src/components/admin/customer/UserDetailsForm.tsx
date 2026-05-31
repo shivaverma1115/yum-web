@@ -1,38 +1,115 @@
-import React from 'react'
+import { IUser } from "@/types/user";
 
-export default function UserDetailsForm() {
+
+export interface UserDetailsFormProps {
+    user?: IUser;
+}
+
+export default function UserDetailsForm({
+    user,
+}: UserDetailsFormProps) {
     return (
         <div className="border rounded-lg border-default-200">
             <div className="p-6">
                 <div className="grid lg:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="firstName">First Name</label>
-                        <input id="firstName" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="text" placeholder="Enter Your First Name" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="firstName"
+                        >
+                            First Name
+                        </label>
+                        <input
+                            id="firstName"
+                            name="firstName"
+                            defaultValue={user?.firstName}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="text"
+                            placeholder="Enter Your First Name"
+                        />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="lastName">Last Name</label>
-                        <input id="lastName" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="text" placeholder="Enter Your Last Name" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="lastName"
+                        >
+                            Last Name
+                        </label>
+                        <input
+                            id="lastName"
+                            name="lastName"
+                            defaultValue={user?.lastName}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="text"
+                            placeholder="Enter Your Last Name"
+                        />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="user_name">User Name</label>
-                        <input id="user_name" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="text" placeholder="Enter Your User Name" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="userName"
+                        >
+                            User Name
+                        </label>
+                        <input
+                            id="userName"
+                            name="userName"
+                            defaultValue={user?.userName}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="text"
+                            placeholder="Enter Your User Name"
+                        />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="emailAddress">Email</label>
-                        <input id="emailAddress" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="email" placeholder="demoexample@mail.com" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="email"
+                        >
+                            Email
+                        </label>
+                        <input
+                            id="email"
+                            name="email"
+                            defaultValue={user?.email}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="email"
+                            placeholder="demoexample@mail.com"
+                        />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="phone_number">Phone Number</label>
-                        <input id="phone_number" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="tel" placeholder="+1-123-XXX-4567" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="phone"
+                        >
+                            Phone Number
+                        </label>
+                        <input
+                            id="phone"
+                            name="phone"
+                            defaultValue={user?.phone}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="tel"
+                            placeholder="+1-123-XXX-4567"
+                        />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="country">Country/Region</label>
-                        <select id="country" defaultValue="United States" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50">
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="country"
+                        >
+                            Country/Region
+                        </label>
+                        <select
+                            id="country"
+                            name="country"
+                            defaultValue={user?.country}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                        >
                             <option value="United States">United States</option>
                             <option value="Canada">Canada</option>
                             <option value="Australia">Australia</option>
@@ -51,8 +128,18 @@ export default function UserDetailsForm() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="state">State</label>
-                        <select id="state" defaultValue="Alabama" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50">
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="state"
+                        >
+                            State
+                        </label>
+                        <select
+                            id="state"
+                            name="state"
+                            defaultValue={user?.state}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                        >
                             <option value="Alabama">Alabama</option>
                             <option value="Alaska">Alaska</option>
                             <option value="Arizona">Arizona</option>
@@ -74,29 +161,58 @@ export default function UserDetailsForm() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="zip_code">Zip Code</label>
-                        <input id="zip_code" className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50" type="text" placeholder="35010" />
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="zipCode"
+                        >
+                            Zip Code
+                        </label>
+                        <input
+                            id="zipCode"
+                            name="zipCode"
+                            defaultValue={user?.zipCode}
+                            className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50"
+                            type="text"
+                            placeholder="35010"
+                        />
                     </div>
 
                     <div className="lg:col-span-2">
-                        <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="description">Description</label>
-                        <textarea id="description" className="block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200" rows={5} placeholder="Enter Your Last Name"></textarea>
+                        <label
+                            className="block text-sm font-medium text-default-900 mb-2"
+                            htmlFor="description"
+                        >
+                            Description
+                        </label>
+                        <textarea
+                            id="description"
+                            name="description"
+                            defaultValue={user?.description}
+                            className="block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200"
+                            rows={5}
+                            placeholder="Enter customer description"
+                        />
                     </div>
                 </div>
 
                 <div className="flex justify-end gap-4">
-                    <button className="flex items-center justify-center gap-2 rounded-full bg-primary/10 px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary hover:text-white">
-                        <i data-lucide="x" className="w-5 h-5"></i>
+                    <button
+                        type="button"
+                        className="flex items-center justify-center gap-2 rounded-full bg-primary/10 px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary hover:text-white"
+                    >
+                        <i data-lucide="x" className="w-5 h-5" />
                         Close
                     </button>
 
-                    <button className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-500">
-                        <i data-lucide="save" className="w-5 h-5"></i>
+                    <button
+                        type="submit"
+                        className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-500"
+                    >
+                        <i data-lucide="save" className="w-5 h-5" />
                         Save
                     </button>
                 </div>
             </div>
         </div>
-    )
+    );
 }
-
