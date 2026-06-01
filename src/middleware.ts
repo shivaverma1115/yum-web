@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDefaultPathForRole } from "@/lib/auth/redirect";
 import { updateSession } from "@/lib/supabase/middleware";
-import { getUserRole } from "@/lib/supabase/profile";
+import { UserRole } from "@/types/user";
 
 /** (auth) route group — URLs omit the group name */
 const AUTH_ROUTES = [
@@ -65,11 +65,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { response: sessionResponse, user, supabase } =
+  const { response: sessionResponse, user, profile } =
     await updateSession(request);
 
+  const role = profile?.role ?? UserRole.USER;
+
   if (user && isAuthRoute(pathname)) {
-    const role = await getUserRole(supabase, user.id);
     return redirectWithCookies(
       new URL(getDefaultPathForRole(role), request.url),
       sessionResponse,
@@ -88,13 +89,11 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(loginUrl, sessionResponse);
   }
 
-  const role = await getUserRole(supabase, user.id);
-
-  if (role === "user" && (pathname === "/admin" || pathname.startsWith("/admin/"))) {
+  if (role === UserRole.USER && (pathname === "/admin" || pathname.startsWith("/admin/"))) {
     return redirectWithCookies(new URL("/", request.url), sessionResponse);
   }
 
-  if (role === "admin" && pathname === "/") {
+  if (role === UserRole.ADMIN && pathname === "/") {
     return redirectWithCookies(
       new URL(getDefaultPathForRole(role), request.url),
       sessionResponse,

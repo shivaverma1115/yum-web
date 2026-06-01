@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { IUser } from "@/types/user";
+import { UserRole, type IUser } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "../constants";
-import { getUserRole } from "./profile";
+import { getProfileByUserId } from "./profile";
 
+// Login with Supabase
 export type LoginPayload = {
   email?: string;
   password?: string;
@@ -11,7 +12,7 @@ export type LoginPayload = {
 export type LoginResult =
   | {
     success: true;
-    user: { id: string; email: string | undefined; role: IUser["role"] };
+    user: IUser;
   }
   | {
     success: false;
@@ -22,8 +23,8 @@ export type LoginResult =
 
 export async function loginWithSupabase(
   supabase: SupabaseClient,
-    email: string,
-    password: string,
+  email: string,
+  password: string,
 ): Promise<LoginResult> {
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
@@ -48,53 +49,53 @@ export async function loginWithSupabase(
     };
   }
 
-  const role = await getUserRole(supabase, data.user.id);
+  const profile = await getProfileByUserId(supabase, data.user.id);
+
+  if (!profile) {
+    return {
+      success: false,
+      message: ERROR_MESSAGE_GENERIC,
+      status: 500,
+      errors: {},
+    };
+  }
 
   return {
     success: true,
-    user: {
-      id: data.user.id,
-      email: data.user.email,
-      role,
-    },
+    user: profile,
   };
 }
 
-export type RegisterPayload = {
-  fullName: string;
-  userName: string;
-  email: string;
+// Register with Supabase
+export type RegisterPayload = Pick<IUser, "full_name" | "email"> & {
   password: string;
 };
 
 export type RegisterResult =
   | {
-      success: true;
-      user: { id: string; email: string | undefined; role: IUser["role"] };
-      needsEmailConfirmation: boolean;
-    }
+    success: true;
+    user: IUser;
+    needsEmailConfirmation: boolean;
+  }
   | {
-      success: false;
-      message: string;
-      status: number;
-      errors?: Record<string, string>;
-    };
+    success: false;
+    message: string;
+    status: number;
+    errors?: Record<string, string>;
+  };
 
 export async function registerWithSupabase(
   supabase: SupabaseClient,
-  input: {
-    fullName: string;
-    email: string;
-    password: string;
-  },
+  input: RegisterPayload
 ): Promise<RegisterResult> {
+
   const email = input.email.trim();
   const { data, error } = await supabase.auth.signUp({
     email,
     password: input.password,
     options: {
       data: {
-        user_name: input.fullName,
+        full_name: input.full_name,
       },
     },
   });
@@ -121,8 +122,8 @@ export async function registerWithSupabase(
     {
       id: data.user.id,
       email,
-      full_name: input.fullName,
-      role: "user",
+      full_name: input.full_name,
+      role: UserRole.USER,
     },
     { onConflict: "id" },
   );
@@ -138,14 +139,45 @@ export async function registerWithSupabase(
   }
 
   const needsEmailConfirmation = !data.session;
+  const profile = await getProfileByUserId(supabase, data.user.id);
+
+  if (!profile) {
+    return {
+      success: false,
+      message: ERROR_MESSAGE_GENERIC,
+      status: 500,
+      errors: {},
+    };
+  }
 
   return {
     success: true,
-    user: {
-      id: data.user.id,
-      email: data.user.email,
-      role: "user",
-    },
+    user: profile,
     needsEmailConfirmation,
   };
+}
+
+// Logout with Supabase
+export type LogoutResult =
+  | { success: true }
+  | {
+    success: false;
+    message: string;
+    status: number;
+  };
+
+export async function logoutWithSupabase(
+  supabase: SupabaseClient,
+): Promise<LogoutResult> {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: error.status ?? 400,
+    };
+  }
+
+  return { success: true };
 }

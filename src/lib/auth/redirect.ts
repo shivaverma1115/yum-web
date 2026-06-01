@@ -1,6 +1,6 @@
-import type { IUser } from "@/types/user";
+import { UserRole, type IUser } from "@/types/user";
 
-export type UserRole = IUser["role"];
+export type UserRoleType = IUser["role"];
 
 const AUTH_PATHS = [
   "/login",
@@ -9,8 +9,8 @@ const AUTH_PATHS = [
   "/reset-password",
 ] as const;
 
-export function getDefaultPathForRole(role: UserRole): string {
-  return role === "admin" ? "/admin/dashboard" : "/";
+export function getDefaultPathForRole(role: UserRoleType): string {
+  return role === UserRole.ADMIN ? "/admin/dashboard" : "/";
 }
 
 export function isAdminPath(path: string): boolean {
@@ -19,7 +19,7 @@ export function isAdminPath(path: string): boolean {
 
 export function getSafeRedirect(
   path: string | null,
-  role: UserRole,
+  role: UserRoleType,
 ): string {
   const defaultPath = getDefaultPathForRole(role);
 
@@ -31,7 +31,7 @@ export function getSafeRedirect(
     return defaultPath;
   }
 
-  if (role === "user" && isAdminPath(path)) {
+  if (role === UserRole.USER && isAdminPath(path)) {
     return "/";
   }
 

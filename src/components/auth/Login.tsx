@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import { useContextApi } from "@/context-api/use-context";
 import { getSafeRedirect } from "@/lib/auth/redirect";
 import type { IUser } from "@/types/user";
 
@@ -15,6 +16,7 @@ type LoginFormValues = {
 export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setUser } = useContextApi();
 
   const {
     register,
@@ -22,8 +24,8 @@ export default function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     defaultValues: {
-      email: "user@demo.com",
-      password: "password",
+      email: "shivavermadev6@gmail.com",
+      password: "000000",
     },
   });
 
@@ -44,7 +46,12 @@ export default function Login() {
 
       toast.success(data.message);
 
-      const role: IUser["role"] = data.data?.user?.role;
+      const user = data.data?.user as IUser | undefined;
+      if (user) {
+        setUser(user);
+      }
+
+      const role: IUser["role"] = user?.role ?? data.data?.user?.role;
       router.push(getSafeRedirect(searchParams.get("redirectTo"), role));
       router.refresh();
     } catch (error: any) {

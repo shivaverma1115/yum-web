@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { useLogout } from "@/lib/auth/useLogout";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -118,6 +119,7 @@ function getOpenSectionForPath(pathname: string): string | null {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const handleLogout = useLogout();
   const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
     getOpenSectionForPath(pathname),
   );
@@ -328,13 +330,14 @@ export default function AdminSidebar() {
           </NavLink>
 
           <li className="menu-item">
-            <Link
-              href="/login"
-              className="flex items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
             >
               <i data-lucide="log-out" className="w-5 h-5 shrink-0" />
               Logout
-            </Link>
+            </button>
           </li>
         </ul>
       </div>

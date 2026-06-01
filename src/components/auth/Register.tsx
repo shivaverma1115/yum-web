@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import { useContextApi } from "@/context-api/use-context";
 import { getSafeRedirect } from "@/lib/auth/redirect";
-import type { IUser } from "@/types/user";
+import { UserRole, type IUser } from "@/types/user";
 
-type RegisterFormValues = {
-  fullName: string;
-  email: string;
+type RegisterFormValues = Pick<
+  IUser,
+  "full_name" | "email"
+> & {
   password: string;
   confirmPassword: string;
 };
@@ -17,6 +19,7 @@ type RegisterFormValues = {
 export default function Register() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setUser } = useContextApi();
 
   const {
     register,
@@ -25,7 +28,7 @@ export default function Register() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     defaultValues: {
-      fullName: "",
+      full_name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -34,12 +37,12 @@ export default function Register() {
 
   const password = watch("password");
 
-  const onSubmit = handleSubmit(async ({ fullName, email, password }) => {
+  const onSubmit = handleSubmit(async ({ full_name, email, password }) => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({ full_name, email, password }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -56,8 +59,15 @@ export default function Register() {
         return;
       }
 
-      const role: IUser["role"] = data.data?.user?.role ?? "user";
-      router.push(getSafeRedirect(searchParams.get("redirectTo"), role));
+      const user = data.data?.user as IUser | undefined;
+      if (user) {
+        setUser(user);
+      }
+
+      router.push(getSafeRedirect(
+        searchParams.get("redirectTo"),
+        user?.role ?? UserRole.USER
+      ));
       router.refresh();
     } catch (error: unknown) {
       const message =
@@ -112,7 +122,7 @@ export default function Register() {
                       autoComplete="name"
                       disabled={isSubmitting}
                       className="block w-full rounded-full py-2.5 px-4 bg-white border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60"
-                      {...register("fullName", {
+                      {...register("full_name", {
                         required: "Full name is required.",
                         minLength: {
                           value: 2,
@@ -120,9 +130,9 @@ export default function Register() {
                         },
                       })}
                     />
-                    {errors.fullName?.message ? (
+                    {errors.full_name?.message ? (
                       <span className="text-red-500 text-sm">
-                        {errors.fullName.message}
+                        {errors.full_name.message}
                       </span>
                     ) : null}
                   </div>

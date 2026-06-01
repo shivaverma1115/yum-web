@@ -7,25 +7,17 @@ import {
 } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
-function splitFullName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  const firstName = parts[0] ?? "";
-  const lastName = parts.length > 1 ? parts.slice(1).join(" ") : firstName;
-  return { firstName, lastName };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json().catch(() => ({})) as RegisterPayload
-    console.log(payload);
 
     const email = payload.email.trim();
     const password = payload.password;
-    const fullName = payload.fullName.trim();
+    const full_name = payload.full_name.trim();
 
     const supabase = await createClient();
     const result = await registerWithSupabase(supabase, {
-      fullName,
+      full_name,
       email,
       password,
     });
