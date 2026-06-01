@@ -1,8 +1,12 @@
 "use client";
 
+import { useContextApi } from '@/context-api/use-context';
+import { UserRole } from '@/types/user';
 import React from 'react'
 
 export default function AdminTopbar() {
+    const { user, isAuthenticated } = useContextApi();
+    const isAdmin = user?.role === UserRole.ADMIN;
     return (
         <div>
             <header className="sticky top-0 h-18 flex z-40 w-full border-b border-default-200 bg-white dark:bg-default-50 lg:ps-64">
@@ -161,8 +165,8 @@ export default function AdminTopbar() {
                                 <button id="hs-dropdown-with-header" type="button" className="hs-dropdown-toggle inline-flex flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium text-default-700 align-middle transition-all text-xs">
                                     <img className="inline-block h-10 w-10 rounded-full" src="/images/avatars/avatar1.png" />
                                     <div className="lg:block text-start hidden">
-                                        <p className="text-sm font-medium text-default-700">Kaiya Botosh</p>
-                                        <p className="text-xs text-default-500 mt-1">Admin</p>
+                                        <p className="text-sm font-medium text-default-700">{user?.full_name}</p>
+                                        <p className="text-xs text-default-500 mt-1">{user?.role}</p>
                                     </div>
                                 </button>
 

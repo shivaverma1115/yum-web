@@ -1,35 +1,67 @@
-import React from 'react'
+"use client";
+
+import CustomerLoadState from "@/components/admin/customer/CustomerLoadState";
+import {
+  getCustomerDisplayName,
+  getCustomerLocation,
+  useAdminCustomer,
+} from "@/hooks/use-admin-customer";
+import Link from "next/link";
 
 interface UserDetailsProps {
-    userId: string;
+  userId: string;
 }
 
 export default function UserDetails({ userId }: UserDetailsProps) {
-    return (
+  const { user, loading, error } = useAdminCustomer(userId);
+
+  return (
+    <CustomerLoadState user={user} loading={loading} error={error}>
+      {(customer) => (
         <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
-            <div className="lg:col-span-1">
-                <div className="p-6 rounded-lg border border-default-200">
-                    <img src="/images/avatars/avatar1.png" alt="" className="w-24 rounded-full p-1 border border-gray-200 bg-gray-100 dark:bg-gray-700 dark:border-gray-600" />
-                    <h4 className="mb-1 mt-3 text-lg">Kaiya Botosh</h4>
+          <div className="lg:col-span-1">
+            <div className="p-6 rounded-lg border border-default-200">
+              <img
+                src="/images/avatars/avatar1.png"
+                alt=""
+                className="w-24 rounded-full p-1 border border-gray-200 bg-gray-100 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <h4 className="mb-1 mt-3 text-lg">
+                {getCustomerDisplayName(customer)}
+              </h4>
 
-                    <div className="text-start mt-6">
-                        <h4 className="text-sm uppercase mb-2.5">About Me :</h4>
-                        <p className="text-gray-400 mb-6">
-                            Hi I'm Kaiya Botosh,has been the industry's standard dummy text ever since the
-                            1500s, when an unknown printer took a galley of type.
-                        </p>
-                        <p className="text-zinc-400 mb-3"><b>Full Name :</b> <span className="ms-2">Kaiya Botosh</span></p>
-
-                        <p className="text-zinc-400 mb-3"><b>Mobile :</b><span className="ms-2">(123) 123 1234</span></p>
-
-                        <p className="text-zinc-400 mb-3"><b>Email :</b> <span className="ms-2 ">user@email.domain</span></p>
-
-                        <p className="text-zinc-400 mb-1.5"><b>Location :</b> <span className="ms-2">USA</span></p>
-                    </div>
-                </div>
+              <div className="text-start mt-6">
+                <h4 className="text-sm uppercase mb-2.5">About</h4>
+                <p className="text-gray-400 mb-6">
+                  {customer.description?.trim() || "No description provided."}
+                </p>
+                <p className="text-zinc-400 mb-3">
+                  <b>Full Name :</b>{" "}
+                  <span className="ms-2">{getCustomerDisplayName(customer)}</span>
+                </p>
+                <p className="text-zinc-400 mb-3">
+                  <b>Mobile :</b>
+                  <span className="ms-2">{customer.phone || "—"}</span>
+                </p>
+                <p className="text-zinc-400 mb-3">
+                  <b>Email :</b>{" "}
+                  <span className="ms-2">{customer.email || "—"}</span>
+                </p>
+                <p className="text-zinc-400 mb-1.5">
+                  <b>Location :</b>{" "}
+                  <span className="ms-2">{getCustomerLocation(customer)}</span>
+                </p>
+                <Link
+                  href={`/admin/customers/${customer.id}/edit`}
+                  className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
+                >
+                  Edit customer
+                </Link>
+              </div>
             </div>
+          </div>
 
-            <div className="lg:col-span-2">
+          <div className="lg:col-span-2">
                 <div className="border rounded-lg border-default-200">
                     <div className="px-6 py-4">
                         <div className="flex flex-wrap justify-between items-center gap-6">
@@ -332,6 +364,8 @@ export default function UserDetails({ userId }: UserDetailsProps) {
                 </div>
             </div>
         </div>
-    )
+      )}
+    </CustomerLoadState>
+  );
 }
 

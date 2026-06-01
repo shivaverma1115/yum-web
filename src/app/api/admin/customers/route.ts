@@ -5,8 +5,75 @@ import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   createCustomerWithSupabase,
+  listCustomersWithSupabase,
 } from "@/lib/supabase/customers";
-import { IUser } from "@/types/user";
+import { UserRole, type IUser } from "@/types/user";
+
+function parseRoleFilter(value: string | null): UserRole | undefined {
+  if (value === UserRole.USER || value === UserRole.ADMIN) {
+    return value;
+  }
+  return undefined;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await requireAdmin();
+
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
+
+    const { searchParams } = request.nextUrl;
+    const role =
+      parseRoleFilter(searchParams.get("role")) ?? UserRole.USER;
+    const page = Number(searchParams.get("page") ?? "1");
+    const limit = Number(searchParams.get("limit") ?? "10");
+    const search = searchParams.get("search") ?? undefined;
+
+    const adminClient = createAdminClient();
+    const result = await listCustomersWithSupabase(adminClient, {
+      role,
+      page,
+      limit,
+      search,
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.message },
+        { status: result.status },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        users: result.users,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
+    });
+  } catch (error) {
+    logError(error, {
+      context: "Admin List Customers API",
+      meta: { url: "/api/admin/customers", method: "GET", status: 500 },
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : ERROR_MESSAGE_GENERIC,
+      },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,22 +90,8 @@ export async function POST(request: NextRequest) {
       password?: string;
     };
 
-    if (!payload.password?.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Password is required.",
-          errors: { password: "Password is required." },
-        },
-        { status: 400 },
-      );
-    }
-
     const adminClient = createAdminClient();
-    const result = await createCustomerWithSupabase(adminClient, {
-      ...payload,
-      password: payload.password,
-    });
+    const result = await createCustomerWithSupabase(adminClient, payload);
 
     if (!result.success) {
       return NextResponse.json(

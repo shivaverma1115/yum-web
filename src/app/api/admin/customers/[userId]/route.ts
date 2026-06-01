@@ -4,6 +4,8 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  deleteCustomerWithSupabase,
+  getCustomerByIdWithSupabase,
   updateCustomerWithSupabase,
 } from "@/lib/supabase/customers";
 import { IUser } from "@/types/user";
@@ -11,6 +13,98 @@ import { IUser } from "@/types/user";
 type RouteContext = {
   params: Promise<{ userId: string }>;
 };
+
+export async function GET(_request: NextRequest, context: RouteContext) {
+  try {
+    const auth = await requireAdmin();
+
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
+
+    const { userId } = await context.params;
+    const adminClient = createAdminClient();
+    const result = await getCustomerByIdWithSupabase(adminClient, userId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.message },
+        { status: result.status },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { user: result.user },
+    });
+  } catch (error) {
+    logError(error, {
+      context: "Admin Get Customer API",
+      meta: {
+        url: "/api/admin/customers/[userId]",
+        method: "GET",
+        status: 500,
+      },
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : ERROR_MESSAGE_GENERIC,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  try {
+    const auth = await requireAdmin();
+
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
+
+    const { userId } = await context.params;
+    const adminClient = createAdminClient();
+    const result = await deleteCustomerWithSupabase(adminClient, userId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.message },
+        { status: result.status },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Customer deleted successfully.",
+    });
+  } catch (error) {
+    logError(error, {
+      context: "Admin Delete Customer API",
+      meta: {
+        url: "/api/admin/customers/[userId]",
+        method: "DELETE",
+        status: 500,
+      },
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : ERROR_MESSAGE_GENERIC,
+      },
+      { status: 500 },
+    );
+  }
+}
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {

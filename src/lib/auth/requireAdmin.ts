@@ -14,7 +14,7 @@ export async function requireAdmin() {
     };
   }
 
-  if (session.user?.role !== UserRole.ADMIN || !session.user) {
+  if (!session.user || session.user?.role !== UserRole.ADMIN) {
     return {
       authorized: false as const,
       status: 403,

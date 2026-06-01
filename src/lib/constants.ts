@@ -34,3 +34,17 @@ export const STATES = [
     "Indiana",
     "Iowa"
 ]
+
+export function formatCustomerSince(createdAt?: string) {
+    if (!createdAt) return "—";
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+}

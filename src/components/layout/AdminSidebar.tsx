@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { useLogout } from "@/lib/auth/useLogout";
+import {
+  ADMIN_NAV_ITEMS,
+  getOpenSectionForPath,
+} from "@/components/layout/admin-navigation";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -19,6 +24,16 @@ const activeToggleClass = "!text-default-700 !bg-default-200/50";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href;
+}
+
+function NavIcon({
+  name,
+  className = "w-5 h-5 shrink-0",
+}: {
+  name: string;
+  className?: string;
+}) {
+  return <i data-lucide={name} className={className} aria-hidden />;
 }
 
 function CollapsibleNavSection({
@@ -53,9 +68,9 @@ function CollapsibleNavSection({
       >
         {icon}
         {label}
-        <i
-          data-lucide="chevron-down"
-          className={`w-4 h-4 ms-auto transition-all${isOpen ? " rotate-180" : ""}`}
+        <ChevronDown
+          className={`ms-auto h-4 w-4 shrink-0 transition-transform duration-300${isOpen ? " rotate-180" : ""}`}
+          aria-hidden
         />
       </button>
 
@@ -101,20 +116,45 @@ function NavLink({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-const SECTIONS = [
-  { id: "menuOrders", prefix: "/admin/orders" },
-  { id: "menuCustomers", prefix: "/admin/customers" },
-  { id: "menuRestaurants", prefix: "/admin/restaurants" },
-  { id: "menuProduct", prefix: "/admin/products" },
-  { id: "menuSeller", prefix: "/admin/sellers" },
-] as const;
+type AdminNavMenuProps = {
+  openSectionId: string | null;
+  onToggle: (sectionId: string) => void;
+};
 
-function getOpenSectionForPath(pathname: string): string | null {
-  const match = SECTIONS.find(
-    ({ prefix }) =>
-      pathname === prefix || pathname.startsWith(`${prefix}/`),
+function AdminNavMenu({ openSectionId, onToggle }: AdminNavMenuProps) {
+  return (
+    <>
+      {ADMIN_NAV_ITEMS.map((item) => {
+        if (item.type === "link") {
+          return (
+            <NavLink key={item.href} href={item.href}>
+              <NavIcon name={item.icon} />
+              {item.label}
+            </NavLink>
+          );
+        }
+
+        return (
+          <CollapsibleNavSection
+            key={item.id}
+            id={item.id}
+            label={item.label}
+            sectionPrefix={item.prefix}
+            openSectionId={openSectionId}
+            onToggle={onToggle}
+            icon={<NavIcon name={item.icon} />}
+          >
+            {item.children.map((child) => (
+              <SubNavLink key={child.href} href={child.href}>
+                <NavIcon name="dot" className="w-6 h-6 shrink-0" />
+                {child.label}
+              </SubNavLink>
+            ))}
+          </CollapsibleNavSection>
+        );
+      })}
+    </>
   );
-  return match?.id ?? null;
 }
 
 export default function AdminSidebar() {
@@ -160,146 +200,10 @@ export default function AdminSidebar() {
 
         <div className="h-[calc(100%-390px)]" data-simplebar>
           <ul className="admin-menu p-4 w-full flex flex-col gap-1.5">
-            <NavLink href="/admin/dashboard">
-              <i data-lucide="layout-grid" className="w-5 h-5 shrink-0" />
-              Dashboard
-            </NavLink>
-
-            <NavLink href="/admin/manage">
-              <i data-lucide="settings-2" className="w-5 h-5 shrink-0" />
-              Manage
-            </NavLink>
-
-            <CollapsibleNavSection
-              id="menuOrders"
-              label="Orders"
-              sectionPrefix="/admin/orders"
+            <AdminNavMenu
               openSectionId={openSectionId}
               onToggle={handleToggle}
-              icon={
-                <i data-lucide="list-ordered" className="w-5 h-5 shrink-0" />
-              }
-            >
-              <SubNavLink href="/admin/orders">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Order List
-              </SubNavLink>
-              <SubNavLink href="/admin/orders/1">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Order Details
-              </SubNavLink>
-            </CollapsibleNavSection>
-
-            <CollapsibleNavSection
-              id="menuCustomers"
-              label="Customers"
-              sectionPrefix="/admin/customers"
-              openSectionId={openSectionId}
-              onToggle={handleToggle}
-              icon={<i data-lucide="users" className="w-5 h-5 shrink-0" />}
-            >
-              <SubNavLink href="/admin/customers">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Customers List
-              </SubNavLink>
-              <SubNavLink href="/admin/customers/1">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Customers Details
-              </SubNavLink>
-              <SubNavLink href="/admin/customers/add">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Customers Add
-              </SubNavLink>
-              <SubNavLink href="/admin/customers/1/edit">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Customers Edit
-              </SubNavLink>
-            </CollapsibleNavSection>
-
-            <CollapsibleNavSection
-              id="menuRestaurants"
-              label="Restaurants"
-              sectionPrefix="/admin/restaurants"
-              openSectionId={openSectionId}
-              onToggle={handleToggle}
-              icon={<i data-lucide="hotel" className="w-5 h-5 shrink-0" />}
-            >
-              <SubNavLink href="/admin/restaurants">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Restaurants List
-              </SubNavLink>
-              <SubNavLink href="/admin/restaurants/1">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Restaurants Details
-              </SubNavLink>
-              <SubNavLink href="/admin/restaurants/add">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Restaurants Add
-              </SubNavLink>
-              <SubNavLink href="/admin/restaurants/1/edit">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Restaurants Edit
-              </SubNavLink>
-            </CollapsibleNavSection>
-
-            <CollapsibleNavSection
-              id="menuProduct"
-              label="Product"
-              sectionPrefix="/admin/products"
-              openSectionId={openSectionId}
-              onToggle={handleToggle}
-              icon={
-                <i data-lucide="shopping-bag" className="w-5 h-5 shrink-0" />
-              }
-            >
-              <SubNavLink href="/admin/products">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Product List
-              </SubNavLink>
-              <SubNavLink href="/admin/products/1">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Product Details
-              </SubNavLink>
-              <SubNavLink href="/admin/products/add">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Product Add
-              </SubNavLink>
-              <SubNavLink href="/admin/products/1/edit">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Product Edit
-              </SubNavLink>
-            </CollapsibleNavSection>
-
-            <CollapsibleNavSection
-              id="menuSeller"
-              label="Seller"
-              sectionPrefix="/admin/sellers"
-              openSectionId={openSectionId}
-              onToggle={handleToggle}
-              icon={<i data-lucide="user-cog" className="w-5 h-5 shrink-0" />}
-            >
-              <SubNavLink href="/admin/sellers">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Seller List
-              </SubNavLink>
-              <SubNavLink href="/admin/sellers/1">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Seller Details
-              </SubNavLink>
-              <SubNavLink href="/admin/sellers/add">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Seller Add
-              </SubNavLink>
-              <SubNavLink href="/admin/sellers/1/edit">
-                <i data-lucide="dot" className="w-6 h-6 shrink-0" />
-                Seller Edit
-              </SubNavLink>
-            </CollapsibleNavSection>
-
-            <NavLink href="/admin/wallet">
-              <i data-lucide="wallet" className="w-5 h-5 shrink-0" />
-              Wallet
-            </NavLink>
+            />
           </ul>
         </div>
 
@@ -325,7 +229,7 @@ export default function AdminSidebar() {
           </li>
 
           <NavLink href="/admin/settings">
-            <i data-lucide="settings" className="w-5 h-5 shrink-0" />
+            <NavIcon name="settings" />
             Settings
           </NavLink>
 
@@ -335,7 +239,7 @@ export default function AdminSidebar() {
               onClick={handleLogout}
               className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
             >
-              <i data-lucide="log-out" className="w-5 h-5 shrink-0" />
+              <NavIcon name="log-out" />
               Logout
             </button>
           </li>
