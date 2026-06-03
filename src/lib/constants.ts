@@ -40,7 +40,7 @@ export function formatCustomerSince(createdAt?: string) {
     const date = new Date(createdAt);
     if (Number.isNaN(date.getTime())) return "—";
 
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat("en-IN", {
         month: "short",
         day: "2-digit",
         year: "numeric",
@@ -50,9 +50,9 @@ export function formatCustomerSince(createdAt?: string) {
 }
 
 export function formatCurrency(value: number) {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
         style: "currency",
-        currency: "USD",
+        currency: "INR",
         maximumFractionDigits: 2,
     }).format(value);
 }

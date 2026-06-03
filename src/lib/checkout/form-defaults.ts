@@ -1,6 +1,7 @@
 import type { IUser } from "@/types/user";
 import { COUNTRIES, STATES } from "@/lib/constants";
-import type { CheckoutPayload, FulfillmentType, PaymentMethod } from "@/types/order";
+import { getDefaultPaymentMethod } from "@/lib/checkout/payment-options";
+import type { CheckoutPayload, FulfillmentType } from "@/types/order";
 
 export type CheckoutFormValues = Omit<CheckoutPayload, 'items'>
 
@@ -29,7 +30,7 @@ export function buildCheckoutDefaults(user: IUser | null): CheckoutFormValues {
     pickup_time: "",
     table_number: "",
     party_size: 0,
-    payment_method: "cod",
+    payment_method: getDefaultPaymentMethod("delivery"),
     additional_notes: user?.description?.trim() ?? "",
   };
 }

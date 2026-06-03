@@ -27,7 +27,7 @@ export default function OrdersList() {
 
                                 <div>
                                     <p className="text-base text-default-500 font-medium mb-1">Your Balance</p>
-                                    <h4 className="text-2xl text-default-950 font-semibold mb-2">$ 8,904.80</h4>
+                                    <h4 className="text-2xl text-default-950 font-semibold mb-2">₹8,904.80</h4>
                                 </div>
                             </div>
                         </div>

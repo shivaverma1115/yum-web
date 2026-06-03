@@ -97,7 +97,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">wlopez@outlook.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">739-813-1211</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">17</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 662.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹662.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Apr 02 2023 | <span className="text-xs">02:05:36</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>
@@ -115,7 +115,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">lwhite@icloud.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">895-528-6760</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">03</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 448.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹448.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Jan 17 2023 | <span className="text-xs">06:35:32</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-500">Block</span>
@@ -133,7 +133,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">cbaker@hotmail.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">759-215-8839</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">07</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 941.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹941.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Dec 29 2020 | <span className="text-xs">13:09:57</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>
@@ -151,7 +151,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">htaylor@aol.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">801-740-7902</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">06</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 133.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹133.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Dec 16 2016 | <span className="text-xs">20:14:39</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>
@@ -169,7 +169,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">ksmith@yahoo.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">705-498-5991</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">02</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 824.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹824.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Aug 26 2023 | <span className="text-xs">10:34:09</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>
@@ -187,7 +187,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">qdavis@mail.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">855-338-4990</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">13</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 238.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹238.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Jul 19 2023 | <span className="text-xs">16:48:10</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-500">Block</span>
@@ -205,7 +205,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">rgarcia@hotmail.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">348-508-9895</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">14</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 679.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹679.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Sep 14 2021 | <span className="text-xs">20:24:37</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-500">Block</span>
@@ -223,7 +223,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">bwhite@mail.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">422-949-1555</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">06</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 979.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹979.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Oct 09 2019 | <span className="text-xs">10:16:48</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>
@@ -241,7 +241,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">ngeorge@aol.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">516-243-5018</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">15</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 959.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹959.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Oct 16 2023 | <span className="text-xs">03:49:38</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-500">Block</span>
@@ -259,7 +259,7 @@ export default function SellersList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">hscott@mail.com</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">575-541-4842</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">14</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">$ 948.00</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">₹948.00</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">Apr 10 2018 | <span className="text-xs">13:51:30</span> </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-3 py-1 text-xs font-medium rounded-md bg-green-500/10 text-green-500">Active</span>

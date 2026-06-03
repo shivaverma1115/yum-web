@@ -12,7 +12,13 @@ import {
     FULFILLMENT_OPTIONS,
     type CheckoutFormValues,
 } from "@/lib/checkout/form-defaults";
+import { getPaymentOptionsForFulfillment } from "@/lib/checkout/payment-options";
+import {
+    openRazorpayCheckout,
+    RazorpayPaymentFailedError,
+} from "@/lib/checkout/razorpay-client";
 import { COUNTRIES, formatCurrency, STATES } from "@/lib/constants";
+import type { RazorpayCheckoutResponse } from "@/types/razorpay";
 
 const inputClass =
     "block w-full bg-transparent dark:bg-default-50 rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200";
@@ -27,6 +33,7 @@ export default function Checkout() {
         handleSubmit,
         watch,
         reset,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm<CheckoutFormValues>({
         defaultValues: buildCheckoutDefaults(null),
@@ -34,6 +41,9 @@ export default function Checkout() {
 
     const fulfillmentType = watch("fulfillment_type");
     const paymentMethod = watch("payment_method");
+    const paymentOptions = getPaymentOptionsForFulfillment(fulfillmentType);
+    const fulfillmentLabel =
+        FULFILLMENT_OPTIONS.find((o) => o.value === fulfillmentType)?.label ?? "Order";
 
     useEffect(() => {
         if (userLoading) return;
@@ -46,6 +56,109 @@ export default function Checkout() {
         }
     }, [items.length, isSubmitting, router]);
 
+    useEffect(() => {
+        if (!paymentOptions.some((option) => option.value === paymentMethod)) {
+            setValue("payment_method", paymentOptions[0].value);
+        }
+    }, [fulfillmentType, paymentMethod, paymentOptions, setValue]);
+
+    const buildOrderBody = (
+        values: CheckoutFormValues,
+        extras?: {
+            payment_phase?: "pending" | "complete";
+            razorpay_order_id?: string;
+            razorpay_payment_id?: string;
+            razorpay_signature?: string;
+        },
+    ) => ({
+        fulfillment_type: values.fulfillment_type,
+        payment_method: values.payment_method,
+        first_name: values.first_name,
+        last_name: values.last_name,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        country: values.country,
+        state: values.state,
+        city: values.city,
+        zip_code: values.zip_code,
+        pickup_time: values.pickup_time,
+        table_number: values.table_number,
+        party_size: values.party_size ?? 0,
+        additional_notes: values.additional_notes,
+        ...extras,
+        items: items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            imageUrl: item.image_url ?? null,
+        })),
+    });
+
+    const markPaymentFailed = async (
+        orderId: string,
+        razorpayPaymentId?: string,
+    ) => {
+        await fetch(`/api/orders/${orderId}/payment`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "failed",
+                ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
+            }),
+        });
+    };
+
+    const completeOnlinePayment = async (
+        orderId: string,
+        razorpay: RazorpayCheckoutResponse,
+    ) => {
+        const response = await fetch(`/api/orders/${orderId}/payment`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                razorpay_order_id: razorpay.razorpay_order_id,
+                razorpay_payment_id: razorpay.razorpay_payment_id,
+                razorpay_signature: razorpay.razorpay_signature,
+            }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+            toast.error(data.message ?? "Failed to confirm payment.");
+            return false;
+        }
+
+        return true;
+    };
+
+    const finishOrderSuccess = () => {
+        toast.success("Order placed successfully.");
+        clearCart();
+        router.push("/home");
+        router.refresh();
+    };
+
+    const placeOrder = async (values: CheckoutFormValues) => {
+        const response = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(buildOrderBody(values)),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+            toast.error(data.message ?? "Failed to place order.");
+            return false;
+        }
+
+        finishOrderSuccess();
+        return true;
+    };
+
     const onSubmit = handleSubmit(async (values) => {
         if (items.length === 0) {
             toast.error("Your cart is empty.");
@@ -54,46 +167,80 @@ export default function Checkout() {
         }
 
         try {
-            const response = await fetch("/api/orders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    fulfillment_type: values.fulfillment_type,
-                    payment_method: values.payment_method,
-                    first_name: values.first_name,
-                    last_name: values.last_name,
-                    email: values.email,
-                    phone: values.phone,
-                    address: values.address,
-                    country: values.country,
-                    state: values.state,
-                    city: values.city,
-                    zip_code: values.zip_code,
-                    pickup_time: values.pickup_time,
-                    table_number: values.table_number,
-                    party_size: values.party_size ?? 0,
-                    additional_notes: values.additional_notes,
-                    items: items.map((item) => ({
-                        productId: item.productId,
-                        name: item.name,
-                        quantity: item.quantity,
-                        price: item.price,
-                        imageUrl: item.image_url ?? null,
-                    })),
-                }),
-            });
+            if (values.payment_method === "online") {
+                const createResponse = await fetch("/api/payments/razorpay/create-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ amount: subtotal }),
+                });
+                const createData = await createResponse.json().catch(() => ({}));
 
-            const data = await response.json().catch(() => ({}));
+                if (!createResponse.ok || !createData.success) {
+                    toast.error(createData.message ?? "Could not start online payment.");
+                    return;
+                }
 
-            if (!response.ok || !data.success) {
-                toast.error(data.message ?? "Failed to place order.");
+                const razorpayOrderId = createData.data.orderId as string;
+
+                const pendingResponse = await fetch("/api/orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(
+                        buildOrderBody(values, {
+                            payment_phase: "pending",
+                            razorpay_order_id: razorpayOrderId,
+                        }),
+                    ),
+                });
+                const pendingData = await pendingResponse.json().catch(() => ({}));
+
+                if (!pendingResponse.ok || !pendingData.success) {
+                    toast.error(pendingData.message ?? "Failed to create order.");
+                    return;
+                }
+
+                const yumOrderId = pendingData.data?.order?.id as string | undefined;
+                if (!yumOrderId) {
+                    toast.error("Order id missing from server response.");
+                    return;
+                }
+
+                try {
+                    const payment = await openRazorpayCheckout({
+                        keyId: createData.data.keyId,
+                        orderId: razorpayOrderId,
+                        amount: createData.data.amount,
+                        currency: createData.data.currency,
+                        name: "Yum",
+                        description: "Food order payment",
+                        prefill: {
+                            name: `${values.first_name} ${values.last_name}`.trim(),
+                            email: values.email,
+                            contact: values.phone,
+                        },
+                    });
+
+                    const confirmed = await completeOnlinePayment(yumOrderId, payment);
+                    if (confirmed) {
+                        finishOrderSuccess();
+                    }
+                } catch (error) {
+                    if (error instanceof RazorpayPaymentFailedError) {
+                        await markPaymentFailed(
+                            yumOrderId,
+                            error.razorpayPaymentId,
+                        );
+                    } else if (!(error instanceof Error && error.message === "Payment cancelled.")) {
+                        await markPaymentFailed(yumOrderId);
+                    } else {
+                        await markPaymentFailed(yumOrderId);
+                    }
+                    throw error;
+                }
                 return;
             }
 
-            toast.success(data.message ?? "Order placed successfully.");
-            clearCart();
-            router.push("/home");
-            router.refresh();
+            await placeOrder(values);
         } catch (error) {
             toast.error(
                 error instanceof Error ? error.message : "Failed to place order.",
@@ -405,43 +552,43 @@ export default function Checkout() {
                                     Payment option
                                 </h4>
                                 <div className="border border-default-200 rounded-lg p-6 lg:w-5/6 mb-5">
-                                    <div className="grid lg:grid-cols-4 grid-cols-2 gap-4">
-                                        {(
-                                            [
-                                                { id: "paymentCOD", value: "cod", label: "Cash on Delivery", icon: "dollar-sign" },
-                                                { id: "paymentPaypal", value: "paypal", label: "Paypal", img: "/images/payment/paypal-2.svg" },
-                                                { id: "paymentAmazonPay", value: "amazon", label: "Amazon Pay", img: "/images/payment/amazon.svg" },
-                                                { id: "paymentCard", value: "card", label: "Debit/Credit Card", icon: "credit-card" },
-                                            ] as const
-                                        ).map((option) => (
-                                            <div key={option.value} className="text-center p-4">
+                                    <p className="text-sm font-semibold text-default-800 mb-4">
+                                        {fulfillmentLabel}
+                                    </p>
+                                    <div className="space-y-3">
+                                        {paymentOptions.map((option) => {
+                                            const inputId = `payment-${option.value}`;
+                                            return (
                                                 <label
-                                                    htmlFor={option.id}
-                                                    className="flex flex-col items-center justify-center mb-4 cursor-pointer"
+                                                    key={option.value}
+                                                    htmlFor={inputId}
+                                                    className="flex items-center gap-3 cursor-pointer rounded-lg py-2 px-1 hover:bg-default-50"
                                                 >
-                                                    {"img" in option ? (
-                                                        <img src={option.img} alt="" className="w-6 h-6 mb-4" />
-                                                    ) : (
-                                                        <i data-lucide={option.icon} className="text-primary mb-4" />
-                                                    )}
-                                                    <h5 className="text-sm font-medium text-default-700">{option.label}</h5>
+                                                    <input
+                                                        id={inputId}
+                                                        type="radio"
+                                                        value={option.value}
+                                                        className="text-primary w-5 h-5 border-default-200 focus:ring-0"
+                                                        {...register("payment_method", {
+                                                            required: "Select a payment option.",
+                                                        })}
+                                                    />
+                                                    <i
+                                                        data-lucide={option.icon}
+                                                        className="text-primary size-5 shrink-0"
+                                                    />
+                                                    <span className="text-sm font-medium text-default-700">
+                                                        {option.label}
+                                                    </span>
                                                 </label>
-                                                <input
-                                                    id={option.id}
-                                                    type="radio"
-                                                    value={option.value}
-                                                    className="text-primary w-5 h-5 dark:bg-transparent border-default-200 focus:ring-0"
-                                                    {...register("payment_method")}
-                                                />
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                {paymentMethod === "card" ? (
+                                {paymentMethod === "online" ? (
                                     <p className="text-sm text-default-500 mb-4">
-                                        Card payments are recorded with your order. Online payment processing
-                                        is not enabled yet — pay at pickup/delivery for now.
+                                        Pay securely with Razorpay when you place your order.
                                     </p>
                                 ) : null}
                             </div>
@@ -517,7 +664,13 @@ export default function Checkout() {
                                     disabled={isSubmitting}
                                     className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
                                 >
-                                    {isSubmitting ? "Placing order..." : "Place Order"}
+                                    {isSubmitting
+                                        ? paymentMethod === "online"
+                                            ? "Processing payment..."
+                                            : "Placing order..."
+                                        : paymentMethod === "online"
+                                          ? "Pay & Place Order"
+                                          : "Place Order"}
                                 </button>
                             </div>
                         </div>
