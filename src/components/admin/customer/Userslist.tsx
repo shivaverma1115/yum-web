@@ -29,7 +29,7 @@ function displayName(user: IUser) {
   return combined || user.user_name || "—";
 }
 
-export default function Userslist() {
+export default async function Userslist() {
   const [users, setUsers] = useState<IUser[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

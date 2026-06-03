@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import React from 'react';
+import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { useLogout } from "@/lib/auth/useLogout";
 import { UserRole } from "@/types/user";
@@ -9,6 +10,7 @@ import { UserRole } from "@/types/user";
 export default function Navbar() {
     const handleLogout = useLogout();
     const { user, isAuthenticated } = useContextApi();
+    const { itemCount } = useCart();
     const isAdmin = user?.role === UserRole.ADMIN;
 
     return (
@@ -790,7 +792,11 @@ export default function Navbar() {
                                 <li className="flex menu-item">
                                     <Link href="/cart" className="relative flex text-base transition-all text-default-600 hover:text-primary">
                                         <i className="w-5 h-5" data-lucide="shopping-bag"></i>
-                                        <span className="absolute z-10 -top-2.5 end-0 inline-flex items-center justify-center p-1 h-5 w-5 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 bg-red-500 rounded-full">1</span>
+                                        {itemCount > 0 ? (
+                                            <span className="absolute z-10 -top-2.5 end-0 inline-flex items-center justify-center p-1 min-h-5 min-w-5 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 bg-red-500 rounded-full px-1">
+                                                {itemCount > 99 ? "99+" : itemCount}
+                                            </span>
+                                        ) : null}
                                     </Link>
                                 </li>
 

@@ -11,7 +11,7 @@ interface ProductDetailPageProps {
 
 export const metadata: Metadata = {
     title: "Product Details",
-    description: "Product Details",
+    description: "View product details",
 };
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {

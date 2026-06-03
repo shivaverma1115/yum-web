@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ToastContainer } from "react-toastify";
+import { CartProvider } from "@/context-api/cart-context";
 import { ContextApiProvider } from "@/context-api/use-context";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import ThemeInit from "@/components/layout/ThemeInit";
@@ -12,8 +13,10 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <ContextApiProvider>
-        <ThemeInit />
-        {children}
+        <CartProvider>
+          <ThemeInit />
+          {children}
+        </CartProvider>
       </ContextApiProvider>
       <ThemeToggle />
       <ToastContainer

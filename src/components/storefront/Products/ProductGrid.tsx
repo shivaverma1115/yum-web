@@ -1,6 +1,69 @@
-import React from 'react'
+"use client";
+
+import ProductCatalogResults from "@/components/storefront/Products/ProductCatalogResults";
+import ProductViewModeToggle, {
+  type ProductViewMode,
+} from "@/components/storefront/Products/ProductViewModeToggle";
+import { fetchProductsPage } from "@/lib/api/products";
+import type { IProduct } from "@/types/product";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+
+const DEFAULT_LIMIT = 10;
 
 export default function ProductGrid() {
+    const [products, setProducts] = useState<IProduct[]>([]);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [isLoading, setIsLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<ProductViewMode>("grid");
+
+    useEffect(() => {
+        const controller = new AbortController();
+        let active = true;
+
+        const loadProducts = async () => {
+            setIsLoading(true);
+
+            try {
+                const data = await fetchProductsPage({
+                    page,
+                    limit: DEFAULT_LIMIT,
+                    signal: controller.signal,
+                    endpoint: "/api/products",
+                });
+
+                if (!active) return;
+
+                setProducts(data.products);
+                setTotal(data.total);
+                setTotalPages(data.totalPages);
+            } catch (error) {
+                if (!active || controller.signal.aborted) return;
+                toast.error(
+                    error instanceof Error ? error.message : "Failed to load products.",
+                );
+                setProducts([]);
+                setTotal(0);
+                setTotalPages(1);
+            } finally {
+                if (active) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        void loadProducts();
+
+        return () => {
+            active = false;
+            controller.abort();
+        };
+    }, [page]);
+
+    const startItem = total === 0 ? 0 : (page - 1) * DEFAULT_LIMIT + 1;
+    const endItem = Math.min(page * DEFAULT_LIMIT, total);
     return (
         <section className="lg:py-8 py-6">
             <div className="container">
@@ -361,12 +424,19 @@ export default function ProductGrid() {
                                     Filter <i className="h-4 w-4" data-lucide="settings-2"></i>
                                 </button>
 
-                                <h6 className="lg:flex hidden text-default-950 text-base">Showing 1–10 of 99
-                                    results
+                                <h6 className="lg:flex hidden text-default-950 text-base">
+                                    {isLoading
+                                        ? "Loading products..."
+                                        : `Showing ${startItem}–${endItem} of ${total} results`}
                                 </h6>
+
+                                <ProductViewModeToggle
+                                    value={viewMode}
+                                    onChange={setViewMode}
+                                />
                             </div>
 
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-4">
                                 <span className="text-base text-default-950 me-3">Sort By :</span>
                                 <div className="hs-dropdown relative inline-flex [--placement:bottom-left]">
                                     <button className="hs-dropdown-toggle flex items-center gap-2 font-medium text-default-950 text-sm py-2.5 px-4 xl:px-5 rounded-full border border-default-200 transition-all" type="button">
@@ -396,450 +466,17 @@ export default function ProductGrid() {
                             </div>
                         </div>
 
-                        <div className="grid xl:grid-cols-3 sm:grid-cols-2 gap-5">
-                            <div className="xl:order-1 order-2 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/pizza.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Italian
-                                                Pizza</a>
-                                            <i className="h-6 w-6 text-red-500 fill-red-500 cursor-pointer" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.5</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$8.75</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="5" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart</a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="sm:col-span-2 xl:order-2 order-1">
-                                <div className="relative rounded-lg overflow-hidden bg-primary/10 bg-cover bg-center h-full" style={{ backgroundImage: "url('/images/other/discount.png')" }}>
-                                    <div className="absolute inset-0 bg-black/10"></div>
-                                    <div className="relative p-8 md:p-12">
-                                        <h4 className="text-5xl text-yellow-500 font-semibold mb-6">52% Discount</h4>
-                                        <p className="text-lg text-default-500 mb-6">on your first order</p>
-                                        <a className="md:mb-10 inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500" href="javascript:void(0)">
-                                            Shop Now
-                                            <i className="h-4 w-4" data-lucide="move-right"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/burger.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Veg Burger</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1">
-                                                <i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.2</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$12.78</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="1" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/noodles.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Noodles</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.9</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$12.34</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="2" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">
-                                            Add to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/red-velvet-pastry.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Red
-                                                Velvet Pastry</a>
-                                            <i className="h-6 w-6 text-red-500 fill-red-500 cursor-pointer" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.0</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$42.25</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="4" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/spaghetti.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Spaghetti</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.9</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$12.42</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="1" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/hot-chocolate.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Hot
-                                                Chocolate</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">3.9</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$15.23</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="0" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/steamed-dumpling.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Steamed
-                                                Dumpling</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.6</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$52.14</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="1" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/veg-rice.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Indian
-                                                Food
-                                            </a>
-                                            <i className="h-6 w-6 text-red-500 fill-red-500 cursor-pointer" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.4</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$25.14</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="2" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/chickpea-hummus.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Chickpea
-                                                Hummus</a>
-                                            <i className="h-6 w-6 text-default-200 cursor-pointer hover:text-red-500 hover:fill-red-500 transition-all relative z-10" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.8</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$21.41</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="6" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="order-3 border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary hover:shadow-xl transition-all duration-300">
-                                <div className="relative rounded-lg overflow-hidden divide-y divide-default-200 group">
-                                    <div className="mb-4 mx-auto">
-                                        <img className="w-full h-full group-hover:scale-105 transition-all" src="/images/dishes/butter-cookies.png" />
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <a className="text-default-800 text-xl font-semibold line-clamp-1 after:absolute after:inset-0" href="products/[slug]">Butter
-                                                Cookies</a>
-                                            <i className="h-6 w-6 text-red-500 fill-red-500 cursor-pointer" data-lucide="heart"></i>
-                                        </div>
-
-                                        <span className="inline-flex items-center gap-2 mb-4">
-                                            <span className="bg-primary rounded-full p-1"><i className="h-3 w-3 text-white fill-white" data-lucide="star"></i></span>
-                                            <span className="text-sm text-default-950 from-inherit">4.8</span>
-                                        </span>
-
-                                        <div className="flex items-end justify-between mb-4">
-                                            <h4 className="font-semibold text-xl text-default-900">$30.25</h4>
-                                            <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                                <button className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    –
-                                                </button>
-
-                                                <input className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent" max="100" min="0" readOnly type="text" value="2" />
-                                                <button className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center" type="button">
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <a className="relative z-10 w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500" href="/cart">Add
-                                            to cart
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-wrap justify-center md:flex-nowrap md:justify-end gap-y-6 gap-x-10 pt-6">
-                            <nav>
-                                <ul className="inline-flex items-center space-x-2 rounded-md text-sm">
-                                    <li>
-                                        <a aria-current="page" className="inline-flex items-center justify-center h-9 w-9 border border-primary rounded-full text-white bg-primary" href="javascript:void(0)">1 </a>
-                                    </li>
-
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">2 </a>
-                                    </li>
-
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">...</a>
-                                    </li>
-
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">9 </a>
-                                    </li>
-
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">10 </a>
-                                    </li>
-                                </ul>
-                            </nav>
-
-                            <nav>
-                                <ul className="inline-flex items-center space-x-2 rounded-md text-sm">
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">
-                                            <i className="h-5 w-5" data-lucide="chevron-left"></i>
-                                        </a>
-                                    </li>
-
-                                    <li>
-                                        <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">
-                                            <i className="h-5 w-5" data-lucide="chevron-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
+                        <ProductCatalogResults
+                            products={products}
+                            isLoading={isLoading}
+                            page={page}
+                            totalPages={totalPages}
+                            total={total}
+                            startItem={startItem}
+                            endItem={endItem}
+                            viewMode={viewMode}
+                            onPageChange={setPage}
+                        />
                     </div>
                 </div>
             </div>
