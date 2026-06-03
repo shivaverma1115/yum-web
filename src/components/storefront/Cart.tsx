@@ -174,7 +174,32 @@ export default function Cart() {
           </div>
 
           <div>
-            <div className="border border-default-200 rounded-lg p-5 mb-5">
+            <div className="border border-default-200 rounded-lg mb-5">
+              <div className="px-6 py-5 border-b border-default-200">
+                <h4 className="text-lg font-semibold text-default-800">
+                  Coupon Code
+                </h4>
+              </div>
+
+              <div className="p-6">
+                <input
+                  className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200"
+                  type="text"
+                  placeholder="Enter Coupon Code"
+                />
+
+                <div className="flex justify-end mt-4">
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
+                  >
+                    Apply Coupon
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-default-200 rounded-lg p-5 ">
               <h4 className="text-lg font-semibold text-default-800 mb-5">
                 Cart Totals
               </h4>
@@ -208,30 +233,6 @@ export default function Cart() {
               </Link>
             </div>
 
-            <div className="border border-default-200 rounded-lg">
-              <div className="px-6 py-5 border-b border-default-200">
-                <h4 className="text-lg font-semibold text-default-800">
-                  Coupon Code
-                </h4>
-              </div>
-
-              <div className="p-6">
-                <input
-                  className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200"
-                  type="text"
-                  placeholder="Enter Coupon Code"
-                />
-
-                <div className="flex justify-end mt-4">
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
-                  >
-                    Apply Coupon
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
