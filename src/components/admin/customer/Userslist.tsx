@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { formatCustomerSince } from "@/lib/constants";
-import Preloader from "@/components/layout/Preloader";
 import { Eye, Pencil, Trash } from "lucide-react";
 
 const DEFAULT_LIMIT = 10;
@@ -29,7 +28,7 @@ function displayName(user: IUser) {
   return combined || user.user_name || "—";
 }
 
-export default async function Userslist() {
+export default function Userslist() {
   const [users, setUsers] = useState<IUser[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -44,7 +43,7 @@ export default async function Userslist() {
     const controller = new AbortController();
     let active = true;
 
-    async function loadCustomers() {
+    const loadCustomers = async () => {
       setLoading(true);
 
       try {
@@ -88,7 +87,7 @@ export default async function Userslist() {
           setLoading(false);
         }
       }
-    }
+    };
 
     void loadCustomers();
 

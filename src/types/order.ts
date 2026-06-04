@@ -20,6 +20,11 @@ export type IOrderItem = {
   quantity: number;
   unit_price: number;
   image_url: string | null;
+  created_at?: string;
+};
+
+export type IOrderWithItems = IOrder & {
+  items: IOrderItem[];
 };
 
 export type IOrder = {

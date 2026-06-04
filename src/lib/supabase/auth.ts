@@ -3,6 +3,13 @@ import { UserRole, type IUser } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "../constants";
 import { getProfileByUserId } from "./profile";
 
+function normalizeHttpStatus(status: number | undefined, fallback = 400): number {
+  if (typeof status === "number" && status >= 200 && status <= 599) {
+    return status;
+  }
+  return fallback;
+}
+
 // Login with Supabase
 export type LoginPayload = {
   email?: string;
@@ -35,7 +42,7 @@ export async function loginWithSupabase(
     return {
       success: false,
       message: error.message,
-      status: error.status ?? 400,
+      status: normalizeHttpStatus(error.status),
       errors: {},
     };
   }
@@ -84,18 +91,115 @@ export type RegisterResult =
     errors?: Record<string, string>;
   };
 
+export type RegisterOptions = {
+  /** Service-role client used to write/read profiles (RLS blocks anon before session). */
+  adminClient: SupabaseClient;
+  emailRedirectTo: string;
+};
+
+function mapAuthErrorMessage(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("rate limit")) {
+    return "Too many emails sent. Wait an hour, use custom SMTP in Supabase, or disable email confirmation for development.";
+  }
+  if (lower.includes("already registered") || lower.includes("already been registered")) {
+    return "This email is already registered. Sign in or use forgot password.";
+  }
+  return message;
+}
+
+function buildRegisterUserStub(
+  userId: string,
+  email: string,
+  full_name: string,
+): IUser {
+  return {
+    id: userId,
+    email,
+    full_name,
+    first_name: "",
+    last_name: "",
+    user_name: "",
+    phone: "",
+    country: "",
+    state: "",
+    zip_code: "",
+    description: "",
+    role: UserRole.USER,
+  };
+}
+
+async function upsertProfileWithAdmin(
+  adminClient: SupabaseClient,
+  userId: string,
+  email: string,
+  full_name: string,
+): Promise<string | null> {
+  const { error } = await adminClient.from("profiles").upsert(
+    {
+      id: userId,
+      email,
+      full_name,
+      role: UserRole.USER,
+    },
+    { onConflict: "id" },
+  );
+
+  return error?.message ?? null;
+}
+
+async function getProfileByUserIdAdmin(
+  adminClient: SupabaseClient,
+  userId: string,
+): Promise<IUser | null> {
+  const { data, error } = await adminClient
+    .from("profiles")
+    .select(
+      "id, email, full_name, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as IUser;
+}
+
 export async function registerWithSupabase(
   supabase: SupabaseClient,
-  input: RegisterPayload
+  input: RegisterPayload,
+  options: RegisterOptions,
 ): Promise<RegisterResult> {
+  const email = input.email?.trim() ?? "";
+  const full_name = input.full_name?.trim() ?? "";
+  const password = input.password ?? "";
 
-  const email = input.email.trim();
+  const errors: Record<string, string> = {};
+  if (!full_name) errors.full_name = "Full name is required.";
+  if (!email) errors.email = "Email is required.";
+  if (!password) errors.password = "Password is required.";
+  if (password && password.length < 6) {
+    errors.password = "Password must be at least 6 characters.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      success: false,
+      message: "Please fix the errors below.",
+      status: 400,
+      errors,
+    };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
-    password: input.password,
+    password,
     options: {
+      emailRedirectTo: options.emailRedirectTo,
       data: {
-        full_name: input.full_name,
+        full_name,
       },
     },
   });
@@ -103,13 +207,13 @@ export async function registerWithSupabase(
   if (error) {
     return {
       success: false,
-      message: error.message,
-      status: error.status ?? 400,
+      message: mapAuthErrorMessage(error.message),
+      status: normalizeHttpStatus(error.status),
       errors: {},
     };
   }
 
-  if (!data.user) {
+  if (!data.user?.id) {
     return {
       success: false,
       message: ERROR_MESSAGE_GENERIC,
@@ -118,37 +222,38 @@ export async function registerWithSupabase(
     };
   }
 
-  const { error: profileError } = await supabase.from("profiles").upsert(
-    {
-      id: data.user.id,
-      email,
-      full_name: input.full_name,
-      role: UserRole.USER,
-    },
-    { onConflict: "id" },
-  );
-
-  // With email confirmation there may be no session yet; trigger still creates the row.
-  if (profileError && data.session) {
+  const identities = data.user.identities ?? [];
+  if (identities.length === 0) {
     return {
       success: false,
-      message: profileError.message,
+      message:
+        "This email is already registered. Sign in, or check your inbox for a confirmation link.",
+      status: 400,
+      errors: { email: "Email already in use." },
+    };
+  }
+
+  const profileError = await upsertProfileWithAdmin(
+    options.adminClient,
+    data.user.id,
+    email,
+    full_name,
+  );
+
+  if (profileError) {
+    return {
+      success: false,
+      message: profileError,
       status: 400,
       errors: {},
     };
   }
 
   const needsEmailConfirmation = !data.session;
-  const profile = await getProfileByUserId(supabase, data.user.id);
-
-  if (!profile) {
-    return {
-      success: false,
-      message: ERROR_MESSAGE_GENERIC,
-      status: 500,
-      errors: {},
-    };
-  }
+  const profile =
+    (await getProfileByUserId(supabase, data.user.id)) ??
+    (await getProfileByUserIdAdmin(options.adminClient, data.user.id)) ??
+    buildRegisterUserStub(data.user.id, email, full_name);
 
   return {
     success: true,
@@ -175,9 +280,111 @@ export async function logoutWithSupabase(
     return {
       success: false,
       message: error.message,
-      status: error.status ?? 400,
+      status: normalizeHttpStatus(error.status),
     };
   }
+
+  return { success: true };
+}
+
+// Forgot / reset password
+export type ForgotPasswordPayload = {
+  email?: string;
+};
+
+export type ForgotPasswordResult =
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      status: number;
+      errors?: Record<string, string>;
+    };
+
+export async function requestPasswordResetWithSupabase(
+  supabase: SupabaseClient,
+  email: string,
+  redirectTo: string,
+): Promise<ForgotPasswordResult> {
+  const trimmed = email.trim();
+
+  if (!trimmed) {
+    return {
+      success: false,
+      message: "Email is required.",
+      status: 400,
+      errors: { email: "Email is required." },
+    };
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+    redirectTo,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: normalizeHttpStatus(error.status),
+      errors: {},
+    };
+  }
+
+  return { success: true };
+}
+
+export type ResetPasswordPayload = {
+  password?: string;
+};
+
+export type ResetPasswordResult =
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      status: number;
+      errors?: Record<string, string>;
+    };
+
+export async function updatePasswordWithSupabase(
+  supabase: SupabaseClient,
+  password: string,
+): Promise<ResetPasswordResult> {
+  if (!password || password.length < 6) {
+    return {
+      success: false,
+      message: "Password must be at least 6 characters.",
+      status: 400,
+      errors: { password: "Password must be at least 6 characters." },
+    };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      success: false,
+      message: "Reset link expired or invalid. Request a new password reset email.",
+      status: 401,
+      errors: {},
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: normalizeHttpStatus(error.status),
+      errors: {},
+    };
+  }
+
+  await supabase.auth.signOut();
 
   return { success: true };
 }

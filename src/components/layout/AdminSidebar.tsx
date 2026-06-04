@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useLogout } from "@/lib/auth/useLogout";
 import {
   ADMIN_NAV_ITEMS,
@@ -157,7 +157,15 @@ function AdminNavMenu({ openSectionId, onToggle }: AdminNavMenuProps) {
   );
 }
 
-export default function AdminSidebar() {
+type AdminSidebarProps = {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+};
+
+export default function AdminSidebar({
+  mobileOpen = false,
+  onMobileClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
   const handleLogout = useLogout();
   const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
@@ -171,6 +179,10 @@ export default function AdminSidebar() {
     }
   }, [pathname]);
 
+  useEffect(() => {
+    onMobileClose?.();
+  }, [pathname, onMobileClose]);
+
   const handleToggle = (sectionId: string) => {
     setOpenSectionId((current) =>
       current === sectionId ? null : sectionId,
@@ -181,9 +193,13 @@ export default function AdminSidebar() {
     <div>
       <div
         id="application-sidebar"
-        className="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform hidden fixed inset-y-0 start-0 z-60 w-64 bg-white border-e border-default-200 overflow-y-auto lg:block lg:translate-x-0 lg:right-auto lg:bottom-0 dark:bg-default-50"
+        className={`fixed inset-y-0 start-0 z-[60] w-64 transform border-e border-default-200 bg-white transition-all duration-300 overflow-y-auto dark:bg-default-50 lg:bottom-0 lg:right-auto lg:block lg:translate-x-0 ${
+          mobileOpen
+            ? "translate-x-0"
+            : "-translate-x-full pointer-events-none lg:pointer-events-auto"
+        }`}
       >
-        <div className="flex sticky top-0 items-center justify-center px-6 h-18 border-b border-dashed border-default-200">
+        <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
           <Link href="/admin/dashboard" className="inline-flex shrink-0">
             <img
               src="/images/logo-dark.png"
@@ -196,6 +212,14 @@ export default function AdminSidebar() {
               className="h-10 hidden dark:flex"
             />
           </Link>
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-default-500 hover:text-default-700 lg:hidden"
+            aria-label="Close sidebar"
+            onClick={onMobileClose}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <div className="h-[calc(100%-390px)]" data-simplebar>

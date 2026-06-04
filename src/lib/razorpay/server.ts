@@ -43,6 +43,33 @@ export async function createRazorpayOrder(amount: number, receipt: string) {
   });
 }
 
+function getRazorpayWebhookSecret(): string {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    throw new Error("RAZORPAY_WEBHOOK_SECRET is not configured.");
+  }
+  return secret;
+}
+
+export function verifyRazorpayWebhookSignature(
+  rawBody: string,
+  webhookSignature: string,
+): boolean {
+  const expected = crypto
+    .createHmac("sha256", getRazorpayWebhookSecret())
+    .update(rawBody)
+    .digest("hex");
+
+  if (expected.length !== webhookSignature.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(webhookSignature),
+  );
+}
+
 export function verifyRazorpayPaymentSignature(
   razorpayOrderId: string,
   razorpayPaymentId: string,

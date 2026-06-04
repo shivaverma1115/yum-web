@@ -234,6 +234,7 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                 <AddToCartButton
                                     product={product}
                                     quantity={quantity}
+                                    redirectToCart
                                     className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
                                 >
                                     Buy Now

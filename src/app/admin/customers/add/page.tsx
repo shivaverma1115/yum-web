@@ -1,8 +1,9 @@
-import UserDetailsForm from '@/components/admin/customer/UserDetailsForm'
 import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
 import { Metadata } from 'next';
-import UserAddWrapper from './components/UserAddWrapper';
+import dynamic from 'next/dynamic';
+const UserAddWrapper = dynamic(() => import('./components/UserAddWrapper'));
+
 export const metadata: Metadata = {
     title: "Customer Details",
     description: "Customer Details",

@@ -1,7 +1,8 @@
-import ProductDetails from '@/components/admin/products/ProductDetails'
 import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
 import { Metadata } from 'next';
+import dynamic from 'next/dynamic';
+const ProductDetails = dynamic(() => import('@/components/admin/products/ProductDetails'));
 interface AdminProductDetailsPageProps {
     params: Promise<{
         productId: string;

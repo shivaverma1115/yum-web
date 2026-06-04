@@ -48,7 +48,12 @@ export default function Register() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
-        toast.error(data.message);
+        const fieldErrors = data.errors as Record<string, string> | undefined;
+        const detail =
+          fieldErrors && Object.keys(fieldErrors).length > 0
+            ? Object.values(fieldErrors).join(" ")
+            : null;
+        toast.error(detail ? `${data.message} ${detail}` : data.message);
         return;
       }
 

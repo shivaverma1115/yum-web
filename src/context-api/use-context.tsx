@@ -51,8 +51,10 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
       const data = await response.json().catch(() => ({})) as MeApiResponse;
 
       if (!response.ok || !data.success) {
-        setError((data as { message: string })?.message ?? ERROR_MESSAGE_GENERIC);
         setUser(null);
+        if (response.status !== 401) {
+          setError((data as { message: string })?.message ?? ERROR_MESSAGE_GENERIC);
+        }
         return;
       }
 

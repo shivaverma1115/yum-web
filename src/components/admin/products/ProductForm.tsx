@@ -9,8 +9,6 @@ import { MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
 import { validateProductImageFiles } from "@/lib/products/imageValidation";
 import type { IProduct, ProductFormInput } from "@/types/product";
 
-type ProductFormValues = ProductFormInput;
-
 const inputClassName =
     "block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60";
 const errorClassName = "text-red-500 text-sm mt-1";
@@ -22,7 +20,7 @@ type ApiResponse = {
 };
 
 function buildProductFormData(
-    values: ProductFormValues,
+    values: ProductFormInput,
     files: File[],
 ): FormData {
     const formData = new FormData();
@@ -79,22 +77,8 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
         clearErrors,
         watch,
         formState: { errors, isSubmitting },
-    } = useForm<ProductFormValues>({
-        defaultValues: {
-            name: product?.name ?? "",
-            category: product?.category ?? "",
-            selling_price: product?.selling_price ?? 0,
-            cost_price: product?.cost_price ?? 0,
-            quantity: product?.quantity ?? 0,
-            order_type: product?.order_type ?? "delivery",
-            short_description: product?.short_description ?? "",
-            long_description: product?.long_description ?? "",
-            add_discount: product?.add_discount ?? false,
-            add_expiry_date: product?.add_expiry_date ?? false,
-            return_policy: product?.return_policy ?? false,
-            image_url: product?.image_url ?? null,
-            image_urls: product?.image_urls ?? [],
-        },
+    } = useForm<ProductFormInput>({
+        defaultValues: product ?? {},
     });
 
     const imageUrl = watch("image_url");

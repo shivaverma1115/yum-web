@@ -1,27 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEmailConfirmRedirectUrl } from "@/lib/auth/site-url";
+import { getPasswordResetCallbackUrl } from "@/lib/auth/site-url";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import {
-  registerWithSupabase,
-  type RegisterPayload,
+  requestPasswordResetWithSupabase,
+  type ForgotPasswordPayload,
 } from "@/lib/supabase/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+
+const SUCCESS_MESSAGE =
+  "If an account exists for that email, we sent a password reset link.";
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json().catch(() => ({}))) as RegisterPayload;
+    const payload = (await request.json().catch(() => ({}))) as ForgotPasswordPayload;
+    const email = payload.email?.trim() ?? "";
 
     const supabase = await createClient();
-    const adminClient = createAdminClient();
-    const result = await registerWithSupabase(
+    const result = await requestPasswordResetWithSupabase(
       supabase,
-      payload,
-      {
-        adminClient,
-        emailRedirectTo: getEmailConfirmRedirectUrl(request),
-      },
+      email,
+      getPasswordResetCallbackUrl(request),
     );
 
     if (!result.success) {
@@ -37,18 +36,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: result.needsEmailConfirmation
-        ? "Account created. Check your email to confirm, then sign in."
-        : "Registered successfully.",
-      data: {
-        user: result.user,
-        needsEmailConfirmation: result.needsEmailConfirmation,
-      },
+      message: SUCCESS_MESSAGE,
     });
   } catch (error) {
     logError(error, {
-      context: "Auth Register API",
-      meta: { url: "/api/auth/register", method: "POST", status: 500 },
+      context: "Auth Forgot Password API",
+      meta: { url: "/api/auth/forgot-password", method: "POST", status: 500 },
     });
     return NextResponse.json(
       {

@@ -1,7 +1,7 @@
 import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
 import dynamic from 'next/dynamic';
-const ProductGrid = dynamic(() => import('@/components/storefront/Products/ProductGrid'));
+const ProductWrapper = dynamic(() => import('@/components/storefront/Products/ProductWrapper'));
 
 import { Metadata } from 'next';
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function ProductGridPage() {
     return (
         <Suspense fallback={<Preloader />}>
-            <ProductGrid />
+            <ProductWrapper />
         </Suspense>
     )
 }

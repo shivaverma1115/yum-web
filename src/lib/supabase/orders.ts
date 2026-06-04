@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { verifyRazorpayPaymentSignature } from "@/lib/razorpay/server";
-import type { CheckoutPayload, IOrder, IOrderItem } from "@/types/order";
+import type {
+  CheckoutPayload,
+  IOrder,
+  IOrderItem,
+  IOrderWithItems,
+} from "@/types/order";
 
 export type CreateOrderResult =
   | { success: true; order: IOrder; items: IOrderItem[] }
@@ -275,4 +280,247 @@ export async function failOrderPaymentWithSupabase(
   }
 
   return { success: true, order: updated as IOrder, items: [] };
+}
+
+export type RazorpayWebhookResult =
+  | { success: true; handled: boolean; order?: IOrder }
+  | { success: false; message: string; status: number };
+
+type RazorpayWebhookPaymentEntity = {
+  id?: string;
+  order_id?: string;
+  status?: string;
+};
+
+type RazorpayWebhookPayload = {
+  event?: string;
+  payload?: {
+    payment?: { entity?: RazorpayWebhookPaymentEntity };
+    order?: { entity?: { id?: string } };
+  };
+};
+
+function getRazorpayOrderIdFromWebhook(body: RazorpayWebhookPayload): string | null {
+  const paymentEntity = body.payload?.payment?.entity;
+  const orderEntity = body.payload?.order?.entity;
+
+  const fromPayment = paymentEntity?.order_id?.trim();
+  if (fromPayment) return fromPayment;
+
+  const fromOrder = orderEntity?.id?.trim();
+  if (fromOrder) return fromOrder;
+
+  return null;
+}
+
+async function findOrderByRazorpayOrderId(
+  supabase: SupabaseClient,
+  razorpayOrderId: string,
+): Promise<IOrder | null> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("razorpay_order_id", razorpayOrderId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as IOrder;
+}
+
+export async function getOrderByIdWithSupabase(
+  supabase: SupabaseClient,
+  orderId: string,
+): Promise<{ success: true; order: IOrder } | { success: false; message: string; status: number }> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (error || !data) {
+    return { success: false, message: "Order not found.", status: 404 };
+  }
+
+  return { success: true, order: data as IOrder };
+}
+
+export async function handleRazorpayWebhookWithSupabase(
+  supabase: SupabaseClient,
+  body: RazorpayWebhookPayload,
+): Promise<RazorpayWebhookResult> {
+  const event = body.event?.trim();
+  const razorpayOrderId = getRazorpayOrderIdFromWebhook(body);
+
+  if (!event || !razorpayOrderId) {
+    return { success: true, handled: false };
+  }
+
+  const order = await findOrderByRazorpayOrderId(supabase, razorpayOrderId);
+  if (!order?.id) {
+    return { success: true, handled: false };
+  }
+
+  const paymentEntity = body.payload?.payment?.entity;
+  const razorpayPaymentId = paymentEntity?.id?.trim();
+
+  if (event === "payment.captured" || event === "order.paid") {
+    if (order.payment_status === "paid") {
+      return { success: true, handled: true, order };
+    }
+
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({
+        payment_status: "paid",
+        ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
+      })
+      .eq("id", order.id)
+      .select("*")
+      .single();
+
+    if (error || !updated) {
+      return {
+        success: false,
+        message: error?.message ?? ERROR_MESSAGE_GENERIC,
+        status: 400,
+      };
+    }
+
+    return { success: true, handled: true, order: updated as IOrder };
+  }
+
+  if (event === "payment.failed") {
+    const result = await failOrderPaymentWithSupabase(supabase, order.id, {
+      razorpay_payment_id: razorpayPaymentId,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message,
+        status: result.status,
+      };
+    }
+
+    return { success: true, handled: true, order: result.order };
+  }
+
+  if (event === "payment.pending" || event === "payment.authorized") {
+    if (order.payment_status === "paid") {
+      return { success: true, handled: true, order };
+    }
+
+    const { data: updated, error } = await supabase
+      .from("orders")
+      .update({
+        payment_status: "pending",
+        ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
+      })
+      .eq("id", order.id)
+      .select("*")
+      .single();
+
+    if (error || !updated) {
+      return {
+        success: false,
+        message: error?.message ?? ERROR_MESSAGE_GENERIC,
+        status: 400,
+      };
+    }
+
+    return { success: true, handled: true, order: updated as IOrder };
+  }
+
+  return { success: true, handled: false };
+}
+
+export type CustomerOrdersFilter = "all" | "paid" | "failed" | "cancelled";
+
+export type ListCustomerOrdersResult =
+  | { success: true; orders: IOrderWithItems[] }
+  | { success: false; message: string; status: number };
+
+type OrderRowWithItems = IOrder & {
+  order_items?: IOrderItem[];
+};
+
+export async function listCustomerOrdersWithSupabase(
+  supabase: SupabaseClient,
+  userId: string,
+  options?: { filter?: CustomerOrdersFilter; customerEmail?: string },
+): Promise<ListCustomerOrdersResult> {
+  const filter = options?.filter ?? "all";
+  const email = options?.customerEmail?.trim().toLowerCase();
+
+  let query = supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+
+  if (userId && email) {
+    query = query.or(`user_id.eq.${userId},customer_email.ilike.${email}`);
+  } else if (userId) {
+    query = query.eq("user_id", userId);
+  } else {
+    return { success: true, orders: [] };
+  }
+
+  if (filter === "paid") {
+    query = query.eq("payment_status", "paid");
+  } else if (filter === "failed") {
+    query = query.eq("payment_status", "failed");
+  } else if (filter === "cancelled") {
+    query = query.eq("status", "cancelled");
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message ?? ERROR_MESSAGE_GENERIC,
+      status: 400,
+    };
+  }
+
+  const orders = (data ?? []).map((row) => {
+    const { order_items, ...order } = row as OrderRowWithItems;
+    return {
+      ...(order as IOrder),
+      items: (order_items ?? []) as IOrderItem[],
+    };
+  });
+
+  return { success: true, orders };
+}
+
+export function getOrderDisplayStatus(order: IOrder): {
+  label: string;
+  className: string;
+} {
+  if (order.status === "cancelled") {
+    return {
+      label: "Cancelled",
+      className: "bg-red-500/20 text-red-500",
+    };
+  }
+
+  if (order.payment_status === "paid") {
+    return {
+      label: "Paid",
+      className: "bg-green-500/20 text-green-500",
+    };
+  }
+
+  if (order.payment_status === "failed") {
+    return {
+      label: "Failed",
+      className: "bg-yellow-500/20 text-yellow-500",
+    };
+  }
+
+  return {
+    label: "Pending",
+    className: "bg-amber-500/20 text-amber-500",
+  };
 }

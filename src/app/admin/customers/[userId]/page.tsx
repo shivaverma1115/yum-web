@@ -1,7 +1,8 @@
-import UserDetails from '@/components/admin/customer/UserDetails';
 import Preloader from '@/components/layout/Preloader';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+const UserDetails = dynamic(() => import('@/components/admin/customer/UserDetails'));
 
 interface CustomerDetailsPageProps {
     params: Promise<{

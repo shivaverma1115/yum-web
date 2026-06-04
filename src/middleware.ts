@@ -61,7 +61,7 @@ function redirectWithCookies(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (isApiRoute(pathname)) {
+  if (isApiRoute(pathname) || pathname.startsWith("/auth/callback")) {
     return NextResponse.next();
   }
 
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
 
   const role = profile?.role ?? UserRole.USER;
 
-  if (user && isAuthRoute(pathname)) {
+  if (user && isAuthRoute(pathname) && pathname !== "/reset-password") {
     return redirectWithCookies(
       new URL(getDefaultPathForRole(role), request.url),
       sessionResponse,

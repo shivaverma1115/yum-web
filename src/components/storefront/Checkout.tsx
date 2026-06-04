@@ -13,12 +13,9 @@ import {
     type CheckoutFormValues,
 } from "@/lib/checkout/form-defaults";
 import { getPaymentOptionsForFulfillment } from "@/lib/checkout/payment-options";
-import {
-    openRazorpayCheckout,
-    RazorpayPaymentFailedError,
-} from "@/lib/checkout/razorpay-client";
+import { openRazorpayCheckout } from "@/lib/checkout/razorpay-client";
+import { waitForOrderPaymentStatus } from "@/lib/checkout/wait-for-payment";
 import { COUNTRIES, formatCurrency, STATES } from "@/lib/constants";
-import type { RazorpayCheckoutResponse } from "@/types/razorpay";
 
 const inputClass =
     "block w-full bg-transparent dark:bg-default-50 rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200";
@@ -96,44 +93,6 @@ export default function Checkout() {
         })),
     });
 
-    const markPaymentFailed = async (
-        orderId: string,
-        razorpayPaymentId?: string,
-    ) => {
-        await fetch(`/api/orders/${orderId}/payment`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                action: "failed",
-                ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
-            }),
-        });
-    };
-
-    const completeOnlinePayment = async (
-        orderId: string,
-        razorpay: RazorpayCheckoutResponse,
-    ) => {
-        const response = await fetch(`/api/orders/${orderId}/payment`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                razorpay_order_id: razorpay.razorpay_order_id,
-                razorpay_payment_id: razorpay.razorpay_payment_id,
-                razorpay_signature: razorpay.razorpay_signature,
-            }),
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || !data.success) {
-            toast.error(data.message ?? "Failed to confirm payment.");
-            return false;
-        }
-
-        return true;
-    };
-
     const finishOrderSuccess = () => {
         toast.success("Order placed successfully.");
         clearCart();
@@ -206,7 +165,7 @@ export default function Checkout() {
                 }
 
                 try {
-                    const payment = await openRazorpayCheckout({
+                    await openRazorpayCheckout({
                         keyId: createData.data.keyId,
                         orderId: razorpayOrderId,
                         amount: createData.data.amount,
@@ -220,20 +179,15 @@ export default function Checkout() {
                         },
                     });
 
-                    const confirmed = await completeOnlinePayment(yumOrderId, payment);
-                    if (confirmed) {
-                        finishOrderSuccess();
-                    }
+                    toast.info("Confirming payment. Please wait...");
+                    await waitForOrderPaymentStatus(yumOrderId);
+                    finishOrderSuccess();
                 } catch (error) {
-                    if (error instanceof RazorpayPaymentFailedError) {
-                        await markPaymentFailed(
-                            yumOrderId,
-                            error.razorpayPaymentId,
+                    if (error instanceof Error && error.message === "Payment cancelled.") {
+                        toast.info(
+                            "Payment cancelled. Your order is saved as pending payment.",
                         );
-                    } else if (!(error instanceof Error && error.message === "Payment cancelled.")) {
-                        await markPaymentFailed(yumOrderId);
-                    } else {
-                        await markPaymentFailed(yumOrderId);
+                        return;
                     }
                     throw error;
                 }

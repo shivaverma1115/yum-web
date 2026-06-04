@@ -40,9 +40,9 @@ export async function listCustomersWithSupabase(
     .select(PROFILE_COLUMNS, { count: "exact" })
     .order("created_at", { ascending: false });
 
-  if (options.role) {
-    query = query.eq("role", options.role);
-  }
+  // if (options.role) {
+  //   query = query.eq("role", options.role);
+  // }
 
   const search = options.search?.trim();
   if (search) {

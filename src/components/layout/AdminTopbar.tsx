@@ -1,19 +1,28 @@
 "use client";
 
 import { useContextApi } from '@/context-api/use-context';
-import { UserRole } from '@/types/user';
+import { MenuIcon } from 'lucide-react';
 import React from 'react'
 
-export default function AdminTopbar() {
-    const { user, isAuthenticated } = useContextApi();
-    const isAdmin = user?.role === UserRole.ADMIN;
+type AdminTopbarProps = {
+    onMenuClick?: () => void;
+};
+
+export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
+    const { user } = useContextApi();
     return (
         <div>
             <header className="sticky top-0 h-18 flex z-40 w-full border-b border-default-200 bg-white dark:bg-default-50 lg:ps-64">
                 <nav className="flex items-center gap-4 w-full px-6">
                     <div className="lg:hidden flex">
-                        <button type="button" className="text-default-500 hover:text-default-600" data-hs-overlay="#application-sidebar" aria-controls="application-sidebar" aria-label="Toggle navigation">
-                            <i data-lucide="align-justify" className="w-6 h-6"></i>
+                        <button
+                            type="button"
+                            className="text-default-500 hover:text-default-600"
+                            aria-controls="application-sidebar"
+                            aria-label="Toggle navigation"
+                            onClick={onMenuClick}
+                        >
+                            <MenuIcon className="size-6" />
                         </button>
                     </div>
 

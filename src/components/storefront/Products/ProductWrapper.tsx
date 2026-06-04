@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 
 const DEFAULT_LIMIT = 10;
 
-export default function ProductGrid() {
+export default function ProductWrapper() {
     const [products, setProducts] = useState<IProduct[]>([]);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
