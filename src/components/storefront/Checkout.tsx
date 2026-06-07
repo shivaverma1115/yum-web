@@ -13,8 +13,8 @@ import {
     type CheckoutFormValues,
 } from "@/lib/checkout/form-defaults";
 import { getPaymentOptionsForFulfillment } from "@/lib/checkout/payment-options";
+import { confirmOrderPayment } from "@/lib/checkout/confirm-payment";
 import { openRazorpayCheckout } from "@/lib/checkout/razorpay-client";
-import { waitForOrderPaymentStatus } from "@/lib/checkout/wait-for-payment";
 import { COUNTRIES, formatCurrency, STATES } from "@/lib/constants";
 
 const inputClass =
@@ -165,7 +165,7 @@ export default function Checkout() {
                 }
 
                 try {
-                    await openRazorpayCheckout({
+                    const payment = await openRazorpayCheckout({
                         keyId: createData.data.keyId,
                         orderId: razorpayOrderId,
                         amount: createData.data.amount,
@@ -180,7 +180,7 @@ export default function Checkout() {
                     });
 
                     toast.info("Confirming payment. Please wait...");
-                    await waitForOrderPaymentStatus(yumOrderId);
+                    await confirmOrderPayment(yumOrderId, payment);
                     finishOrderSuccess();
                 } catch (error) {
                     if (error instanceof Error && error.message === "Payment cancelled.") {

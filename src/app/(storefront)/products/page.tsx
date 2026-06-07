@@ -6,11 +6,11 @@ const ProductWrapper = dynamic(() => import('@/components/storefront/Products/Pr
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: "Product Grid",
-    description: "Product Grid",
+    title: "All Products",
+    description: "All Products",
 };
 
-export default function ProductGridPage() {
+export default function AllProductsPage() {
     return (
         <Suspense fallback={<Preloader />}>
             <ProductWrapper />

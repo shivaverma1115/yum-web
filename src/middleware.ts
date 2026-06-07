@@ -13,6 +13,7 @@ const AUTH_ROUTES = [
 
 /** (storefront) route group */
 const STOREFRONT_ROUTES = [
+  "/",
   "/home",
   "/cart",
   "/checkout",
@@ -97,12 +98,12 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(new URL("/", request.url), sessionResponse);
   }
 
-  if (role === UserRole.ADMIN && pathname === "/") {
-    return redirectWithCookies(
-      new URL(getDefaultPathForRole(role), request.url),
-      sessionResponse,
-    );
-  }
+  // if (role === UserRole.ADMIN && pathname === "/") {
+  //   return redirectWithCookies(
+  //     new URL(getDefaultPathForRole(role), request.url),
+  //     sessionResponse,
+  //   );
+  // }
 
   return sessionResponse;
 }

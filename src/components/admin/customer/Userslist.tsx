@@ -214,12 +214,6 @@ export default function Userslist() {
                     scope="col"
                     className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
                   >
-                    User Name
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
-                  >
                     Phone
                   </th>
                   <th
@@ -277,7 +271,7 @@ export default function Userslist() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={14}
+                      colSpan={13}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       Loading customers...
@@ -286,7 +280,7 @@ export default function Userslist() {
                 ) : users.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={14}
+                      colSpan={13}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       <i data-lucide="search" className="w-5 h-5 text-default-600" />
@@ -299,7 +293,7 @@ export default function Userslist() {
                   users.map((user) => (
                     <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.id}
+                        #{user.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.email || "—"}
@@ -309,9 +303,6 @@ export default function Userslist() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.last_name || "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.user_name || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.phone || "—"}

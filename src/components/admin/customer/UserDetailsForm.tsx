@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { COUNTRIES, STATES } from "@/lib/constants";
-import { Save, X } from "lucide-react";
+import { Info, Save, X } from "lucide-react";
+import { useContextApi } from "@/context-api/use-context";
 
 export interface UserDetailsFormProps {
   user?: IUser;
@@ -18,6 +19,7 @@ const errorClassName = "text-red-500 text-sm mt-1";
 export default function UserDetailsForm({ user }: UserDetailsFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(user?.id);
+  const { setUser } = useContextApi();
 
   const {
     register,
@@ -28,7 +30,6 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    console.log(values);
     try {
       const response = await fetch(
         isEditMode
@@ -47,10 +48,8 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
         toast.error(data.message ?? "Something went wrong.");
         return;
       }
-
+      setUser(data.data.user);
       toast.success(data.message);
-      router.push("/admin/customers");
-      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Something went wrong.",
@@ -75,7 +74,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="first_name"
             >
-              First Name
+              First Name <span className="text-required">*</span>
             </label>
             <input
               id="first_name"
@@ -101,7 +100,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="last_name"
             >
-              Last Name
+              Last Name <span className="text-required">*</span>
             </label>
             <input
               id="last_name"
@@ -124,48 +123,39 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
 
           <div>
             <label
-              className="block text-sm font-medium text-default-900 mb-2"
-              htmlFor="user_name"
-            >
-              User Name
-            </label>
-            <input
-              id="user_name"
-              type="text"
-              placeholder="Enter Your User Name"
-              disabled={isSubmitting}
-              className={inputClassName}
-              {...register("user_name", {
-                required: "User name is required.",
-                minLength: {
-                  value: 3,
-                  message: "User name must be at least 3 characters.",
-                },
-                pattern: {
-                  value: /^[a-zA-Z0-9_]+$/,
-                  message: "Use letters, numbers, and underscores only.",
-                },
-              })}
-            />
-            {errors.user_name?.message ? (
-              <span className={errorClassName}>{errors.user_name.message}</span>
-            ) : null}
-          </div>
-
-          <div>
-            <label
-              className="block text-sm font-medium text-default-900 mb-2"
+              className="flex items-center gap-1 text-sm font-medium text-default-900 mb-2"
               htmlFor="email"
             >
-              Email
+              <span>
+                Email <span className="text-required">*</span>
+              </span>
+              {isEditMode ? (
+                <span className="relative inline-flex group">
+                  <button
+                    type="button"
+                    className="inline-flex rounded text-default-400 hover:text-primary focus:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    aria-label="Email cannot be edited after account creation"
+                  >
+                    <Info className="size-4" aria-hidden />
+                  </button>
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute start-0 top-full z-10 mt-1 w-56 rounded-md border border-default-200 bg-white px-3 py-2 text-xs font-normal text-default-600 opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-default-50"
+                  >
+                    Email cannot be edited after account creation.
+                  </span>
+                </span>
+              ) : null}
             </label>
             <input
               id="email"
               type="email"
-              placeholder="demoexample@mail.com"
+              placeholder="Please enter your email address"
               autoComplete="email"
+              readOnly={isEditMode}
               disabled={isSubmitting}
               className={inputClassName}
+              aria-describedby={isEditMode ? "email-help" : undefined}
               {...register("email", {
                 required: "Email is required.",
                 pattern: {
@@ -174,6 +164,11 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
                 },
               })}
             />
+            {isEditMode ? (
+              <p id="email-help" className="sr-only">
+                Email cannot be edited after account creation.
+              </p>
+            ) : null}
             {errors.email?.message ? (
               <span className={errorClassName}>{errors.email.message}</span>
             ) : null}
@@ -184,12 +179,12 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="phone"
             >
-              Phone Number
+              Phone Number <span className="text-required">*</span>
             </label>
             <input
               id="phone"
               type="tel"
-              placeholder="+1-123-XXX-4567"
+              placeholder="Please enter your phone number"
               autoComplete="tel"
               disabled={isSubmitting}
               className={inputClassName}
@@ -211,7 +206,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="country"
             >
-              Country/Region
+              Country/Region <span className="text-required">*</span>
             </label>
             <select
               id="country"
@@ -237,7 +232,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="state"
             >
-              State
+              State <span className="text-required">*</span>
             </label>
             <select
               id="state"
@@ -263,7 +258,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="role"
             >
-              Role
+              Role <span className="text-required">*</span>
             </label>
             <select
               id="role"
@@ -289,7 +284,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="zip_code"
             >
-              Zip Code
+              Zip Code <span className="text-required">*</span>
             </label>
             <input
               id="zip_code"
@@ -320,7 +315,7 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
             <textarea
               id="description"
               rows={5}
-              placeholder="Enter customer description"
+              placeholder="Please enter your description"
               disabled={isSubmitting}
               className="block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 disabled:opacity-60"
               {...register("description", {

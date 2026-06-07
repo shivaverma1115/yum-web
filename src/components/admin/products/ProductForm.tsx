@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { ImageIcon, UploadCloud } from "lucide-react";
+import { fetchProductCategories } from "@/lib/api/categories";
 import { MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
 import { validateProductImageFiles } from "@/lib/products/imageValidation";
+import type { IProductCategory } from "@/types/product-category";
 import type { IProduct, ProductFormInput } from "@/types/product";
 
 const inputClassName =
@@ -68,7 +70,23 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     const isEditMode = Boolean(productId);
 
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [categories, setCategories] = useState<IProductCategory[]>([]);
     const selectedImageFilesRef = useRef<File[]>([]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetchProductCategories(controller.signal)
+            .then(setCategories)
+            .catch((error) => {
+                if (controller.signal.aborted) return;
+                toast.error(
+                    error instanceof Error ? error.message : "Failed to load categories.",
+                );
+            });
+
+        return () => controller.abort();
+    }, []);
 
     const {
         register,
@@ -261,9 +279,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                     })}
                                 >
                                     <option value="">Select Product Category</option>
-                                    <option value="italian">Italian</option>
-                                    <option value="bbq">BBQ</option>
-                                    <option value="mexican">Mexican</option>
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.slug}>
+                                            {category.name}
+                                        </option>
+                                    ))}
                                 </select>
                                 {errors.category?.message ? (
                                     <span className={errorClassName}>{errors.category.message}</span>

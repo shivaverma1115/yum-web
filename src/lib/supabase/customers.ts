@@ -4,7 +4,7 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { deleteProductWithSupabase } from "@/lib/supabase/product/products";
 
 const PROFILE_COLUMNS =
-  "id, email, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at";
+  "id, email, first_name, last_name, phone, country, state, zip_code, description, role, created_at, updated_at";
 
 export type ListCustomersResult =
   | {
@@ -49,7 +49,7 @@ export async function listCustomersWithSupabase(
   if (search) {
     const pattern = `%${search}%`;
     query = query.or(
-      `email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},phone.ilike.${pattern},user_name.ilike.${pattern}`,
+      `email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},phone.ilike.${pattern}`,
     );
   }
 
@@ -373,7 +373,6 @@ export async function createCustomerWithSupabase(
     user_metadata: {
       first_name,
       last_name,
-      user_name: input.user_name.trim(),
     },
   });
 

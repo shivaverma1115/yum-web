@@ -2,22 +2,112 @@
 
 import ProductCatalogResults from "@/components/storefront/Products/ProductCatalogResults";
 import ProductViewModeToggle, {
-  type ProductViewMode,
+    type ProductViewMode,
 } from "@/components/storefront/Products/ProductViewModeToggle";
+import { fetchProductCategories } from "@/lib/api/categories";
 import { fetchProductsPage } from "@/lib/api/products";
+import type { IProductCategory } from "@/types/product-category";
 import type { IProduct } from "@/types/product";
-import { useEffect, useState } from "react";
+import { Settings2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { CURRENCY_SYMBOL } from "@/lib/constants";
 
 const DEFAULT_LIMIT = 10;
 
 export default function ProductWrapper() {
     const [products, setProducts] = useState<IProduct[]>([]);
+    const [categories, setCategories] = useState<IProductCategory[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<string[]>([]);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<ProductViewMode>("grid");
+    const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+    const isAllCategoriesSelected = selectedCategorySlugs.length === 0;
+
+    useEffect(() => {
+        if (!isMobileFilterOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isMobileFilterOpen]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function initPreline() {
+            try {
+                const { HSStaticMethods } = await import("preline/preline");
+                if (cancelled) return;
+                HSStaticMethods.autoInit();
+            } catch (error) {
+                console.error("Preline init failed:", error);
+            }
+        }
+
+        void initPreline();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        let active = true;
+
+        const loadCategories = async () => {
+            setCategoriesLoading(true);
+
+            try {
+                const data = await fetchProductCategories(controller.signal);
+                if (!active) return;
+                setCategories(data);
+            } catch (error) {
+                if (!active || controller.signal.aborted) return;
+                toast.error(
+                    error instanceof Error ? error.message : "Failed to load categories.",
+                );
+                setCategories([]);
+            } finally {
+                if (active) {
+                    setCategoriesLoading(false);
+                }
+            }
+        };
+
+        void loadCategories();
+
+        return () => {
+            active = false;
+            controller.abort();
+        };
+    }, []);
+
+    const handleAllCategoriesChange = useCallback((checked: boolean) => {
+        if (checked) {
+            setSelectedCategorySlugs([]);
+            setPage(1);
+        }
+    }, []);
+
+    const handleCategoryChange = useCallback((slug: string, checked: boolean) => {
+        setSelectedCategorySlugs((current) => {
+            if (checked) {
+                return [...current, slug];
+            }
+            return current.filter((value) => value !== slug);
+        });
+        setPage(1);
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -30,6 +120,7 @@ export default function ProductWrapper() {
                 const data = await fetchProductsPage({
                     page,
                     limit: DEFAULT_LIMIT,
+                    categories: isAllCategoriesSelected ? undefined : selectedCategorySlugs,
                     signal: controller.signal,
                     endpoint: "/api/products",
                 });
@@ -60,7 +151,7 @@ export default function ProductWrapper() {
             active = false;
             controller.abort();
         };
-    }, [page]);
+    }, [page, selectedCategorySlugs, isAllCategoriesSelected]);
 
     const startItem = total === 0 ? 0 : (page - 1) * DEFAULT_LIMIT + 1;
     const endItem = Math.min(page * DEFAULT_LIMIT, total);
@@ -68,15 +159,35 @@ export default function ProductWrapper() {
         <section className="lg:py-8 py-6">
             <div className="container">
                 <div className="lg:flex gap-6">
-                    <div className="hs-overlay hs-overlay-open:translate-x-0 hidden max-w-xs lg:max-w-full lg:w-1/4 w-full -translate-x-full fixed top-0 start-0 transition-all transform h-full z-60 lg:z-auto bg-white lg:translate-x-0 lg:block lg:static lg:start-auto dark:bg-default-50" id="filter_Offcanvas" tabIndex={-1}>
+                    {isMobileFilterOpen ? (
+                        <button
+                            type="button"
+                            className="fixed inset-0 z-50 bg-default-900/50 lg:hidden"
+                            aria-label="Close filter panel"
+                            onClick={() => setIsMobileFilterOpen(false)}
+                        />
+                    ) : null}
+
+                    <div
+                        className={`max-w-xs lg:max-w-full lg:w-1/4 w-full fixed top-0 start-0 transition-all transform h-full z-60 lg:z-auto bg-white dark:bg-default-50 lg:translate-x-0 lg:block lg:static lg:start-auto ${isMobileFilterOpen
+                                ? "translate-x-0 block"
+                                : "-translate-x-full hidden lg:block"
+                            }`}
+                        id="filter_Offcanvas"
+                        tabIndex={-1}
+                    >
                         <div className="flex justify-between items-center py-3 px-4 border-b border-default-200 lg:hidden">
                             <h3 className="font-medium text-default-800">
                                 Filter Options
                             </h3>
 
-                            <button className="inline-flex flex-shrink-0 justify-center items-center h-8 w-8 rounded-md text-default-500 hover:text-default-700 text-sm" data-hs-overlay="#filter_Offcanvas" type="button">
-                                <span className="sr-only">Close modal</span>
-                                <i className="h-5 w-5" data-lucide="x"></i>
+                            <button
+                                className="inline-flex flex-shrink-0 justify-center items-center h-8 w-8 rounded-md text-default-500 hover:text-default-700 text-sm"
+                                type="button"
+                                aria-label="Close filter panel"
+                                onClick={() => setIsMobileFilterOpen(false)}
+                            >
+                                <X className="h-5 w-5" aria-hidden />
                             </button>
                         </div>
 
@@ -90,54 +201,45 @@ export default function ProductWrapper() {
                                     <div className="hs-collapse w-full overflow-hidden transition-[height] duration-300 open" id="all_categories">
                                         <div className="relative flex flex-col space-y-4 mb-6">
                                             <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="all" name="all" type="checkbox" defaultChecked />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="all">All</label>
+                                                <input
+                                                    className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer"
+                                                    id="category_all"
+                                                    name="category_all"
+                                                    type="checkbox"
+                                                    checked={isAllCategoriesSelected}
+                                                    onChange={(event) => handleAllCategoriesChange(event.target.checked)}
+                                                />
+                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="category_all">
+                                                    All
+                                                </label>
                                             </div>
 
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="wraps_roll" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="wraps_roll">Wraps</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="noodles_bowl" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="noodles_bowl">Noodles</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="burrito_bowls" name="burrito_bowls" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="burrito_bowls">Burrito Bowls</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="thalis" name="thalis" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="thalis">Thalis</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="smart_meals" name="smart_meals" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="smart_meals">Smart Meals</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="salads" name="salads" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="salads">Salads</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="beverages_desserts" name="beverages_desserts" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="beverages_desserts">Beverages & Desserts</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="appetizers" name="appetizers" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="appetizers">Appetizers</label>
-                                            </div>
-
-                                            <div className="flex items-center">
-                                                <input className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer" id="burger_more" name="burger_more" type="checkbox" />
-                                                <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="burger_more">Burger & More</label>
-                                            </div>
+                                            {categoriesLoading ? (
+                                                <p className="text-sm text-default-500">Loading categories...</p>
+                                            ) : categories.length === 0 ? (
+                                                <p className="text-sm text-default-500">No categories available.</p>
+                                            ) : (
+                                                categories.map((category) => (
+                                                    <div className="flex items-center" key={category.id}>
+                                                        <input
+                                                            className="form-checkbox rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent ring-offset-0 cursor-pointer"
+                                                            id={`category_${category.slug}`}
+                                                            name={category.slug}
+                                                            type="checkbox"
+                                                            checked={selectedCategorySlugs.includes(category.slug)}
+                                                            onChange={(event) =>
+                                                                handleCategoryChange(category.slug, event.target.checked)
+                                                            }
+                                                        />
+                                                        <label
+                                                            className="ps-3 inline-flex items-center text-default-600 text-sm select-none"
+                                                            htmlFor={`category_${category.slug}`}
+                                                        >
+                                                            {category.name}
+                                                        </label>
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -176,42 +278,42 @@ export default function ProductWrapper() {
                                                 <div className="flex items-center">
                                                     <input className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="under_$20" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="under_$20">Under
-                                                        $20
+                                                        {CURRENCY_SYMBOL}20
                                                     </label>
                                                 </div>
 
                                                 <div className="flex items-center">
                                                     <input className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="$25_$100" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="$25_$100">$25
-                                                        to $100
+                                                        to {CURRENCY_SYMBOL}100
                                                     </label>
                                                 </div>
 
                                                 <div className="flex items-center">
                                                     <input className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="$100_$300" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="$100_$300">$100
-                                                        to $300
+                                                        to {CURRENCY_SYMBOL}300
                                                     </label>
                                                 </div>
 
                                                 <div className="flex items-center">
                                                     <input defaultChecked className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="$300_$500" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="$300_$500">$300
-                                                        to $500
+                                                        to {CURRENCY_SYMBOL}500
                                                     </label>
                                                 </div>
 
                                                 <div className="flex items-center">
                                                     <input className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="$500_$1,000" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="$500_$1,000">$500
-                                                        to $1,000
+                                                        to {CURRENCY_SYMBOL}1,000
                                                     </label>
                                                 </div>
 
                                                 <div className="flex items-center">
                                                     <input className="form-radio rounded-full text-primary border-default-400 bg-transparent w-5 h-5 focus:ring-0 focus:ring-transparent cursor-pointer" id="$1,000_$10,000" name="radio" type="radio" />
                                                     <label className="ps-3 inline-flex items-center text-default-600 text-sm select-none" htmlFor="$1,000_$10,000">$1,000
-                                                        to $10,000
+                                                        to {CURRENCY_SYMBOL}10,000
                                                     </label>
                                                 </div>
                                             </div>
@@ -398,7 +500,7 @@ export default function ProductWrapper() {
                                             <div className="flex items-center justify-center gap-2 w-full font-medium text-default-950 mb-6">
                                                 Sort By :
                                                 <span className="inline-flex items-center gap-4 text-sm py-2 px-4 xl:px-5 bg-default-50 rounded-full">
-                                                    $59 USD
+                                                    {CURRENCY_SYMBOL}59
                                                 </span>
                                             </div>
 
@@ -420,8 +522,12 @@ export default function ProductWrapper() {
                     <div className="lg:w-3/4">
                         <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4 mb-10">
                             <div className="flex flex-wrap md:flex-nowrap items-center gap-4">
-                                <button className="inline-flex lg:hidden items-center gap-4 text-sm py-2.5 px-4 xl:px-5 rounded-full text-default-950 border border-default-200 transition-all" data-hs-overlay="#filter_Offcanvas" type="button">
-                                    Filter <i className="h-4 w-4" data-lucide="settings-2"></i>
+                                <button
+                                    className="inline-flex lg:hidden items-center gap-4 text-sm py-2.5 px-4 xl:px-5 rounded-full text-default-950 border border-default-200 transition-all"
+                                    type="button"
+                                    onClick={() => setIsMobileFilterOpen(true)}
+                                >
+                                    Filter <Settings2 className="h-4 w-4" aria-hidden />
                                 </button>
 
                                 <h6 className="lg:flex hidden text-default-950 text-base">

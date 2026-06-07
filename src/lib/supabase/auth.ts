@@ -113,7 +113,6 @@ function buildRegisterUserStub(
     email,
     first_name,
     last_name,
-    user_name: "",
     phone: "",
     country: "",
     state: "",
@@ -151,7 +150,7 @@ async function getProfileByUserIdAdmin(
   const { data, error } = await adminClient
     .from("profiles")
     .select(
-      "id, email, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
+      "id, email, first_name, last_name, phone, country, state, zip_code, description, role, created_at, updated_at",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -386,6 +385,72 @@ export async function updatePasswordWithSupabase(
   }
 
   await supabase.auth.signOut();
+
+  return { success: true };
+}
+
+export type ChangePasswordPayload = {
+  currentPassword?: string;
+  newPassword?: string;
+};
+
+export async function changePasswordWithSupabase(
+  supabase: SupabaseClient,
+  email: string,
+  input: ChangePasswordPayload,
+): Promise<ResetPasswordResult> {
+  const currentPassword = input.currentPassword ?? "";
+  const newPassword = input.newPassword ?? "";
+
+  if (!newPassword || newPassword.length < 6) {
+    return {
+      success: false,
+      message: "Password must be at least 6 characters.",
+      status: 400,
+      errors: { newPassword: "Password must be at least 6 characters." },
+    };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      success: false,
+      message: "You must be signed in to change your password.",
+      status: 401,
+      errors: {},
+    };
+  }
+
+  if (currentPassword.trim()) {
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      return {
+        success: false,
+        message: "Current password is incorrect.",
+        status: 400,
+        errors: { currentPassword: "Current password is incorrect." },
+      };
+    }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: normalizeHttpStatus(error.status),
+      errors: {},
+    };
+  }
 
   return { success: true };
 }

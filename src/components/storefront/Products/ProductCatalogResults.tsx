@@ -2,7 +2,7 @@ import ProductCard from "@/components/storefront/Products/ProductCard";
 import ProductListRow from "@/components/storefront/Products/ProductListRow";
 import type { ProductViewMode } from "@/components/storefront/Products/ProductViewModeToggle";
 import type { IProduct } from "@/types/product";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 type ProductCatalogResultsProps = {
   products: IProduct[];
@@ -62,7 +62,7 @@ export default function ProductCatalogResults({
                 className="md:mb-10 inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500"
               >
                 Shop Now
-                <i className="h-4 w-4" data-lucide="move-right" />
+                <ArrowRight className="size-4" />
               </button>
             </div>
           </div>

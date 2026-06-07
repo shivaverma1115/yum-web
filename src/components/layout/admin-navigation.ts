@@ -41,18 +41,24 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     ],
   },
   {
-    type: "group",
-    id: "menuCustomers",
+    type: "link",
+    href: "/admin/customers",
     label: "Customers",
-    icon: "users",
-    prefix: "/admin/customers",
-    children: [
-      { href: "/admin/customers", label: "All Customers" },
-      { href: "/admin/customers/1", label: "Customer Details" },
-      { href: "/admin/customers/add", label: "Add Customer" },
-      { href: "/admin/customers/1/edit", label: "Edit Customer" },
-    ],
+    icon: "users"
   },
+  // {
+  //   type: "group",
+  //   id: "menuCustomers",
+  //   label: "Customers",
+  //   icon: "users",
+  //   prefix: "/admin/customers",
+  //   children: [
+  //     { href: "/admin/customers", label: "All Customers" },
+  //     { href: "/admin/customers/1", label: "Customer Details" },
+  //     { href: "/admin/customers/add", label: "Add Customer" },
+  //     { href: "/admin/customers/1/edit", label: "Edit Customer" },
+  //   ],
+  // },
   {
     type: "group",
     id: "menuRestaurants",

@@ -68,18 +68,23 @@ function getItemsSummary(items: IOrderItem[]) {
 }
 
 function StatusBadge({
+  title,
   label,
   className,
 }: {
+  title: string;
   label: string;
   className: string;
 }) {
   return (
-    <span
-      className={`inline-flex items-center py-1 px-3 rounded-full text-xs font-medium capitalize ${className}`}
-    >
-      {label}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-default-500">{title}</span>
+      <span
+        className={`inline-flex items-center py-1 px-3 rounded-full text-xs font-medium capitalize ${className}`}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -115,39 +120,6 @@ function DetailSection({
     <div className="rounded-lg border border-default-200 p-4">
       <h5 className="text-sm font-medium text-default-900 mb-3">{title}</h5>
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">{children}</div>
-    </div>
-  );
-}
-
-function OrderLineItem({ item }: { item: IOrderItem }) {
-  const imageSrc = item.image_url?.trim() || PLACEHOLDER_IMAGE;
-  const lineTotal = item.quantity * item.unit_price;
-
-  return (
-    <div className="flex gap-4 py-3 border-b border-default-100 last:border-b-0">
-      <div className="shrink">
-        <div className="h-14 w-14 overflow-hidden rounded border border-default-200">
-          <img
-            src={imageSrc}
-            alt={item.product_name}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      </div>
-      <div className="grow min-w-0 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <DetailField label="Product" value={item.product_name} />
-        <DetailField label="Quantity" value={item.quantity} />
-        <DetailField label="Unit price" value={formatCurrency(item.unit_price)} />
-        <DetailField label="Line total" value={formatCurrency(lineTotal)} />
-        <DetailField label="Product ID" value={displayValue(item.product_id)} mono />
-        <DetailField label="Line item ID" value={displayValue(item.id)} mono />
-        {item.created_at ? (
-          <DetailField
-            label="Added at"
-            value={formatCustomerSince(item.created_at)}
-          />
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -225,18 +197,19 @@ function OrderCard({ order }: { order: IOrderWithItems }) {
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex flex-wrap gap-2 justify-end">
               <StatusBadge
+                title={"Order Status"}
                 label={orderStatus}
                 className={ORDER_STATUS_STYLES[orderStatus]}
               />
               <StatusBadge
+                title={"Payment Status"}
                 label={paymentStatus}
                 className={PAYMENT_STATUS_STYLES[paymentStatus]}
               />
             </div>
             <ChevronDown
-              className={`h-5 w-5 text-default-500 transition-transform ${
-                expanded ? "rotate-180" : ""
-              }`}
+              className={`h-5 w-5 text-default-500 transition-transform ${expanded ? "rotate-180" : ""
+                }`}
               aria-hidden
             />
           </div>
@@ -248,85 +221,75 @@ function OrderCard({ order }: { order: IOrderWithItems }) {
 
       {expanded ? (
         <div className="px-6 pb-5 pt-0 border-t border-default-100">
-      <div className="grid lg:grid-cols-2 gap-4 mb-4 mt-4">
-        <DetailSection title="Order">
-          <DetailField
-            label="Order ID"
-            value={displayValue(order.id)}
-            mono
-          />
-          <DetailField
-            label="Fulfillment"
-            value={FULFILLMENT_LABELS[order.fulfillment_type]}
-          />
-          <DetailField
-            label="Payment method"
-            value={PAYMENT_METHOD_LABELS[order.payment_method]}
-          />
-          <DetailField label="Subtotal" value={formatCurrency(order.subtotal)} />
-          <DetailField label="Total" value={formatCurrency(order.total)} />
-          <DetailField label="User ID" value={displayValue(order.user_id)} mono />
-          <DetailField
-            label="Updated at"
-            value={
-              order.updated_at
-                ? formatCustomerSince(order.updated_at)
-                : "—"
-            }
-          />
-        </DetailSection>
-
-        <DetailSection title="Customer">
-          <DetailField
-            label="Name"
-            value={`${order.customer_first_name} ${order.customer_last_name}`.trim() || "—"}
-          />
-          <DetailField label="Email" value={displayValue(order.customer_email)} />
-          <DetailField label="Phone" value={displayValue(order.customer_phone)} />
-          <DetailField
-            label="Notes"
-            value={displayValue(order.additional_notes)}
-          />
-        </DetailSection>
-
-        <DetailSection title="Payment (Razorpay)">
-          <DetailField
-            label="Razorpay order ID"
-            value={displayValue(order.razorpay_order_id)}
-            mono
-          />
-          <DetailField
-            label="Razorpay payment ID"
-            value={displayValue(order.razorpay_payment_id)}
-            mono
-          />
-        </DetailSection>
-
-        <FulfillmentDetails order={order} />
-      </div>
-
-      <div className="rounded-lg border border-default-200">
-        <div className="px-4 py-3 border-b border-default-200 bg-default-50">
-          <h5 className="text-sm font-medium text-default-900">
-            Items ({items.length})
-          </h5>
-        </div>
-        {items.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-default-400">No items</p>
-        ) : (
-          <div className="px-4">
-            {items.map((item) => (
-              <OrderLineItem
-                key={
-                  item.id ??
-                  `${order.id}-${item.product_id}-${item.product_name}`
-                }
-                item={item}
+          <div className="grid lg:grid-cols-2 gap-4 mb-4 mt-4">
+            <DetailSection title="Order">
+              <DetailField
+                label="Order ID"
+                value={displayValue(order.id)}
+                mono
               />
-            ))}
+              <DetailField
+                label="Fulfillment"
+                value={FULFILLMENT_LABELS[order.fulfillment_type]}
+              />
+              <DetailField
+                label="Payment method"
+                value={PAYMENT_METHOD_LABELS[order.payment_method]}
+              />
+              <DetailField label="Subtotal" value={formatCurrency(order.subtotal)} />
+              <DetailField label="Total" value={formatCurrency(order.total)} />
+              <DetailField
+                label="Updated at"
+                value={
+                  order.updated_at
+                    ? formatCustomerSince(order.updated_at)
+                    : "—"
+                }
+              />
+            </DetailSection>
+
+            {
+              order.payment_method === "online" ? (
+                <DetailSection title="Payment (Razorpay)">
+                  <DetailField
+                    label="Razorpay order ID"
+                    value={displayValue(order.razorpay_order_id)}
+                    mono
+                  />
+                  <DetailField
+                    label="Razorpay payment ID"
+                    value={displayValue(order.razorpay_payment_id)}
+                    mono
+                  />
+                </DetailSection>
+              ) : null
+            }
+
+            <FulfillmentDetails order={order} />
           </div>
-        )}
-      </div>
+
+          <div className="rounded-lg border border-default-200">
+            <div className="px-4 py-3 border-b border-default-200 bg-default-50">
+              <h5 className="text-sm font-medium text-default-900">
+                Items ({items.length})
+              </h5>
+            </div>
+            {items.length === 0 ? (
+              <p className="px-4 py-6 text-sm text-default-400">No items</p>
+            ) : (
+              <div className="px-4">
+                {items.map((item) => (
+                  <OrderLineItem
+                    key={
+                      item.id ??
+                      `${order.id}-${item.product_id}-${item.product_name}`
+                    }
+                    item={item}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
     </article>
@@ -373,11 +336,10 @@ export default function CustomerOrderHistory({
                       <button
                         type="button"
                         onClick={() => setFilter(option.value)}
-                        className={`w-full text-start flex items-center gap-3 font-normal py-2 px-3 transition-all rounded ${
-                          filter === option.value
-                            ? "text-default-700 bg-default-400/20"
-                            : "text-default-600 hover:text-default-700 hover:bg-default-400/20"
-                        }`}
+                        className={`w-full text-start flex items-center gap-3 font-normal py-2 px-3 transition-all rounded ${filter === option.value
+                          ? "text-default-700 bg-default-400/20"
+                          : "text-default-600 hover:text-default-700 hover:bg-default-400/20"
+                          }`}
                       >
                         {option.label}
                       </button>
@@ -406,6 +368,38 @@ export default function CustomerOrderHistory({
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function OrderLineItem({ item }: { item: IOrderItem }) {
+  const imageSrc = item.image_url?.trim() || PLACEHOLDER_IMAGE;
+  const lineTotal = item.quantity * item.unit_price;
+
+  return (
+    <div className="flex gap-4 py-3 border-b border-default-100 last:border-b-0">
+      <div className="shrink">
+        <div className="h-14 w-14 overflow-hidden rounded border border-default-200">
+          <img
+            src={imageSrc}
+            alt={item.product_name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      </div>
+      <div className="grow min-w-0 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <DetailField label="Item ID" value={displayValue(item.id)} mono />
+        <DetailField label="Product" value={item.product_name} />
+        <DetailField label="Quantity" value={item.quantity} />
+        <DetailField label="Unit price" value={formatCurrency(item.unit_price)} />
+        <DetailField label="Line total" value={formatCurrency(lineTotal)} />
+        {item.created_at ? (
+          <DetailField
+            label="Added at"
+            value={formatCustomerSince(item.created_at)}
+          />
+        ) : null}
       </div>
     </div>
   );

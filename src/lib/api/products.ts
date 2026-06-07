@@ -18,6 +18,8 @@ export type FetchProductsPageOptions = {
   page?: number;
   limit?: number;
   search?: string;
+  /** Product category slugs; omit or empty for all categories */
+  categories?: string[];
   signal?: AbortSignal;
   /** Defaults to public catalog API */
   endpoint?: "/api/products" | "/api/admin/products";
@@ -37,6 +39,10 @@ export async function fetchProductsPage(
 
   if (options.search?.trim()) {
     params.set("search", options.search.trim());
+  }
+
+  if (options.categories?.length) {
+    params.set("categories", options.categories.join(","));
   }
 
   const response = await fetch(`${endpoint}?${params.toString()}`, {

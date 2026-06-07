@@ -32,6 +32,8 @@ export type ListProductsOptions = {
   page?: number;
   limit?: number;
   search?: string;
+  /** Product category slugs from product_categories.slug */
+  categories?: string[];
 };
 export type GetProductResult =
   | { success: true; product: IProduct }
@@ -345,6 +347,11 @@ export async function listProductsWithSupabase(
     query = query.or(
       `name.ilike.${pattern},category.ilike.${pattern},short_description.ilike.${pattern}`,
     );
+  }
+
+  const categories = options.categories?.map((slug) => slug.trim()).filter(Boolean);
+  if (categories?.length) {
+    query = query.in("category", categories);
   }
 
   const { data, error, count } = await query.range(offset, offset + limit - 1);

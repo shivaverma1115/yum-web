@@ -85,10 +85,6 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
               <dd className="text-default-800">{displayValue(customer.last_name)}</dd>
             </div>
             <div className="flex gap-2">
-              <dt className="text-default-500 shrink-0">Username</dt>
-              <dd className="text-default-800">{displayValue(customer.user_name)}</dd>
-            </div>
-            <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">Email</dt>
               <dd className="text-default-800 break-all">{displayValue(customer.email)}</dd>
             </div>

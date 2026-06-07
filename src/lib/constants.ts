@@ -64,3 +64,7 @@ export const ALLOWED_PRODUCT_IMAGE_TYPES = [
     "image/png",
     "image/webp",
 ] as const;
+
+export const CURRENCY_SYMBOL = process.env.CURRENCY_SYMBOL || "₹";
+
+export const DEFAULT_USER_IMAGE = "/images/avatars/images.png";

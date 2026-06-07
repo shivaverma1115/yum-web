@@ -11,12 +11,18 @@ export async function GET(request: NextRequest) {
     const page = Number(searchParams.get("page") ?? "1");
     const limit = Number(searchParams.get("limit") ?? "10");
     const search = searchParams.get("search") ?? undefined;
+    const categories = searchParams
+      .get("categories")
+      ?.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
 
     const adminClient = createAdminClient();
     const result = await listProductsWithSupabase(adminClient, {
       page,
       limit,
       search,
+      categories,
     });
 
     if (!result.success) {
