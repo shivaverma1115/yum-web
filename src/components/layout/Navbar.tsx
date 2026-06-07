@@ -6,6 +6,7 @@ import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { useLogout } from "@/lib/auth/useLogout";
 import { UserRole } from "@/types/user";
+import { getUserDisplayName } from "@/lib/user/display-name";
 
 export default function Navbar() {
     const handleLogout = useLogout();
@@ -808,9 +809,9 @@ export default function Navbar() {
 
                                         <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5 dark:bg-default-50">
                                             <ul className="flex flex-col gap-1">
-                                                {user?.full_name ? (
+                                                {user ? (
                                                     <li className="px-3 py-2 text-sm font-medium text-default-800">
-                                                        {user.full_name}
+                                                        {getUserDisplayName(user)}
                                                     </li>
                                                 ) : null}
                                                 {isAdmin ? (

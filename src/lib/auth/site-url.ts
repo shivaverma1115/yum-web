@@ -16,13 +16,11 @@ export function getSiteUrl(request?: NextRequest): string {
 
 export function getPasswordResetCallbackUrl(request?: NextRequest): string {
   const siteUrl = getSiteUrl(request);
-  const next = encodeURIComponent("/reset-password");
-  return `${siteUrl}/auth/callback?next=${next}`;
+  return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/reset-password")}`;
 }
 
-/** Where Supabase sends users after clicking the signup confirmation link. */
+/** Used by signUp; confirmation emails use token_hash templates (Supabase Dashboard → Email Templates). */
 export function getEmailConfirmRedirectUrl(request?: NextRequest): string {
   const siteUrl = getSiteUrl(request);
-  const next = encodeURIComponent("/login");
-  return `${siteUrl}/auth/callback?next=${next}`;
+  return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/home")}`;
 }

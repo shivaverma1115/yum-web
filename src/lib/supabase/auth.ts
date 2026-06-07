@@ -41,7 +41,7 @@ export async function loginWithSupabase(
   if (error) {
     return {
       success: false,
-      message: error.message,
+      message: mapAuthErrorMessage(error.message),
       status: normalizeHttpStatus(error.status),
       errors: {},
     };
@@ -73,11 +73,6 @@ export async function loginWithSupabase(
   };
 }
 
-// Register with Supabase
-export type RegisterPayload = Pick<IUser, "full_name" | "email"> & {
-  password: string;
-};
-
 export type RegisterResult =
   | {
     success: true;
@@ -91,14 +86,13 @@ export type RegisterResult =
     errors?: Record<string, string>;
   };
 
-export type RegisterOptions = {
-  /** Service-role client used to write/read profiles (RLS blocks anon before session). */
-  adminClient: SupabaseClient;
-  emailRedirectTo: string;
-};
-
-function mapAuthErrorMessage(message: string): string {
+export function mapAuthErrorMessage(message: string): string {
   const lower = message.toLowerCase();
+
+  if (lower.includes("email not confirmed")) {
+    return "Please verify your email. We sent a confirmation link to your inbox — check spam/junk if you don't see it.";
+  }
+
   if (lower.includes("rate limit")) {
     return "Too many emails sent. Wait an hour, use custom SMTP in Supabase, or disable email confirmation for development.";
   }
@@ -111,14 +105,14 @@ function mapAuthErrorMessage(message: string): string {
 function buildRegisterUserStub(
   userId: string,
   email: string,
-  full_name: string,
+  first_name: string,
+  last_name: string,
 ): IUser {
   return {
     id: userId,
     email,
-    full_name,
-    first_name: "",
-    last_name: "",
+    first_name,
+    last_name,
     user_name: "",
     phone: "",
     country: "",
@@ -133,13 +127,15 @@ async function upsertProfileWithAdmin(
   adminClient: SupabaseClient,
   userId: string,
   email: string,
-  full_name: string,
+  first_name: string,
+  last_name: string,
 ): Promise<string | null> {
   const { error } = await adminClient.from("profiles").upsert(
     {
       id: userId,
       email,
-      full_name,
+      first_name,
+      last_name,
       role: UserRole.USER,
     },
     { onConflict: "id" },
@@ -155,7 +151,7 @@ async function getProfileByUserIdAdmin(
   const { data, error } = await adminClient
     .from("profiles")
     .select(
-      "id, email, full_name, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
+      "id, email, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -167,17 +163,24 @@ async function getProfileByUserIdAdmin(
   return data as IUser;
 }
 
+export type RegisterPayload = Pick<IUser, "email"> & {
+  password: string;
+};
+
+export type RegisterOptions = {
+  adminClient: SupabaseClient;
+  emailRedirectTo: string;
+};
+
 export async function registerWithSupabase(
   supabase: SupabaseClient,
   input: RegisterPayload,
   options: RegisterOptions,
 ): Promise<RegisterResult> {
   const email = input.email?.trim() ?? "";
-  const full_name = input.full_name?.trim() ?? "";
   const password = input.password ?? "";
 
   const errors: Record<string, string> = {};
-  if (!full_name) errors.full_name = "Full name is required.";
   if (!email) errors.email = "Email is required.";
   if (!password) errors.password = "Password is required.";
   if (password && password.length < 6) {
@@ -198,9 +201,6 @@ export async function registerWithSupabase(
     password,
     options: {
       emailRedirectTo: options.emailRedirectTo,
-      data: {
-        full_name,
-      },
     },
   });
 
@@ -237,7 +237,8 @@ export async function registerWithSupabase(
     options.adminClient,
     data.user.id,
     email,
-    full_name,
+    "",
+    "",
   );
 
   if (profileError) {
@@ -253,7 +254,7 @@ export async function registerWithSupabase(
   const profile =
     (await getProfileByUserId(supabase, data.user.id)) ??
     (await getProfileByUserIdAdmin(options.adminClient, data.user.id)) ??
-    buildRegisterUserStub(data.user.id, email, full_name);
+    buildRegisterUserStub(data.user.id, email, "", "");
 
   return {
     success: true,
@@ -295,11 +296,11 @@ export type ForgotPasswordPayload = {
 export type ForgotPasswordResult =
   | { success: true }
   | {
-      success: false;
-      message: string;
-      status: number;
-      errors?: Record<string, string>;
-    };
+    success: false;
+    message: string;
+    status: number;
+    errors?: Record<string, string>;
+  };
 
 export async function requestPasswordResetWithSupabase(
   supabase: SupabaseClient,
@@ -340,11 +341,11 @@ export type ResetPasswordPayload = {
 export type ResetPasswordResult =
   | { success: true }
   | {
-      success: false;
-      message: string;
-      status: number;
-      errors?: Record<string, string>;
-    };
+    success: false;
+    message: string;
+    status: number;
+    errors?: Record<string, string>;
+  };
 
 export async function updatePasswordWithSupabase(
   supabase: SupabaseClient,

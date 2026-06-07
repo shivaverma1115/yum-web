@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
 
 function safeNextPath(value: string | null): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/login";
+    return "/home";
   }
   return value;
 }
@@ -18,13 +18,20 @@ function loginWithError(origin: string, message?: string) {
   return NextResponse.redirect(url);
 }
 
+/**
+ * Cross-browser email confirmation (token_hash).
+ * Does not require the PKCE code verifier from the signup browser.
+ */
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;
-  const code = requestUrl.searchParams.get("code");
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
   const next = safeNextPath(requestUrl.searchParams.get("next"));
   const origin = requestUrl.origin;
+
+  if (!token_hash || !type) {
+    return loginWithError(origin, "Invalid confirmation link.");
+  }
 
   const successUrl = new URL(next, origin);
   successUrl.searchParams.set("confirmed", "1");
@@ -40,36 +47,14 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash,
+    type: type as EmailOtpType,
+  });
 
-    if (error) {
-      return loginWithError(origin, error.message);
-    }
-
-    return response;
+  if (error) {
+    return loginWithError(origin, error.message);
   }
 
-  if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: type as EmailOtpType,
-    });
-
-    if (error) {
-      return loginWithError(origin, error.message);
-    }
-
-    return response;
-  }
-
-  const authError =
-    requestUrl.searchParams.get("error_description") ??
-    requestUrl.searchParams.get("error");
-
-  if (authError) {
-    return loginWithError(origin, authError);
-  }
-
-  return NextResponse.redirect(new URL("/login?error=missing_code", origin));
+  return response;
 }

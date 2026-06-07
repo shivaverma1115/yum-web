@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import AdminLayoutShell from "@/components/layout/AdminLayoutShell";
+import LayoutShell from "@/components/layout/LayoutShell";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <AdminLayoutShell>{children}</AdminLayoutShell>;
+  return <LayoutShell>{children}</LayoutShell>;
 }

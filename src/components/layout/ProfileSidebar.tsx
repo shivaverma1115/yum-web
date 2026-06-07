@@ -157,15 +157,15 @@ function AdminNavMenu({ openSectionId, onToggle }: AdminNavMenuProps) {
   );
 }
 
-type AdminSidebarProps = {
+type ProfileSidebarProps = {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 };
 
-export default function AdminSidebar({
+export default function ProfileSidebar({
   mobileOpen = false,
   onMobileClose,
-}: AdminSidebarProps) {
+}: ProfileSidebarProps) {
   const pathname = usePathname();
   const handleLogout = useLogout();
   const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
@@ -200,7 +200,7 @@ export default function AdminSidebar({
         }`}
       >
         <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
-          <Link href="/admin/dashboard" className="inline-flex shrink-0">
+          <Link href="/user/dashboard" className="inline-flex shrink-0">
             <img
               src="/images/logo-dark.png"
               alt="logo"

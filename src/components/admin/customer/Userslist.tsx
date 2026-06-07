@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { formatCustomerSince } from "@/lib/constants";
-import { Eye, Pencil, Trash } from "lucide-react";
+import { getUserDisplayName } from "@/lib/user/display-name";
+import { Eye, Pencil, Trash, TriangleAlert } from "lucide-react";
 
 const DEFAULT_LIMIT = 10;
 
@@ -20,13 +21,6 @@ type CustomersListResponse = {
     totalPages: number;
   };
 };
-
-function displayName(user: IUser) {
-  const name = user.full_name?.trim();
-  if (name) return name;
-  const combined = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
-  return combined || user.user_name || "—";
-}
 
 export default function Userslist() {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -103,21 +97,36 @@ export default function Userslist() {
     setSearch(searchInput);
   };
 
-  const handleDelete = async (user: IUser) => {
+  const refreshAfterDelete = () => {
+    if (users.length === 1 && page > 1) {
+      setPage((current) => current - 1);
+    } else {
+      setReloadToken((current) => current + 1);
+    }
+  };
+
+  const handleDelete = async (user: IUser, force = false) => {
     if (!user.id) return;
 
-    const name = displayName(user);
-    const confirmed = window.confirm(
-      `Delete customer "${name}"? This cannot be undone.`,
-    );
+    const name = getUserDisplayName(user);
+    const confirmed = force
+      ? window.confirm(
+          `FORCE DELETE "${name}"?\n\nThis permanently removes:\n- All orders linked to this customer\n- All products they created (including storage images)\n- Their account and profile\n\nThis cannot be undone.`,
+        )
+      : window.confirm(
+          `Delete customer "${name}"? This cannot be undone.`,
+        );
+
     if (!confirmed) return;
 
     setDeletingId(user.id);
 
     try {
-      const response = await fetch(`/api/admin/customers/${user.id}`, {
-        method: "DELETE",
-      });
+      const url = force
+        ? `/api/admin/customers/${user.id}?force=true`
+        : `/api/admin/customers/${user.id}`;
+
+      const response = await fetch(url, { method: "DELETE" });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
@@ -126,11 +135,7 @@ export default function Userslist() {
       }
 
       toast.success(data.message ?? "Customer deleted.");
-      if (users.length === 1 && page > 1) {
-        setPage((current) => current - 1);
-      } else {
-        setReloadToken((current) => current + 1);
-      }
+      refreshAfterDelete();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to delete customer.",
@@ -192,12 +197,6 @@ export default function Userslist() {
                     className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
                   >
                     Email
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
-                  >
-                    Full Name
                   </th>
                   <th
                     scope="col"
@@ -278,7 +277,7 @@ export default function Userslist() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={14}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       Loading customers...
@@ -287,7 +286,7 @@ export default function Userslist() {
                 ) : users.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={14}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       <i data-lucide="search" className="w-5 h-5 text-default-600" />
@@ -304,9 +303,6 @@ export default function Userslist() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.email || "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.full_name || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.first_name || "—"}
@@ -365,6 +361,16 @@ export default function Userslist() {
                           >
                             <Trash className="size-3.5" />
                             {deletingId === user.id ? "..." : "Delete"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingId === user.id}
+                            onClick={() => void handleDelete(user, true)}
+                            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                            title="Delete customer with all orders, products, and images"
+                          >
+                            <TriangleAlert className="size-3.5" />
+                            {deletingId === user.id ? "..." : "Force"}
                           </button>
                         </div>
                       </td>

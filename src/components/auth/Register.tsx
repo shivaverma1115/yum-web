@@ -7,11 +7,10 @@ import { toast } from "react-toastify";
 import { useContextApi } from "@/context-api/use-context";
 import { getSafeRedirect } from "@/lib/auth/redirect";
 import { UserRole, type IUser } from "@/types/user";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { useState } from "react";
 
-type RegisterFormValues = Pick<
-  IUser,
-  "full_name" | "email"
-> & {
+type RegisterFormValues = Pick<IUser, "email"> & {
   password: string;
   confirmPassword: string;
 };
@@ -20,6 +19,7 @@ export default function Register() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setUser } = useContextApi();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -28,7 +28,6 @@ export default function Register() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     defaultValues: {
-      full_name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -37,12 +36,12 @@ export default function Register() {
 
   const password = watch("password");
 
-  const onSubmit = handleSubmit(async ({ full_name, email, password }) => {
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name, email, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -69,10 +68,12 @@ export default function Register() {
         setUser(user);
       }
 
-      router.push(getSafeRedirect(
-        searchParams.get("redirectTo"),
-        user?.role ?? UserRole.USER
-      ));
+      router.push(
+        getSafeRedirect(
+          searchParams.get("redirectTo"),
+          user?.role ?? UserRole.USER,
+        ),
+      );
       router.refresh();
     } catch (error: unknown) {
       const message =
@@ -108,40 +109,11 @@ export default function Register() {
                     Register
                   </h1>
                   <p className="text-sm text-default-500 max-w-md">
-                    Create your account with your name, email, and password.
+                    Create your account with your email and password.
                   </p>
                 </div>
 
                 <form onSubmit={onSubmit} noValidate className="pt-16">
-                  <div className="mb-6">
-                    <label
-                      className="block text-sm font-medium text-default-900 mb-2"
-                      htmlFor="FullName"
-                    >
-                      Full Name
-                    </label>
-                    <input
-                      id="FullName"
-                      type="text"
-                      placeholder="Enter your name"
-                      autoComplete="name"
-                      disabled={isSubmitting}
-                      className="block w-full rounded-full py-2.5 px-4 bg-white border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60"
-                      {...register("full_name", {
-                        required: "Full name is required.",
-                        minLength: {
-                          value: 2,
-                          message: "Enter at least 2 characters.",
-                        },
-                      })}
-                    />
-                    {errors.full_name?.message ? (
-                      <span className="text-red-500 text-sm">
-                        {errors.full_name.message}
-                      </span>
-                    ) : null}
-                  </div>
-
                   <div className="mb-6">
                     <label
                       className="block text-sm font-medium text-default-900 mb-2"
@@ -181,7 +153,7 @@ export default function Register() {
                     <div className="flex" data-x-password>
                       <input
                         id="form-password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         autoComplete="new-password"
                         disabled={isSubmitting}
@@ -198,15 +170,11 @@ export default function Register() {
                         type="button"
                         id="password-addon"
                         className="password-toggle inline-flex items-center justify-center py-2.5 px-4 border rounded-e-full bg-white -ms-px border-default-200 dark:bg-default-50"
+                        onClick={() => setShowPassword(!showPassword)}
                       >
-                        <i
-                          className="password-eye-on h-5 w-5 text-default-600"
-                          data-lucide="eye"
-                        />
-                        <i
-                          className="password-eye-off h-5 w-5 text-default-600"
-                          data-lucide="eye-off"
-                        />
+                        {
+                          showPassword ? <EyeIcon className="h-5 w-5 text-default-600" /> : <EyeOffIcon className="h-5 w-5 text-default-600" />
+                        }
                       </button>
                     </div>
                     {errors.password?.message ? (

@@ -222,31 +222,47 @@ export default function Checkout() {
                                 <h4 className="text-lg font-medium text-default-800 mb-4">
                                     Order type
                                 </h4>
-                                <div className="space-y-3">
-                                    {FULFILLMENT_OPTIONS.map((option) => (
-                                        <label
-                                            key={option.value}
-                                            className="flex items-start gap-3 cursor-pointer rounded-lg border border-default-200 p-4 hover:border-primary/50"
-                                        >
-                                            <input
-                                                type="radio"
-                                                value={option.value}
-                                                className="mt-1 text-primary w-5 h-5 border-default-200 focus:ring-0"
-                                                {...register("fulfillment_type", {
-                                                    required: "Select an order type.",
-                                                })}
-                                            />
-                                            <span>
-                                                <span className="block text-sm font-medium text-default-800">
-                                                    {option.label}
+                                <div className="grid grid-cols-3 gap-3">
+                                    {FULFILLMENT_OPTIONS.map((option) => {
+                                        const inputId = `fulfillment-${option.value}`;
+                                        const isSelected = fulfillmentType === option.value;
+
+                                        return (
+                                            <label
+                                                key={option.value}
+                                                htmlFor={inputId}
+                                                className={`flex flex-col items-center text-center gap-2 cursor-pointer rounded-lg border p-3 sm:p-4 hover:border-primary/50 ${
+                                                    isSelected
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-default-200"
+                                                }`}
+                                            >
+                                                <input
+                                                    id={inputId}
+                                                    type="radio"
+                                                    value={option.value}
+                                                    className="text-primary w-5 h-5 border-default-200 focus:ring-0"
+                                                    {...register("fulfillment_type", {
+                                                        required: "Select an order type.",
+                                                    })}
+                                                />
+                                                <span>
+                                                    <span className="block text-xs sm:text-sm font-medium text-default-800">
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="block text-[10px] sm:text-xs text-default-500 mt-0.5">
+                                                        {option.description}
+                                                    </span>
                                                 </span>
-                                                <span className="block text-xs text-default-500 mt-0.5">
-                                                    {option.description}
-                                                </span>
-                                            </span>
-                                        </label>
-                                    ))}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
+                                {errors.fulfillment_type?.message ? (
+                                    <span className="text-red-500 text-sm">
+                                        {errors.fulfillment_type.message}
+                                    </span>
+                                ) : null}
                             </div>
 
                             <div>
@@ -274,6 +290,7 @@ export default function Checkout() {
                                         <input
                                             id="firstName"
                                             type="text"
+                                            placeholder="Enter your first name"
                                             disabled={isSubmitting}
                                             className={inputClass}
                                             {...register("first_name", { required: "First name is required." })}
@@ -290,6 +307,7 @@ export default function Checkout() {
                                         <input
                                             id="lastName"
                                             type="text"
+                                            placeholder="Enter your last name"
                                             disabled={isSubmitting}
                                             className={inputClass}
                                             {...register("last_name", { required: "Last name is required." })}
@@ -306,6 +324,7 @@ export default function Checkout() {
                                         <input
                                             id="email"
                                             type="email"
+                                            placeholder="Enter your email"
                                             disabled={isSubmitting}
                                             className={inputClass}
                                             {...register("email", {
@@ -330,7 +349,7 @@ export default function Checkout() {
                                             type="tel"
                                             disabled={isSubmitting}
                                             className={inputClass}
-                                            placeholder="+1 123-456-7890"
+                                            placeholder="Enter your phone number"
                                             {...register("phone", { required: "Phone is required." })}
                                         />
                                         {errors.phone?.message ? (
@@ -355,7 +374,7 @@ export default function Checkout() {
                                                 type="text"
                                                 disabled={isSubmitting}
                                                 className={inputClass}
-                                                placeholder="Enter your address"
+                                                placeholder="Enter your street address"
                                                 {...register("address", {
                                                     required: "Address is required for delivery.",
                                                 })}
@@ -408,6 +427,7 @@ export default function Checkout() {
                                             <input
                                                 id="city"
                                                 type="text"
+                                                placeholder="Enter your city"
                                                 disabled={isSubmitting}
                                                 className={inputClass}
                                                 {...register("city", { required: "City is required." })}
@@ -424,6 +444,7 @@ export default function Checkout() {
                                             <input
                                                 id="zipCode"
                                                 type="text"
+                                                placeholder="Enter your zip code"
                                                 disabled={isSubmitting}
                                                 className={inputClass}
                                                 {...register("zip_code", { required: "Zip code is required." })}
@@ -451,7 +472,7 @@ export default function Checkout() {
                                             type="text"
                                             disabled={isSubmitting}
                                             className={inputClass}
-                                            placeholder="e.g. Today at 6:30 PM"
+                                            placeholder="Enter your preferred pickup time"
                                             {...register("pickup_time")}
                                         />
                                     </div>
@@ -473,7 +494,7 @@ export default function Checkout() {
                                                 type="text"
                                                 disabled={isSubmitting}
                                                 className={inputClass}
-                                                placeholder="e.g. 12"
+                                                placeholder="Enter your table number"
                                                 {...register("table_number", {
                                                     required: "Table number is required.",
                                                 })}
@@ -493,7 +514,7 @@ export default function Checkout() {
                                                 type="text"
                                                 disabled={isSubmitting}
                                                 className={inputClass}
-                                                placeholder="e.g. 4"
+                                                placeholder="Enter your party size"
                                                 {...register("party_size")}
                                             />
                                         </div>
@@ -623,8 +644,8 @@ export default function Checkout() {
                                             ? "Processing payment..."
                                             : "Placing order..."
                                         : paymentMethod === "online"
-                                          ? "Pay & Place Order"
-                                          : "Place Order"}
+                                            ? "Pay & Place Order"
+                                            : "Place Order"}
                                 </button>
                             </div>
                         </div>

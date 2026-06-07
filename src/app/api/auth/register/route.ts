@@ -15,14 +15,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
     const adminClient = createAdminClient();
-    const result = await registerWithSupabase(
-      supabase,
-      payload,
-      {
-        adminClient,
-        emailRedirectTo: getEmailConfirmRedirectUrl(request),
-      },
-    );
+    const result = await registerWithSupabase(supabase, payload, {
+      adminClient,
+      emailRedirectTo: getEmailConfirmRedirectUrl(request),
+    });
 
     if (!result.success) {
       return NextResponse.json(
@@ -38,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: result.needsEmailConfirmation
-        ? "Account created. Check your email to confirm, then sign in."
+        ? "Account created. Check your email for the confirmation link."
         : "Registered successfully.",
       data: {
         user: result.user,

@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useState, type ReactNode } from "react";
-import AdminSidebar from "@/components/layout/AdminSidebar";
-import AdminTopbar from "@/components/layout/AdminTopbar";
+import ProfileSidebar from "@/components/layout/ProfileSidebar";
+import ProfileTopbar from "@/components/layout/ProfileTopbar";
 
-type AdminLayoutShellProps = {
+type LayoutShellProps = {
   children: ReactNode;
 };
 
-export default function AdminLayoutShell({ children }: AdminLayoutShellProps) {
+export default function LayoutShell({ children }: LayoutShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
@@ -23,13 +23,13 @@ export default function AdminLayoutShell({ children }: AdminLayoutShellProps) {
         />
       ) : null}
 
-      <AdminSidebar
+      <ProfileSidebar
         mobileOpen={mobileSidebarOpen}
         onMobileClose={closeMobileSidebar}
       />
 
       <div className="min-h-screen flex flex-col">
-        <AdminTopbar onMenuClick={() => setMobileSidebarOpen(true)} />
+        <ProfileTopbar onMenuClick={() => setMobileSidebarOpen(true)} />
         <main className="flex-1">
           <div className="w-full lg:ps-64">
             <div className="p-6 page-content">{children}</div>

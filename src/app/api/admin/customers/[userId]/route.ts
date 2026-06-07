@@ -5,6 +5,7 @@ import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   deleteCustomerWithSupabase,
+  forceDeleteCustomerWithSupabase,
   getCustomerByIdWithSupabase,
   updateCustomerWithSupabase,
 } from "@/lib/supabase/customers";
@@ -60,7 +61,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const auth = await requireAdmin();
 
@@ -72,19 +73,41 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     const { userId } = await context.params;
+    const force = request.nextUrl.searchParams.get("force") === "true";
+
+    if (force && auth.profile.id === userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You cannot force delete your own account.",
+        },
+        { status: 400 },
+      );
+    }
+
     const adminClient = createAdminClient();
-    const result = await deleteCustomerWithSupabase(adminClient, userId);
+    const result = force
+      ? await forceDeleteCustomerWithSupabase(adminClient, userId)
+      : await deleteCustomerWithSupabase(adminClient, userId);
 
     if (!result.success) {
       return NextResponse.json(
-        { success: false, message: result.message },
+        {
+          success: false,
+          message: result.message,
+          ...(result.associations
+            ? { associations: result.associations }
+            : {}),
+        },
         { status: result.status },
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: "Customer deleted successfully.",
+      message: force
+        ? "Customer and all associated data deleted successfully."
+        : "Customer deleted successfully.",
     });
   } catch (error) {
     logError(error, {

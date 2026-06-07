@@ -61,7 +61,11 @@ function redirectWithCookies(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (isApiRoute(pathname) || pathname.startsWith("/auth/callback")) {
+  if (
+    isApiRoute(pathname) ||
+    pathname.startsWith("/auth/callback") ||
+    pathname.startsWith("/auth/confirm")
+  ) {
     return NextResponse.next();
   }
 

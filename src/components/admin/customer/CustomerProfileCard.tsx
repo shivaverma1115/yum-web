@@ -43,12 +43,14 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
                 {displayName}
               </h4>
               <ChevronDown
-                className={`h-5 w-5 shrink-0 text-default-500 transition-transform ${
-                  expanded ? "rotate-180" : ""
-                }`}
+                className={`h-5 w-5 shrink-0 text-default-500 transition-transform ${expanded ? "rotate-180" : ""
+                  }`}
                 aria-hidden
               />
             </div>
+            <p className="text-xs text-default-500 truncate mt-1">
+              {displayValue(customer.id)}
+            </p>
             <p className="text-sm text-default-500 truncate mt-1">
               {customer.email || "—"}
             </p>
@@ -64,7 +66,7 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
 
       {expanded ? (
         <div className="px-6 pb-6 pt-0 border-t border-default-200 text-start space-y-4">
-          <div>
+          <div className="mt-4">
             <h5 className="text-xs uppercase tracking-wide text-default-500 mb-2">
               About
             </h5>
@@ -74,10 +76,6 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
           </div>
 
           <dl className="grid gap-2 text-sm">
-            <div className="flex gap-2">
-              <dt className="text-default-500 shrink-0">Full name</dt>
-              <dd className="text-default-800">{displayName}</dd>
-            </div>
             <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">First name</dt>
               <dd className="text-default-800">{displayValue(customer.first_name)}</dd>
@@ -124,12 +122,6 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
                 {customer.updated_at
                   ? formatCustomerSince(customer.updated_at)
                   : "—"}
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-default-500 shrink-0">Customer ID</dt>
-              <dd className="text-default-800 font-mono text-xs break-all">
-                {displayValue(customer.id)}
               </dd>
             </div>
           </dl>

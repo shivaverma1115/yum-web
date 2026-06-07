@@ -1,14 +1,15 @@
 "use client";
 
 import { useContextApi } from '@/context-api/use-context';
+import { getUserDisplayName } from '@/lib/user/display-name';
 import { MenuIcon } from 'lucide-react';
 import React from 'react'
 
-type AdminTopbarProps = {
+type ProfileTopbarProps = {
     onMenuClick?: () => void;
 };
 
-export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
+export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
     const { user } = useContextApi();
     return (
         <div>
@@ -174,7 +175,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                                 <button id="hs-dropdown-with-header" type="button" className="hs-dropdown-toggle inline-flex flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium text-default-700 align-middle transition-all text-xs">
                                     <img className="inline-block h-10 w-10 rounded-full" src="/images/avatars/avatar1.png" />
                                     <div className="lg:block text-start hidden">
-                                        <p className="text-sm font-medium text-default-700">{user?.full_name}</p>
+                                        <p className="text-sm font-medium text-default-700">{user ? getUserDisplayName(user) : ""}</p>
                                         <p className="text-xs text-default-500 mt-1">{user?.role}</p>
                                     </div>
                                 </button>

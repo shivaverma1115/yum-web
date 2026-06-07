@@ -8,7 +8,7 @@ export async function getProfileByUserId(
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, email, full_name, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
+      "id, email, first_name, last_name, user_name, phone, country, state, zip_code, description, role, created_at, updated_at",
     )
     .eq("id", userId)
     .maybeSingle();

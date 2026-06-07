@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { IUser } from "@/types/user";
+import { getUserDisplayName } from "@/lib/user/display-name";
 
 type CustomerResponse = {
   success: boolean;
@@ -10,10 +11,7 @@ type CustomerResponse = {
 };
 
 export function getCustomerDisplayName(user: IUser) {
-  const name = user.full_name?.trim();
-  if (name) return name;
-  const combined = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim();
-  return combined || user.user_name || "Customer";
+  return getUserDisplayName(user);
 }
 
 export function getCustomerLocation(user: IUser) {
