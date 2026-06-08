@@ -16,11 +16,13 @@ create index if not exists product_categories_is_active_idx
 
 alter table public.product_categories enable row level security;
 
+drop policy if exists "Anyone can read active product categories" on public.product_categories;
 create policy "Anyone can read active product categories"
 on public.product_categories
 for select
 using (is_active = true);
 
+drop policy if exists "Admins can manage product categories" on public.product_categories;
 create policy "Admins can manage product categories"
 on public.product_categories
 for all

@@ -3,7 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, X } from "lucide-react";
+import {
+  ChevronDown,
+  Headphones,
+  Hotel,
+  LayoutGrid,
+  ListOrdered,
+  LogOut,
+  Settings,
+  Settings2,
+  ShoppingBag,
+  UserCog,
+  Users,
+  Wallet,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useLogout } from "@/lib/auth/useLogout";
 import {
   ADMIN_NAV_ITEMS,
@@ -28,6 +43,20 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href;
 }
 
+const NAV_ICON_MAP: Record<string, LucideIcon> = {
+  "layout-grid": LayoutGrid,
+  "settings-2": Settings2,
+  "list-ordered": ListOrdered,
+  users: Users,
+  hotel: Hotel,
+  "shopping-bag": ShoppingBag,
+  "user-cog": UserCog,
+  wallet: Wallet,
+  settings: Settings,
+  "log-out": LogOut,
+  headphones: Headphones,
+};
+
 function NavIcon({
   name,
   className = "w-5 h-5 shrink-0",
@@ -35,7 +64,21 @@ function NavIcon({
   name: string;
   className?: string;
 }) {
-  return <i data-lucide={name} className={className} aria-hidden />;
+  const Icon = NAV_ICON_MAP[name];
+  if (!Icon) return null;
+
+  return <Icon className={className} aria-hidden />;
+}
+
+function SubNavBullet() {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+      <span
+        className="h-1.5 w-1.5 rounded-full bg-current opacity-60"
+        aria-hidden
+      />
+    </span>
+  );
 }
 
 function CollapsibleNavSection({
@@ -150,7 +193,7 @@ function AdminNavMenu({ openSectionId, onToggle, isAdmin }: AdminNavMenuProps) {
           >
             {item.children.map((child) => (
               <SubNavLink key={child.href} href={child.href}>
-                <NavIcon name="dot" className="w-6 h-6 shrink-0" />
+                <SubNavBullet />
                 {child.label}
               </SubNavLink>
             ))}
@@ -244,7 +287,7 @@ export default function ProfileSidebar({
               style={{ backgroundImage: "url('/images/other/offer-bg.png')" }}
             >
               <div className="-mt-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-default-100 bg-white text-primary shadow-lg dark:bg-default-50">
-                <i data-lucide="headphones" className="h-6 w-6" />
+                <Headphones className="h-6 w-6" aria-hidden />
               </div>
               <p className="mb-4 text-sm text-default-700">
                 🔥 Upgrade Your Plan. Find Out here

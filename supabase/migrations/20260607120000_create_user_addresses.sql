@@ -38,18 +38,21 @@ create trigger user_addresses_set_updated_at
 
 alter table public.user_addresses enable row level security;
 
+drop policy if exists "Users can read own addresses" on public.user_addresses;
 create policy "Users can read own addresses"
 on public.user_addresses
 for select
 to authenticated
 using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own addresses" on public.user_addresses;
 create policy "Users can insert own addresses"
 on public.user_addresses
 for insert
 to authenticated
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own addresses" on public.user_addresses;
 create policy "Users can update own addresses"
 on public.user_addresses
 for update
@@ -57,6 +60,7 @@ to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own addresses" on public.user_addresses;
 create policy "Users can delete own addresses"
 on public.user_addresses
 for delete

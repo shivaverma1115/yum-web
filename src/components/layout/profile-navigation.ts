@@ -30,15 +30,10 @@ export const ADMIN_NAV_ITEMS: ProfileNavItem[] = [
     icon: "settings-2",
   },
   {
-    type: "group",
-    id: "menuOrders",
+    type: "link",
+    href: "/admin/orders",
     label: "Orders",
     icon: "list-ordered",
-    prefix: "/admin/orders",
-    children: [
-      { href: "/admin/orders", label: "All Orders" },
-      { href: "/admin/orders/1", label: "Order Details" },
-    ],
   },
   {
     type: "link",
