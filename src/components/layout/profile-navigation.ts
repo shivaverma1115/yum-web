@@ -1,11 +1,11 @@
-export type AdminNavLink = {
+export type ProfileNavLink = {
   type: "link";
   href: string;
   label: string;
   icon: string;
 };
 
-export type AdminNavGroup = {
+export type ProfileNavGroup = {
   type: "group";
   id: string;
   label: string;
@@ -14,9 +14,9 @@ export type AdminNavGroup = {
   children: { href: string; label: string }[];
 };
 
-export type AdminNavItem = AdminNavLink | AdminNavGroup;
+export type ProfileNavItem = ProfileNavLink | ProfileNavGroup;
 
-export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+export const ADMIN_NAV_ITEMS: ProfileNavItem[] = [
   {
     type: "link",
     href: "/admin/dashboard",
@@ -107,7 +107,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
 ];
 
 export const ADMIN_NAV_SECTIONS = ADMIN_NAV_ITEMS.filter(
-  (item): item is AdminNavGroup => item.type === "group",
+  (item): item is ProfileNavGroup => item.type === "group",
 ).map(({ id, prefix }) => ({ id, prefix }));
 
 export function getOpenSectionForPath(pathname: string): string | null {
@@ -117,3 +117,12 @@ export function getOpenSectionForPath(pathname: string): string | null {
   );
   return match?.id ?? null;
 }
+
+export const USER_NAV_ITEMS: ProfileNavItem[] = [
+  {
+    type: "link",
+    href: "/user/dashboard",
+    label: "Dashboard",
+    icon: "layout-grid",
+  }
+];

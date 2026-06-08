@@ -43,7 +43,7 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const response = await fetch("/api/me", {
+      const response = await fetch("/api/account/me", {
         credentials: "include",
         cache: "no-store",
       });

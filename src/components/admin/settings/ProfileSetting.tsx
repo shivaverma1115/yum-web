@@ -15,7 +15,7 @@ const emptyAddresses = (): UserAddressesByType => ({
     shipping: null,
 });
 
-export default function AdminSetting() {
+export default function ProfileSetting() {
     const { user, loading } = useContextApi();
     const [addresses, setAddresses] = useState<UserAddressesByType>(emptyAddresses);
     const [addressesLoading, setAddressesLoading] = useState(true);
@@ -88,7 +88,7 @@ export default function AdminSetting() {
                         </div>
                     </div>
 
-                    {loading && !user ? <Preloader /> : <UserDetailsForm user={user ?? undefined} />}
+                    {loading && !user ? <Preloader /> : <UserDetailsForm user={user ?? undefined} mode="self" />}
                 </div>
             </div>
 

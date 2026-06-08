@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import {
@@ -7,24 +8,22 @@ import {
   upsertUserAddressWithSupabase,
 } from "@/lib/supabase/addresses";
 import type { UserAddressInput } from "@/types/user-address";
-import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const auth = await requireAuth();
 
-    if (userError || !user) {
+    if (!auth.authorized) {
       return NextResponse.json(
-        { success: false, message: "You must be signed in." },
-        { status: 401 },
+        { success: false, message: auth.message },
+        { status: auth.status },
       );
     }
 
-    const result = await listUserAddressesWithSupabase(supabase, user.id);
+    const result = await listUserAddressesWithSupabase(
+      auth.supabase,
+      auth.user.id,
+    );
 
     if (!result.success) {
       return NextResponse.json(
@@ -56,16 +55,12 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const auth = await requireAuth();
 
-    if (userError || !user) {
+    if (!auth.authorized) {
       return NextResponse.json(
-        { success: false, message: "You must be signed in." },
-        { status: 401 },
+        { success: false, message: auth.message },
+        { status: auth.status },
       );
     }
 
@@ -83,8 +78,8 @@ export async function PUT(request: NextRequest) {
     }
 
     const result = await upsertUserAddressWithSupabase(
-      supabase,
-      user.id,
+      auth.supabase,
+      auth.user.id,
       payload,
     );
 

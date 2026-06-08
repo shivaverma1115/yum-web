@@ -2,17 +2,16 @@ import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
 import { Metadata } from 'next';
 import dynamic from 'next/dynamic';
-const AdminSetting = dynamic(() => import('@/components/admin/settings/AdminSetting'));
+const AdminProfileSetting = dynamic(() => import('@/components/admin/settings/ProfileSetting'));
 
 export const metadata: Metadata = {
-    title: "Settings",
-    description: "Settings",
+    title: "Admin Profile Settings",
+    description: "Admin Profile Settings",
 };
-export default function AdminSettingsPage() {
+export default function AdminProfileSettingsPage() {
     return (
         <Suspense fallback={<Preloader />}>
-            <AdminSetting />
+            <AdminProfileSetting />
         </Suspense>
     )
 }
-

@@ -25,40 +25,6 @@ const STOREFRONT_ROUTES = [
 
 const LOGIN_PATH = "/login";
 
-function matchesRoute(pathname: string, routes: readonly string[]) {
-  return routes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-}
-
-function isAuthRoute(pathname: string) {
-  return matchesRoute(pathname, AUTH_ROUTES);
-}
-
-function isStorefrontRoute(pathname: string) {
-  return matchesRoute(pathname, STOREFRONT_ROUTES);
-}
-
-/** Guests may only access auth + storefront pages */
-function isPublicRoute(pathname: string) {
-  return isAuthRoute(pathname) || isStorefrontRoute(pathname);
-}
-
-function isApiRoute(pathname: string) {
-  return pathname.startsWith("/api/");
-}
-
-function redirectWithCookies(
-  url: URL,
-  sessionResponse: NextResponse,
-) {
-  const redirectResponse = NextResponse.redirect(url);
-  sessionResponse.cookies.getAll().forEach((cookie) => {
-    redirectResponse.cookies.set(cookie);
-  });
-  return redirectResponse;
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -116,3 +82,37 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
+
+function matchesRoute(pathname: string, routes: readonly string[]) {
+  return routes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+function isAuthRoute(pathname: string) {
+  return matchesRoute(pathname, AUTH_ROUTES);
+}
+
+function isStorefrontRoute(pathname: string) {
+  return matchesRoute(pathname, STOREFRONT_ROUTES);
+}
+
+/** Guests may only access auth + storefront pages */
+function isPublicRoute(pathname: string) {
+  return isAuthRoute(pathname) || isStorefrontRoute(pathname);
+}
+
+function isApiRoute(pathname: string) {
+  return pathname.startsWith("/api/");
+}
+
+function redirectWithCookies(
+  url: URL,
+  sessionResponse: NextResponse,
+) {
+  const redirectResponse = NextResponse.redirect(url);
+  sessionResponse.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie);
+  });
+  return redirectResponse;
+}

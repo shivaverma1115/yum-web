@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
-import { getProfileByUserId } from "@/lib/supabase/profile";
+import { getProfileByUserId } from "@/lib/supabase/account/profile";
 import type { IUser } from "@/types/user";
 
 export type MiddlewareSession = {

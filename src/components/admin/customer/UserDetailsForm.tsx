@@ -10,15 +10,21 @@ import { useContextApi } from "@/context-api/use-context";
 
 export interface UserDetailsFormProps {
   user?: IUser;
+  /** self = own profile via /api/account/customers; admin = manage customers */
+  mode?: "self" | "admin";
 }
 const inputClassName =
   "block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60";
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
-export default function UserDetailsForm({ user }: UserDetailsFormProps) {
+export default function UserDetailsForm({
+  user,
+  mode = "admin",
+}: UserDetailsFormProps) {
   const router = useRouter();
   const isEditMode = Boolean(user?.id);
+  const isSelfMode = mode === "self";
   const { setUser } = useContextApi();
 
   const {
@@ -31,16 +37,18 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const response = await fetch(
-        isEditMode
+      const url = isSelfMode
+        ? "/api/account/customers"
+        : isEditMode
           ? `/api/admin/customers/${user!.id}`
-          : "/api/admin/customers",
-        {
-          method: isEditMode ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
-        },
-      );
+          : "/api/admin/customers";
+      const method = isSelfMode || isEditMode ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
       const data = await response.json().catch(() => ({}));
 
@@ -48,7 +56,9 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
         toast.error(data.message ?? "Something went wrong.");
         return;
       }
-      setUser(data.data.user);
+      if (isSelfMode) {
+        setUser(data.data.user);
+      }
       toast.success(data.message);
     } catch (error) {
       toast.error(
@@ -253,31 +263,33 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
             ) : null}
           </div>
 
-          <div>
-            <label
-              className="block text-sm font-medium text-default-900 mb-2"
-              htmlFor="role"
-            >
-              Role <span className="text-required">*</span>
-            </label>
-            <select
-              id="role"
-              disabled={isSubmitting}
-              className={inputClassName}
-              {...register("role", {
-                required: "Role is required.",
-              })}
-            >
-              {Object.values(UserRole).map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-            {errors.role?.message ? (
-              <span className={errorClassName}>{errors.role.message}</span>
-            ) : null}
-          </div>
+          {!isSelfMode ? (
+            <div>
+              <label
+                className="block text-sm font-medium text-default-900 mb-2"
+                htmlFor="role"
+              >
+                Role <span className="text-required">*</span>
+              </label>
+              <select
+                id="role"
+                disabled={isSubmitting}
+                className={inputClassName}
+                {...register("role", {
+                  required: "Role is required.",
+                })}
+              >
+                {Object.values(UserRole).map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              {errors.role?.message ? (
+                <span className={errorClassName}>{errors.role.message}</span>
+              ) : null}
+            </div>
+          ) : null}
 
           <div>
             <label
@@ -334,15 +346,17 @@ export default function UserDetailsForm({ user }: UserDetailsFormProps) {
         </div>
 
         <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 rounded-full bg-primary/10 px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-60"
-          >
-            <X className="size-5" />
-            Close
-          </button>
+          {!isSelfMode ? (
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="flex items-center justify-center gap-2 rounded-full bg-primary/10 px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary hover:text-white disabled:opacity-60"
+            >
+              <X className="size-5" />
+              Close
+            </button>
+          ) : null}
 
           <button
             type="submit"

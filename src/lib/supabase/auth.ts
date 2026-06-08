@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { UserRole, type IUser } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "../constants";
-import { getProfileByUserId } from "./profile";
+import { getProfileByUserId } from "./account/profile";
 
 function normalizeHttpStatus(status: number | undefined, fallback = 400): number {
   if (typeof status === "number" && status >= 200 && status <= 599) {

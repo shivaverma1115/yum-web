@@ -4,7 +4,7 @@ import { validateCheckoutPayload } from "@/lib/checkout/validate-order-payload";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOrderWithSupabase } from "@/lib/supabase/orders";
-import { getCurrentUser } from "@/lib/supabase/profile";
+import { getCurrentUser } from "@/lib/supabase/account/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckoutPayload } from "@/types/order";
 

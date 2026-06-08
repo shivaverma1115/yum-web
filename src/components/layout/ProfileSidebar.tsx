@@ -8,7 +8,9 @@ import { useLogout } from "@/lib/auth/useLogout";
 import {
   ADMIN_NAV_ITEMS,
   getOpenSectionForPath,
-} from "@/components/layout/admin-navigation";
+  USER_NAV_ITEMS,
+} from "@/components/layout/profile-navigation";
+import { useContextApi } from "@/context-api/use-context";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -119,12 +121,14 @@ function NavLink({ href, children }: { href: string; children: ReactNode }) {
 type AdminNavMenuProps = {
   openSectionId: string | null;
   onToggle: (sectionId: string) => void;
+  isAdmin: boolean;
 };
 
-function AdminNavMenu({ openSectionId, onToggle }: AdminNavMenuProps) {
+function AdminNavMenu({ openSectionId, onToggle, isAdmin }: AdminNavMenuProps) {
+  const navItems = isAdmin ? ADMIN_NAV_ITEMS : USER_NAV_ITEMS;
   return (
     <>
-      {ADMIN_NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         if (item.type === "link") {
           return (
             <NavLink key={item.href} href={item.href}>
@@ -166,6 +170,8 @@ export default function ProfileSidebar({
   mobileOpen = false,
   onMobileClose,
 }: ProfileSidebarProps) {
+  const { user } = useContextApi();
+  const isAdmin = user?.role === "admin";
   const pathname = usePathname();
   const handleLogout = useLogout();
   const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
@@ -193,11 +199,10 @@ export default function ProfileSidebar({
     <div>
       <div
         id="application-sidebar"
-        className={`fixed inset-y-0 start-0 z-[60] w-64 transform border-e border-default-200 bg-white transition-all duration-300 overflow-y-auto dark:bg-default-50 lg:bottom-0 lg:right-auto lg:block lg:translate-x-0 ${
-          mobileOpen
+        className={`fixed inset-y-0 start-0 z-[60] w-64 transform border-e border-default-200 bg-white transition-all duration-300 overflow-y-auto dark:bg-default-50 lg:bottom-0 lg:right-auto lg:block lg:translate-x-0 ${mobileOpen
             ? "translate-x-0"
             : "-translate-x-full pointer-events-none lg:pointer-events-auto"
-        }`}
+          }`}
       >
         <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
           <Link href="/user/dashboard" className="inline-flex shrink-0">
@@ -227,6 +232,7 @@ export default function ProfileSidebar({
             <AdminNavMenu
               openSectionId={openSectionId}
               onToggle={handleToggle}
+              isAdmin={isAdmin}
             />
           </ul>
         </div>
@@ -252,7 +258,7 @@ export default function ProfileSidebar({
             </div>
           </li>
 
-          <NavLink href="/admin/settings">
+          <NavLink href={isAdmin ? "/admin/settings" : "/user/settings"}>
             <NavIcon name="settings" />
             Settings
           </NavLink>

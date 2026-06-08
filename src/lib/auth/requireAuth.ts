@@ -1,8 +1,11 @@
-import { UserRole } from "@/types/user";
 import { getCurrentUser } from "@/lib/supabase/account/profile";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireAdmin() {
+type RequireAuthOptions = {
+  requireEmail?: boolean;
+};
+
+export async function requireAuth(options: RequireAuthOptions = {}) {
   const supabase = await createClient();
   const session = await getCurrentUser(supabase);
 
@@ -14,11 +17,11 @@ export async function requireAdmin() {
     };
   }
 
-  if (!session.user || session.user?.role !== UserRole.ADMIN) {
+  if (options.requireEmail && !session.authUser.email) {
     return {
       authorized: false as const,
-      status: 403,
-      message: "You do not have permission to perform this action.",
+      status: 401,
+      message: "You must be signed in to change your password.",
     };
   }
 
