@@ -11,7 +11,11 @@ import {
     fetchProductsPage,
     getProductImages,
 } from "@/lib/api/products";
+import HtmlContent from "@/components/ui/HtmlContent";
+import OrderTypeBadges from "@/components/ui/OrderTypeBadges";
+import { isRichTextEmpty } from "@/lib/rich-text";
 import { formatCurrency } from "@/lib/constants";
+import { calculateDiscountedPrice } from "@/lib/products/discount";
 import type { IProduct } from "@/types/product";
 
 interface ProductDetailsProps {
@@ -110,10 +114,10 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
         );
     }
 
-    const description =
-        product.long_description?.trim() ||
-        product.short_description?.trim() ||
-        "No description available.";
+    const longDescription = product.long_description?.trim() ?? "";
+    const shortDescription = product.short_description?.trim() ?? "";
+    const hasLongDescription = !isRichTextEmpty(longDescription);
+    const hasShortDescription = !isRichTextEmpty(shortDescription);
 
     return (
         <div>
@@ -163,14 +167,25 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                 {product.category}
                             </h5>
 
-                            <p className="text-sm text-default-500 mb-4">{description}</p>
+                            {hasShortDescription ? (
+                                <HtmlContent
+                                    html={shortDescription}
+                                    className="mb-3 text-sm text-default-500"
+                                />
+                            ) : null}
+                            {hasLongDescription ? (
+                                <HtmlContent
+                                    html={longDescription}
+                                    className="mb-4 text-sm text-default-500"
+                                />
+                            ) : !hasShortDescription ? (
+                                <p className="mb-4 text-sm text-default-500">
+                                    No description available.
+                                </p>
+                            ) : null}
 
                             <div className="flex flex-wrap gap-2 mb-5">
-                                {product.order_type ? (
-                                    <div className="border border-default-200 rounded-full px-3 py-1.5 flex items-center">
-                                        <span className="text-xs">{product.order_type}</span>
-                                    </div>
-                                ) : null}
+                                <OrderTypeBadges types={product.order_type} />
                                 <div className="border border-default-200 rounded-full px-3 py-1.5 flex items-center">
                                     <span className="text-xs">{product.category}</span>
                                 </div>
@@ -187,16 +202,27 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                             </div>
 
                             <h4 className="text-3xl font-semibold text-primary mb-6">
-                                {formatCurrency(product.selling_price)}
-                                {product.add_discount ? (
-                                    <span className="ms-2 text-lg text-default-400 font-medium line-through">
-                                        {formatCurrency(product.cost_price)}
-                                    </span>
-                                ) : null}
+                                {product.add_discount &&
+                                product.discount_percent != null &&
+                                product.selling_price != null ? (
+                                    <>
+                                        {formatCurrency(
+                                            calculateDiscountedPrice(
+                                                product.selling_price,
+                                                product.discount_percent,
+                                            ) ?? product.selling_price,
+                                        )}
+                                        <span className="ms-2 text-lg font-medium text-default-400 line-through">
+                                            {formatCurrency(product.selling_price)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    formatCurrency(product.selling_price ?? 0)
+                                )}
                             </h4>
 
                             <p className="text-sm text-default-600 mb-6">
-                                {product.quantity > 0
+                                {product.quantity != null && product.quantity > 0
                                     ? `${product.quantity} in stock`
                                     : "Out of stock"}
                             </p>

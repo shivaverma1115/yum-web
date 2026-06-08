@@ -1,19 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useForm } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { ImageIcon, UploadCloud } from "lucide-react";
+import { Loader2, Package, Save, X } from "lucide-react";
 import { fetchProductCategories } from "@/lib/api/categories";
-import { MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
+import { formatCurrency, MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
+import { calculateDiscountedPrice } from "@/lib/products/discount";
+import ImageUploadField, {
+    type ImageUploadValue,
+} from "@/components/ui/ImageUploadField";
+import Input from "@/components/ui/Input";
+import MultiSelect from "@/components/ui/MultiSelect";
 import { validateProductImageFiles } from "@/lib/products/imageValidation";
+import { normalizeOrderTypes, ORDER_TYPE_OPTIONS } from "@/lib/order-types";
 import type { IProductCategory } from "@/types/product-category";
 import type { IProduct, ProductFormInput } from "@/types/product";
+import RichTextEditor from "@/components/ui/RichTextEditor";
+import { isRichTextEmpty } from "@/lib/rich-text";
 
-const inputClassName =
-    "block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60";
 const errorClassName = "text-red-500 text-sm mt-1";
+
+const DEFAULT_FORM_VALUES: ProductFormInput = {
+    name: "",
+    category: "",
+    selling_price: null,
+    cost_price: null,
+    quantity: null,
+    order_type: [],
+    short_description: "",
+    long_description: "",
+    add_discount: false,
+    discount_percent: null,
+    add_expiry_date: false,
+    expiry_start_date: null,
+    expiry_end_date: null,
+    return_policy: false,
+    image_url: null,
+    image_urls: [],
+};
 
 type ApiResponse = {
     success?: boolean;
@@ -23,8 +49,10 @@ type ApiResponse = {
 
 function buildProductFormData(
     values: ProductFormInput,
-    files: File[],
+    imageValue: ImageUploadValue,
 ): FormData {
+    const files = imageValue.files;
+    const keptExistingUrls = imageValue.existingUrls;
     const formData = new FormData();
 
     formData.append("name", values.name);
@@ -32,19 +60,33 @@ function buildProductFormData(
     formData.append("selling_price", String(values.selling_price));
     formData.append("cost_price", String(values.cost_price));
     formData.append("quantity", String(values.quantity));
-    formData.append("order_type", values.order_type);
+    for (const orderType of values.order_type) {
+        formData.append("order_type", orderType);
+    }
     formData.append("short_description", values.short_description);
     formData.append("long_description", values.long_description);
     formData.append("add_discount", String(values.add_discount));
+    if (values.add_discount && values.discount_percent != null) {
+        formData.append("discount_percent", String(values.discount_percent));
+    }
     formData.append("add_expiry_date", String(values.add_expiry_date));
+    if (values.add_expiry_date) {
+        if (values.expiry_start_date) {
+            formData.append("expiry_start_date", values.expiry_start_date);
+        }
+        if (values.expiry_end_date) {
+            formData.append("expiry_end_date", values.expiry_end_date);
+        }
+    }
     formData.append("return_policy", String(values.return_policy));
 
-    if (values.image_url) {
-        formData.append("image_url", values.image_url);
+    const coverUrl = keptExistingUrls[0] ?? values.image_url;
+    if (coverUrl) {
+        formData.append("image_url", coverUrl);
     }
 
-    if (values.image_urls?.length) {
-        formData.append("image_urls", JSON.stringify(values.image_urls));
+    if (keptExistingUrls.length) {
+        formData.append("image_urls", JSON.stringify(keptExistingUrls));
     }
 
     for (const file of files) {
@@ -69,9 +111,19 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     const productId = String(params?.productId ?? "");
     const isEditMode = Boolean(productId);
 
-    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [categories, setCategories] = useState<IProductCategory[]>([]);
-    const selectedImageFilesRef = useRef<File[]>([]);
+    const imageUploadRef = useRef<ImageUploadValue>({
+        files: [],
+        existingUrls: [],
+    });
+    const initialProductImages = useMemo(() => {
+        if (!product) return [];
+        const urls = [...(product.image_urls ?? [])];
+        if (product.image_url && !urls.includes(product.image_url)) {
+            urls.unshift(product.image_url);
+        }
+        return urls;
+    }, [product]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -90,42 +142,61 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
     const {
         register,
+        control,
         handleSubmit,
         setError,
         clearErrors,
+        reset,
         watch,
         formState: { errors, isSubmitting },
     } = useForm<ProductFormInput>({
-        defaultValues: product ?? {},
+        defaultValues: product
+            ? {
+                ...DEFAULT_FORM_VALUES,
+                ...product,
+                order_type: normalizeOrderTypes(product.order_type),
+            }
+            : DEFAULT_FORM_VALUES,
     });
 
-    const imageUrl = watch("image_url");
-    const imageUrls = watch("image_urls");
+    useEffect(() => {
+        if (!product) return;
+        reset({
+            ...DEFAULT_FORM_VALUES,
+            ...product,
+            order_type: normalizeOrderTypes(product.order_type),
+        });
+    }, [product, reset]);
+
+    const handleImageUploadChange = useCallback(
+        (value: ImageUploadValue) => {
+            imageUploadRef.current = value;
+            if (value.files.length > 0 || value.existingUrls.length > 0) {
+                queueMicrotask(() => clearErrors("image_url"));
+            }
+        },
+        [clearErrors],
+    );
+    const addDiscount = watch("add_discount");
+    const discountPercent = watch("discount_percent");
+    const sellingPrice = watch("selling_price");
+    const addExpiryDate = watch("add_expiry_date");
+    const discountedPrice = calculateDiscountedPrice(sellingPrice, discountPercent);
     const maxImageSizeMb = MAX_PRODUCT_IMAGE_SIZE_BYTES / (1024 * 1024);
 
-    const hasSelectedOrExistingImage = () =>
-        selectedImageFilesRef.current.length > 0 || Boolean(imageUrl);
+    const toggleClassName =
+        "relative h-7 w-[3.25rem] cursor-pointer appearance-none rounded-full border-2 border-transparent bg-default-200 transition-colors duration-200 ease-in-out before:inline-block before:h-6 before:w-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:transition before:duration-200 before:ease-in-out checked:border-transparent checked:bg-none checked:!bg-primary checked:before:translate-x-full focus:ring-0 focus:ring-transparent";
 
-    const onImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files ?? []);
-        if (!files.length) return;
-
-        const validation = validateProductImageFiles(files);
-        if (!validation.valid) {
-            toast.error(validation.message);
-            event.target.value = "";
-            return;
-        }
-
-        selectedImageFilesRef.current = files;
-        setImagePreviews(files.map((file) => URL.createObjectURL(file)));
-        clearErrors("image_url");
+    const hasSelectedOrExistingImage = () => {
+        const { files, existingUrls } = imageUploadRef.current;
+        return files.length > 0 || existingUrls.length > 0;
     };
 
     const onSubmit = handleSubmit(async (values) => {
-        const files = selectedImageFilesRef.current;
+        const imageValue = imageUploadRef.current;
+        const files = imageValue.files;
 
-        if (!files.length && !values.image_url) {
+        if (!files.length && !imageValue.existingUrls.length) {
             setError("image_url", {
                 type: "required",
                 message: "Please select at least one product image.",
@@ -146,7 +217,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
             ? `/api/admin/products/${productId}`
             : "/api/admin/products";
         const method = isEditMode ? "PATCH" : "POST";
-        const formData = buildProductFormData(values, files);
+        const formData = buildProductFormData(values, imageValue);
 
         try {
             const data = await saveProduct(endpoint, method, formData);
@@ -174,41 +245,37 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
     return (
         <form onSubmit={onSubmit} noValidate className="grid lg:grid-cols-3 gap-6">
-            <div className="p-6 rounded-lg border border-default-200">
-                <div className="p-6 rounded-lg border border-default-200 mb-4">
-                    <div className="h-52 mb-4 flex items-center justify-center rounded-lg border border-dashed border-default-300 bg-default-50/50 overflow-hidden">
-                        {imagePreviews[0] || imageUrl ? (
-                            <img
-                                src={imagePreviews[0] || imageUrl || ""}
-                                alt="Product cover preview"
-                                className="h-full w-full object-cover"
-                            />
-                        ) : (
-                            <ImageIcon className="w-10 h-10 text-primary" />
-                        )}
-                    </div>
-
-                    <h5 className="text-base text-primary font-medium mb-2">
-                        <UploadCloud className="inline-flex ms-2 h-4 w-4" />
-                        Upload Image
-                    </h5>
-
-                    <p className="text-sm text-default-600 mb-2">
-                        Select product images. They are uploaded when you save the product.
-                    </p>
-                    <p className="text-sm text-default-600 mb-4">
-                        File Format <span className="text-default-800">jpeg, png, webp</span>{" "}
-                        Max Size <span className="text-default-800">{maxImageSizeMb} MB per image</span>{" "}
-                        Recommended <span className="text-default-800">600x600 (1:1)</span>
-                    </p>
-
-                    <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
+            <div className="rounded-lg border border-default-200 p-6">
+                <div className="rounded-lg border border-default-200 p-6">
+                    <ImageUploadField
+                        key={product?.id ?? "new-product"}
+                        variant="gallery"
                         multiple
+                        aspect={1}
+                        required
                         disabled={isSubmitting}
-                        onChange={onImageChange}
-                        className="block w-full text-sm file:me-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-white disabled:opacity-60"
+                        initialExistingUrls={initialProductImages}
+                        maxSizeBytes={MAX_PRODUCT_IMAGE_SIZE_BYTES}
+                        label="Upload Image"
+                        description={
+                            <>
+                                <p className="mb-2 text-sm text-default-600">
+                                    Crop each image after selecting. Images upload when you save the product.
+                                </p>
+                                <p className="mb-4 text-sm text-default-600">
+                                    File Format{" "}
+                                    <span className="text-default-800">jpeg, png, webp</span>{" "}
+                                    Max Size{" "}
+                                    <span className="text-default-800">
+                                        {maxImageSizeMb} MB per image
+                                    </span>{" "}
+                                    Recommended{" "}
+                                    <span className="text-default-800">600x600 (1:1)</span>
+                                </p>
+                            </>
+                        }
+                        error={errors.image_url?.message}
+                        onChange={handleImageUploadChange}
                     />
                     <input
                         type="hidden"
@@ -219,26 +286,6 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                         })}
                     />
                     <input type="hidden" {...register("image_urls")} />
-                    {errors.image_url?.message ? (
-                        <span className={errorClassName}>{errors.image_url.message}</span>
-                    ) : null}
-                    {imagePreviews.length > 1 ? (
-                        <div className="grid grid-cols-3 gap-2 mt-4">
-                            {imagePreviews.slice(1).map((preview, index) => (
-                                <img
-                                    key={`${preview}-${index}`}
-                                    src={preview}
-                                    alt={`Selected product image ${index + 2}`}
-                                    className="h-20 w-full object-cover rounded-md border border-default-200"
-                                />
-                            ))}
-                        </div>
-                    ) : null}
-                    {imageUrls?.length ? (
-                        <p className="text-xs text-default-500 mt-3">
-                            Existing images: {imageUrls.length}
-                        </p>
-                    ) : null}
                 </div>
             </div>
 
@@ -248,12 +295,10 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="name">
-                                    Product Name
+                                    Product Name <span className="text-required" >*</span>
                                 </label>
-                                <input
+                                <Input
                                     id="name"
-                                    className={inputClassName}
-                                    type="text"
                                     placeholder="Product Name"
                                     disabled={isSubmitting}
                                     {...register("name", {
@@ -268,11 +313,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="category">
-                                    Category
+                                    Category <span className="text-required" >*</span>
                                 </label>
-                                <select
+                                <Input
+                                    as="select"
                                     id="category"
-                                    className={inputClassName}
                                     disabled={isSubmitting}
                                     {...register("category", {
                                         required: "Please select a category.",
@@ -284,7 +329,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                             {category.name}
                                         </option>
                                     ))}
-                                </select>
+                                </Input>
                                 {errors.category?.message ? (
                                     <span className={errorClassName}>{errors.category.message}</span>
                                 ) : null}
@@ -293,12 +338,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                             <div className="grid lg:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="selling_price">
-                                        Selling Price
+                                        Selling Price <span className="text-required" >*</span>
                                     </label>
-                                    <input
-                                        id="selling_price"
-                                        className={inputClassName}
+                                    <Input
                                         type="number"
+                                        id="selling_price"
                                         step="0.01"
                                         min={0}
                                         placeholder="Selling Price"
@@ -316,12 +360,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                                 <div>
                                     <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="cost_price">
-                                        Cost Price
+                                        Cost Price <span className="text-required" >*</span>
                                     </label>
-                                    <input
-                                        id="cost_price"
-                                        className={inputClassName}
+                                    <Input
                                         type="number"
+                                        id="cost_price"
                                         step="0.01"
                                         min={0}
                                         placeholder="Cost Price"
@@ -340,12 +383,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="quantity">
-                                    Quantity in Stock
+                                    Quantity in Stock <span className="text-required" >*</span>
                                 </label>
-                                <input
-                                    id="quantity"
-                                    className={inputClassName}
+                                <Input
                                     type="number"
+                                    id="quantity"
                                     min={0}
                                     placeholder="Quantity in Stock"
                                     disabled={isSubmitting}
@@ -362,71 +404,221 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="order_type">
-                                    Order Type
+                                    Order Type <span className="text-required" >*</span>
                                 </label>
-                                <select
-                                    id="order_type"
-                                    className={inputClassName}
-                                    disabled={isSubmitting}
-                                    {...register("order_type", { required: "Order type is required." })}
-                                >
-                                    <option value="">Order Type</option>
-                                    <option value="delivery">Delivery</option>
-                                    <option value="pickup">Pickup</option>
-                                    <option value="dine-in">Dine-in</option>
-                                </select>
-                                {errors.order_type?.message ? (
-                                    <span className={errorClassName}>{errors.order_type.message}</span>
+                                <Controller
+                                    name="order_type"
+                                    control={control}
+                                    rules={{
+                                        validate: (value) =>
+                                            value.length > 0 ||
+                                            "Select at least one order type.",
+                                    }}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            id="order_type"
+                                            options={ORDER_TYPE_OPTIONS}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="Select order types"
+                                            disabled={isSubmitting}
+                                            error={errors.order_type?.message}
+                                            aria-label="Order type"
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-default-600">Discount</h4>
+                                    <div className="flex items-center gap-4">
+                                        <label className="block text-sm text-default-600" htmlFor="addDiscount">
+                                            Add Discount
+                                        </label>
+                                        <input
+                                            type="checkbox"
+                                            id="addDiscount"
+                                            className={toggleClassName}
+                                            disabled={isSubmitting}
+                                            {...register("add_discount")}
+                                        />
+                                    </div>
+                                </div>
+
+                                {addDiscount ? (
+                                    <div className="space-y-3 border-t border-default-200 pt-4">
+                                        <div>
+                                            <label
+                                                className="mb-2 block text-sm font-medium text-default-900"
+                                                htmlFor="discount_percent"
+                                            >
+                                                Discount (%)
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                id="discount_percent"
+                                                min={1}
+                                                max={100}
+                                                step="0.01"
+                                                placeholder="e.g. 10"
+                                                disabled={isSubmitting}
+                                                {...register("discount_percent", {
+                                                    valueAsNumber: true,
+                                                    validate: (value, formValues) => {
+                                                        if (!formValues.add_discount) return true;
+                                                        if (
+                                                            value == null ||
+                                                            Number.isNaN(value)
+                                                        ) {
+                                                            return "Discount percentage is required.";
+                                                        }
+                                                        if (value <= 0 || value > 100) {
+                                                            return "Enter a discount between 1 and 100.";
+                                                        }
+                                                        return true;
+                                                    },
+                                                })}
+                                            />
+                                            {errors.discount_percent?.message ? (
+                                                <span className={errorClassName}>
+                                                    {errors.discount_percent.message}
+                                                </span>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="rounded-lg bg-default-50 px-4 py-3 text-sm">
+                                            <p className="text-default-600">
+                                                Selling price:{" "}
+                                                <span className="font-medium text-default-900">
+                                                    {sellingPrice != null &&
+                                                        !Number.isNaN(sellingPrice)
+                                                        ? formatCurrency(sellingPrice)
+                                                        : "—"}
+                                                </span>
+                                            </p>
+                                            <p className="mt-1 text-default-600">
+                                                Discounted price:{" "}
+                                                <span className="font-semibold text-primary">
+                                                    {discountedPrice != null
+                                                        ? formatCurrency(discountedPrice)
+                                                        : "—"}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
                                 ) : null}
                             </div>
 
-                            <div className="flex justify-between">
-                                <h4 className="text-sm font-medium text-default-600">Discount</h4>
-                                <div className="flex items-center gap-4">
-                                    <label className="block text-sm text-default-600" htmlFor="addDiscount">
-                                        Add Discount
-                                    </label>
-                                    <input
-                                        type="checkbox"
-                                        id="addDiscount"
-                                        className="relative w-[3.25rem] h-7 bg-default-200 focus:ring-0 checked:bg-none checked:!bg-primary border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 appearance-none focus:ring-transparent before:inline-block before:w-6 before:h-6 before:bg-white before:translate-x-0 checked:before:translate-x-full before:shadow before:rounded-full before:transform before:transition before:ease-in-out before:duration-200"
-                                        disabled={isSubmitting}
-                                        {...register("add_discount")}
-                                    />
+                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-default-600">Expiry Date</h4>
+                                    <div className="flex items-center gap-4">
+                                        <label className="block text-sm text-default-600" htmlFor="addExpiryDate">
+                                            Add Expiry Date
+                                        </label>
+                                        <input
+                                            type="checkbox"
+                                            id="addExpiryDate"
+                                            className={toggleClassName}
+                                            disabled={isSubmitting}
+                                            {...register("add_expiry_date")}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-between">
-                                <h4 className="text-sm font-medium text-default-600">Expiry Date</h4>
-                                <div className="flex items-center gap-4">
-                                    <label className="block text-sm text-default-600" htmlFor="addExpiryDate">
-                                        Add Expiry Date
-                                    </label>
-                                    <input
-                                        type="checkbox"
-                                        id="addExpiryDate"
-                                        className="relative w-[3.25rem] h-7 bg-default-200 focus:ring-0 checked:bg-none checked:!bg-primary border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 appearance-none focus:ring-transparent before:inline-block before:w-6 before:h-6 before:bg-white before:translate-x-0 checked:before:translate-x-full before:shadow before:rounded-full before:transform before:transition before:ease-in-out before:duration-200"
-                                        disabled={isSubmitting}
-                                        {...register("add_expiry_date")}
-                                    />
-                                </div>
+                                {addExpiryDate ? (
+                                    <div className="grid gap-4 border-t border-default-200 pt-4 sm:grid-cols-2">
+                                        <div>
+                                            <label
+                                                className="mb-2 block text-sm font-medium text-default-900"
+                                                htmlFor="expiry_start_date"
+                                            >
+                                                Start date
+                                            </label>
+                                            <Input
+                                                type="date"
+                                                id="expiry_start_date"
+                                                disabled={isSubmitting}
+                                                {...register("expiry_start_date", {
+                                                    validate: (value, formValues) => {
+                                                        if (!formValues.add_expiry_date) return true;
+                                                        return value
+                                                            ? true
+                                                            : "Start date is required.";
+                                                    },
+                                                })}
+                                            />
+                                            {errors.expiry_start_date?.message ? (
+                                                <span className={errorClassName}>
+                                                    {errors.expiry_start_date.message}
+                                                </span>
+                                            ) : null}
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                className="mb-2 block text-sm font-medium text-default-900"
+                                                htmlFor="expiry_end_date"
+                                            >
+                                                End date
+                                            </label>
+                                            <Input
+                                                type="date"
+                                                id="expiry_end_date"
+                                                disabled={isSubmitting}
+                                                {...register("expiry_end_date", {
+                                                    validate: (value, formValues) => {
+                                                        if (!formValues.add_expiry_date) return true;
+                                                        if (!value) {
+                                                            return "End date is required.";
+                                                        }
+                                                        if (
+                                                            formValues.expiry_start_date &&
+                                                            value < formValues.expiry_start_date
+                                                        ) {
+                                                            return "End date must be on or after start date.";
+                                                        }
+                                                        return true;
+                                                    },
+                                                })}
+                                            />
+                                            {errors.expiry_end_date?.message ? (
+                                                <span className={errorClassName}>
+                                                    {errors.expiry_end_date.message}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
 
                         <div className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="short_description">
-                                    Short Description
+                                    Short Description <span className="text-required" >*</span>
                                 </label>
-                                <textarea
-                                    id="short_description"
-                                    className={inputClassName}
-                                    rows={5}
-                                    placeholder="Short Description"
-                                    disabled={isSubmitting}
-                                    {...register("short_description", {
-                                        required: "Short description is required.",
-                                    })}
+                                <Controller
+                                    name="short_description"
+                                    control={control}
+                                    rules={{
+                                        validate: (value) =>
+                                            !isRichTextEmpty(value) ||
+                                            "Short description is required.",
+                                    }}
+                                    render={({ field }) => (
+                                        <RichTextEditor
+                                            id="short_description"
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            onBlur={field.onBlur}
+                                            disabled={isSubmitting}
+                                            toolbar="minimal"
+                                            minHeight={120}
+                                            placeholder="Short description"
+                                        />
+                                    )}
                                 />
                                 {errors.short_description?.message ? (
                                     <span className={errorClassName}>
@@ -437,17 +629,28 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="longDescription">
-                                    Product Long Description
+                                    Product Long Description <span className="text-required" >*</span>
                                 </label>
-                                <textarea
-                                    id="longDescription"
-                                    className={inputClassName}
-                                    rows={6}
-                                    placeholder="Enter product long description"
-                                    disabled={isSubmitting}
-                                    {...register("long_description", {
-                                        required: "Long description is required.",
-                                    })}
+                                <Controller
+                                    name="long_description"
+                                    control={control}
+                                    rules={{
+                                        validate: (value) =>
+                                            !isRichTextEmpty(value) ||
+                                            "Long description is required.",
+                                    }}
+                                    render={({ field }) => (
+                                        <RichTextEditor
+                                            id="longDescription"
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            onBlur={field.onBlur}
+                                            disabled={isSubmitting}
+                                            toolbar="standard"
+                                            minHeight={200}
+                                            placeholder="Enter product long description"
+                                        />
+                                    )}
                                 />
                                 <p className="text-sm text-default-600 mt-2">
                                     Add a long description for your product
@@ -468,7 +671,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                     <input
                                         type="checkbox"
                                         id="returnPolicy"
-                                        className="relative w-[3.25rem] h-7 bg-default-200 focus:ring-0 checked:bg-none checked:!bg-primary border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 appearance-none focus:ring-transparent before:inline-block before:w-6 before:h-6 before:bg-white before:translate-x-0 checked:before:translate-x-full before:shadow before:rounded-full before:transform before:transition before:ease-in-out before:duration-200"
+                                        className={toggleClassName}
                                         disabled={isSubmitting}
                                         {...register("return_policy")}
                                     />
@@ -482,20 +685,31 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                             type="button"
                             disabled={isSubmitting}
                             onClick={() => router.push("/admin/products")}
-                            className="py-2.5 px-4 inline-flex rounded-lg text-sm font-medium bg-default-100 text-default-700 transition-all hover:bg-default-200 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-lg bg-default-100 px-4 py-2.5 text-sm font-medium text-default-700 transition-all hover:bg-default-200 disabled:opacity-60"
                         >
+                            <X className="h-4 w-4 shrink-0" aria-hidden />
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="py-2.5 px-4 inline-flex rounded-lg text-sm font-medium bg-primary text-white transition-all hover:bg-primary-500 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary-500 disabled:opacity-60"
                         >
-                            {isSubmitting
-                                ? "Saving..."
-                                : isEditMode
-                                    ? "Update Product"
-                                    : "Create Product"}
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    {isEditMode ? (
+                                        <Save className="h-4 w-4 shrink-0" aria-hidden />
+                                    ) : (
+                                        <Package className="h-4 w-4 shrink-0" aria-hidden />
+                                    )}
+                                    {isEditMode ? "Update Product" : "Create Product"}
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

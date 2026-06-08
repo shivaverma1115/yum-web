@@ -36,7 +36,7 @@ function productToCartItem(product: IProduct, quantity: number): ICartItem | nul
     productId: product.id,
     name: product.name,
     image_url: images[0] ?? "/images/dishes/pizza.png",
-    price: product.selling_price,
+    price: product.selling_price ?? 0,
     quantity: Math.min(Math.max(1, quantity), maxQuantity),
     maxQuantity,
   };

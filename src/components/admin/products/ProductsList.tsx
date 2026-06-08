@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { fetchProductsPage } from "@/lib/api/products";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
+import OrderTypeBadges from "@/components/ui/OrderTypeBadges";
 import { Eye, Pencil, Trash } from "lucide-react";
 
 const TABLE_COL_SPAN = 19;
@@ -204,7 +205,7 @@ export default function ProductsList() {
                                             products.map((product) => (
                                                 <tr key={product.id}>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
-                                                        {product.id}
+                                                        #{product.id}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
                                                         {product.image_url ? (
@@ -224,22 +225,22 @@ export default function ProductsList() {
                                                         {product.category}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {formatCurrency(product.selling_price)}
+                                                        {product.selling_price ? formatCurrency(product.selling_price) : "-"}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {formatCurrency(product.cost_price)}
+                                                        {product.cost_price ? formatCurrency(product.cost_price) : "-"}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.quantity}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {product.order_type}
+                                                    <td className="px-6 py-4 text-sm text-default-600 min-w-[160px]">
+                                                        <OrderTypeBadges types={product.order_type} />
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-default-600 min-w-[220px]">
-                                                        {product.short_description}
+                                                    <td className="px-6 py-4 text-sm text-default-600 min-w-[220px]" title={product.short_description}>
+                                                        {product.short_description.length > 50 ? product.short_description.substring(0, 50) + "..." : product.short_description}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-default-600 min-w-[260px]">
-                                                        {product.long_description}
+                                                    <td className="px-6 py-4 text-sm text-default-600 min-w-[260px]" title={product.long_description}>
+                                                        {product.long_description.length > 50 ? product.long_description.substring(0, 50) + "..." : product.long_description}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.add_discount ? "Yes" : "No"}

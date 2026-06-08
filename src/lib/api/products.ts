@@ -1,4 +1,12 @@
+import { normalizeOrderTypes } from "@/lib/order-types";
 import type { IProduct } from "@/types/product";
+
+function normalizeProduct(product: IProduct): IProduct {
+  return {
+    ...product,
+    order_type: normalizeOrderTypes(product.order_type),
+  };
+}
 
 export type ProductsListData = {
   products: IProduct[];
@@ -57,7 +65,10 @@ export async function fetchProductsPage(
     throw new Error(result.message ?? "Failed to load products.");
   }
 
-  return result.data;
+  return {
+    ...result.data,
+    products: result.data.products.map(normalizeProduct),
+  };
 }
 
 export type ProductDetailResponse = {
@@ -82,7 +93,7 @@ export async function fetchProduct(
     throw new Error(result.message ?? "Product not found.");
   }
 
-  return result.data.product;
+  return normalizeProduct(result.data.product);
 }
 
 export function getProductImages(product: IProduct): string[] {

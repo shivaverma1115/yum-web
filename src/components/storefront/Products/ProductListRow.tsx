@@ -51,7 +51,7 @@ export default function ProductListRow({ product }: ProductListRowProps) {
             </div>
 
             <h4 className="font-semibold text-lg sm:text-2xl text-primary">
-              {formatCurrency(product.selling_price)}
+              {product.selling_price !== null ? formatCurrency(product.selling_price) : "-"}
             </h4>
           </div>
         </div>

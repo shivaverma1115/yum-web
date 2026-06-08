@@ -2,12 +2,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IProduct, ProductFormInput } from "@/types/product";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import {
+  normalizeOrderTypes,
+  parseOrderTypesFromFormData,
+} from "@/lib/order-types";
+import { isRichTextEmpty } from "@/lib/rich-text";
+import {
   deleteProductImagesByUrls,
   uploadProductImages,
 } from "@/lib/supabase/product/product-images";
 
 const PRODUCT_COLUMNS =
-  "id, user_id, name, category, selling_price, cost_price, quantity, order_type, short_description, long_description, add_discount, add_expiry_date, return_policy, image_url, image_urls, created_at, updated_at";
+  "id, user_id, name, category, selling_price, cost_price, quantity, order_type, short_description, long_description, add_discount, discount_percent, add_expiry_date, expiry_start_date, expiry_end_date, return_policy, image_url, image_urls, created_at, updated_at";
 
 export type CreateProductResult =
   | { success: true; product: IProduct }
@@ -56,6 +61,13 @@ function parseNumber(
   return { ok: true, value: parsed };
 }
 
+function mapProductRow(row: Record<string, unknown>): IProduct {
+  return {
+    ...(row as IProduct),
+    order_type: normalizeOrderTypes(row.order_type),
+  };
+}
+
 export function parseProductFormData(formData: FormData): {
   input: ProductFormInput | null;
   errors: Record<string, string>;
@@ -64,15 +76,21 @@ export function parseProductFormData(formData: FormData): {
 
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
-  const order_type = String(formData.get("order_type") ?? "").trim();
+  const order_type = parseOrderTypesFromFormData(formData);
   const short_description = String(formData.get("short_description") ?? "").trim();
   const long_description = String(formData.get("long_description") ?? "").trim();
 
   if (!name) errors.name = "Product name is required.";
   if (!category) errors.category = "Category is required.";
-  if (!order_type) errors.order_type = "Order type is required.";
-  if (!short_description) errors.short_description = "Short description is required.";
-  if (!long_description) errors.long_description = "Long description is required.";
+  if (!order_type.length) {
+    errors.order_type = "Select at least one order type.";
+  }
+  if (isRichTextEmpty(short_description)) {
+    errors.short_description = "Short description is required.";
+  }
+  if (isRichTextEmpty(long_description)) {
+    errors.long_description = "Long description is required.";
+  }
 
   const sellingPriceResult = parseNumber(formData.get("selling_price"), "Selling price");
   const costPriceResult = parseNumber(formData.get("cost_price"), "Cost price");
@@ -92,6 +110,46 @@ export function parseProductFormData(formData: FormData): {
     errors.quantity = "Quantity cannot be negative.";
   }
 
+  const add_discount = parseBoolean(formData.get("add_discount"));
+  const add_expiry_date = parseBoolean(formData.get("add_expiry_date"));
+
+  let discount_percent: number | null = null;
+  if (add_discount) {
+    const discountResult = parseNumber(
+      formData.get("discount_percent"),
+      "Discount percentage",
+    );
+    if (!discountResult.ok) {
+      errors.discount_percent = discountResult.message;
+    } else if (discountResult.value <= 0 || discountResult.value > 100) {
+      errors.discount_percent = "Enter a discount between 1 and 100.";
+    } else {
+      discount_percent = discountResult.value;
+    }
+  }
+
+  let expiry_start_date: string | null = null;
+  let expiry_end_date: string | null = null;
+  if (add_expiry_date) {
+    expiry_start_date =
+      String(formData.get("expiry_start_date") ?? "").trim() || null;
+    expiry_end_date = String(formData.get("expiry_end_date") ?? "").trim() || null;
+
+    if (!expiry_start_date) {
+      errors.expiry_start_date = "Start date is required.";
+    }
+    if (!expiry_end_date) {
+      errors.expiry_end_date = "End date is required.";
+    }
+    if (
+      expiry_start_date &&
+      expiry_end_date &&
+      expiry_end_date < expiry_start_date
+    ) {
+      errors.expiry_end_date = "End date must be on or after start date.";
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     return { input: null, errors };
   }
@@ -106,8 +164,11 @@ export function parseProductFormData(formData: FormData): {
       order_type,
       short_description,
       long_description,
-      add_discount: parseBoolean(formData.get("add_discount")),
-      add_expiry_date: parseBoolean(formData.get("add_expiry_date")),
+      add_discount,
+      discount_percent,
+      add_expiry_date,
+      expiry_start_date,
+      expiry_end_date,
       return_policy: parseBoolean(formData.get("return_policy")),
       image_url: String(formData.get("image_url") ?? "").trim() || null,
       image_urls: [],
@@ -141,7 +202,10 @@ export async function createProductWithSupabase(
       short_description: input.short_description,
       long_description: input.long_description,
       add_discount: input.add_discount,
+      discount_percent: input.add_discount ? input.discount_percent : null,
       add_expiry_date: input.add_expiry_date,
+      expiry_start_date: input.add_expiry_date ? input.expiry_start_date : null,
+      expiry_end_date: input.add_expiry_date ? input.expiry_end_date : null,
       return_policy: input.return_policy,
       image_url: input.image_url,
       image_urls: input.image_urls,
@@ -168,7 +232,7 @@ export async function createProductWithSupabase(
       };
     }
 
-    return { success: true, product: created as IProduct };
+    return { success: true, product: mapProductRow(created) };
   }
 
   const uploadResult = await uploadProductImages(
@@ -206,7 +270,7 @@ export async function createProductWithSupabase(
     };
   }
 
-  return { success: true, product: updated as IProduct };
+  return { success: true, product: mapProductRow(updated) };
 }
 
 export async function updateProductWithSupabase(
@@ -234,8 +298,8 @@ export async function updateProductWithSupabase(
       };
     }
 
-    image_url = uploadResult.image_url;
-    image_urls = uploadResult.image_urls;
+    image_urls = [...input.image_urls, ...uploadResult.image_urls];
+    image_url = image_urls[0] ?? uploadResult.image_url;
   }
 
   if (!image_url) {
@@ -259,7 +323,10 @@ export async function updateProductWithSupabase(
       short_description: input.short_description,
       long_description: input.long_description,
       add_discount: input.add_discount,
+      discount_percent: input.add_discount ? input.discount_percent : null,
       add_expiry_date: input.add_expiry_date,
+      expiry_start_date: input.add_expiry_date ? input.expiry_start_date : null,
+      expiry_end_date: input.add_expiry_date ? input.expiry_end_date : null,
       return_policy: input.return_policy,
       image_url,
       image_urls,
@@ -277,7 +344,7 @@ export async function updateProductWithSupabase(
     };
   }
 
-  return { success: true, product: data as IProduct };
+  return { success: true, product: mapProductRow(data) };
 }
 
 export async function deleteProductWithSupabase(
@@ -368,7 +435,7 @@ export async function listProductsWithSupabase(
 
   return {
     success: true,
-    products: (data ?? []) as IProduct[],
+    products: (data ?? []).map((row) => mapProductRow(row as Record<string, unknown>)),
     total,
     page,
     limit,
@@ -396,6 +463,6 @@ export async function getProductWithSupabase(
 
   return {
     success: true,
-    product: data as IProduct,
+    product: mapProductRow(data),
   };
 }

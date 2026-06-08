@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Camera } from 'lucide-react'
+import { useCallback, useRef } from 'react';
 import { useContextApi } from '@/context-api/use-context';
-import { DEFAULT_USER_IMAGE } from '@/lib/constants';
+import ImageUploadField, { type ImageUploadValue } from '@/components/ui/ImageUploadField';
 import ChangePasswordForm from '@/components/auth/ChangePasswordForm';
 import UserDetailsForm from '../customer/UserDetailsForm';
 import UserAddressForm from '@/components/admin/settings/UserAddressForm';
@@ -19,6 +19,10 @@ export default function ProfileSetting() {
     const { user, loading } = useContextApi();
     const [addresses, setAddresses] = useState<UserAddressesByType>(emptyAddresses);
     const [addressesLoading, setAddressesLoading] = useState(true);
+    const avatarUploadRef = useRef<ImageUploadValue>({ files: [], existingUrls: [] });
+    const handleAvatarChange = useCallback((value: ImageUploadValue) => {
+        avatarUploadRef.current = value;
+    }, []);
 
     useEffect(() => {
         if (!user?.id) {
@@ -78,14 +82,12 @@ export default function ProfileSetting() {
 
                 <div className="grid gap-6">
                     <div className="lg:col-span-1">
-                        <div className="w-60 h-60 relative">
-                            <img src={DEFAULT_USER_IMAGE} className="w-full h-full rounded-full" />
-                            <div className="absolute bottom-2 end-4">
-                                <button className="w-11 h-11 flex items-center justify-center rounded-full bg-primary border-2 border-default-50">
-                                    <Camera className="size-5 text-white" />
-                                </button>
-                            </div>
-                        </div>
+                        <ImageUploadField
+                            variant="avatar"
+                            multiple={false}
+                            aspect={1}
+                            onChange={handleAvatarChange}
+                        />
                     </div>
 
                     {loading && !user ? <Preloader /> : <UserDetailsForm user={user ?? undefined} mode="self" />}

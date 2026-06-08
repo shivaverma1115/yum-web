@@ -46,7 +46,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <div className="flex items-end justify-between mb-4">
             <h4 className="font-semibold text-xl text-default-900">
-              {formatCurrency(product.selling_price)}
+              {product.selling_price !== null ? formatCurrency(product.selling_price) : "-"}
             </h4>
           </div>
 
