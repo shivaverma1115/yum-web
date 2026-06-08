@@ -124,5 +124,11 @@ export const USER_NAV_ITEMS: ProfileNavItem[] = [
     href: "/user/dashboard",
     label: "Dashboard",
     icon: "layout-grid",
-  }
+  },
+  {
+    type: "link",
+    href: "/user/orders",
+    label: "My Orders",
+    icon: "list-ordered",
+  },
 ];

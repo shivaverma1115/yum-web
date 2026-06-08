@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { type CustomerOrdersFilter } from "@/lib/supabase/orders";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
 import { useAdminCustomerOrders } from "@/hooks/use-admin-customer-orders";
-import type {
-  FulfillmentType,
-  IOrderItem,
-  IOrderWithItems,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-} from "@/types/order";
+import type { IOrderWithItems, OrderStatus, PaymentStatus } from "@/types/order";
+import {
+  formatOrderIdShort,
+  FULFILLMENT_LABELS,
+  getItemsSummary,
+  ORDER_STATUS_COLORS,
+  OrderDetailsPanel,
+  PAYMENT_STATUS_COLORS,
+  StatusBadge,
+} from "@/components/admin/orders/order-details-shared";
 
 const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -20,145 +22,6 @@ const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
   { value: "paid", label: "Paid" },
   { value: "cancelled", label: "Cancelled" },
 ];
-
-const PLACEHOLDER_IMAGE = "/images/dishes/small/pizza.png";
-
-const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
-  delivery: "Delivery",
-  pickup: "Pickup",
-  dine_in: "Dine in",
-};
-
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash_on_delivery: "Cash on delivery",
-  pay_at_counter: "Pay at counter",
-  pay_at_table: "Pay at table",
-  online: "Online",
-};
-
-const ORDER_STATUS_STYLES: Record<OrderStatus, string> = {
-  pending: "bg-amber-500/20 text-amber-600",
-  confirmed: "bg-blue-500/20 text-blue-600",
-  cancelled: "bg-red-500/20 text-red-500",
-  completed: "bg-green-500/20 text-green-600",
-};
-
-const PAYMENT_STATUS_STYLES: Record<PaymentStatus, string> = {
-  pending: "bg-amber-500/20 text-amber-600",
-  paid: "bg-green-500/20 text-green-600",
-  failed: "bg-red-500/20 text-red-500",
-};
-
-function displayValue(value: string | number | null | undefined) {
-  if (value === null || value === undefined) return "—";
-  if (typeof value === "string" && !value.trim()) return "—";
-  return String(value);
-}
-
-function formatOrderIdShort(orderId?: string) {
-  if (!orderId) return "—";
-  return `#${orderId.slice(0, 8).toUpperCase()}`;
-}
-
-function getItemsSummary(items: IOrderItem[]) {
-  if (items.length === 0) return "No items";
-  const first = items[0].product_name;
-  if (items.length === 1) return first;
-  return `${first} +${items.length - 1} more`;
-}
-
-function StatusBadge({
-  title,
-  label,
-  className,
-}: {
-  title: string;
-  label: string;
-  className: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-default-500">{title}</span>
-      <span
-        className={`inline-flex items-center py-1 px-3 rounded-full text-xs font-medium capitalize ${className}`}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function DetailField({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs text-default-500 mb-0.5">{label}</p>
-      <p
-        className={`text-sm text-default-800 break-words ${mono ? "font-mono text-xs" : ""}`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function DetailSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-default-200 p-4">
-      <h5 className="text-sm font-medium text-default-900 mb-3">{title}</h5>
-      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">{children}</div>
-    </div>
-  );
-}
-
-function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
-  if (order.fulfillment_type === "delivery") {
-    return (
-      <DetailSection title="Delivery">
-        <DetailField label="Address" value={displayValue(order.delivery_address)} />
-        <DetailField label="City" value={displayValue(order.delivery_city)} />
-        <DetailField label="State" value={displayValue(order.delivery_state)} />
-        <DetailField label="Country" value={displayValue(order.delivery_country)} />
-        <DetailField label="ZIP code" value={displayValue(order.delivery_zip_code)} />
-      </DetailSection>
-    );
-  }
-
-  if (order.fulfillment_type === "pickup") {
-    return (
-      <DetailSection title="Pickup">
-        <DetailField
-          label="Pickup time"
-          value={
-            order.pickup_time
-              ? formatCustomerSince(order.pickup_time)
-              : displayValue(order.pickup_time)
-          }
-        />
-      </DetailSection>
-    );
-  }
-
-  return (
-    <DetailSection title="Dine in">
-      <DetailField label="Table number" value={displayValue(order.table_number)} />
-      <DetailField label="Party size" value={displayValue(order.party_size)} />
-    </DetailSection>
-  );
-}
 
 function OrderCard({ order }: { order: IOrderWithItems }) {
   const [expanded, setExpanded] = useState(false);
@@ -197,19 +60,18 @@ function OrderCard({ order }: { order: IOrderWithItems }) {
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex flex-wrap gap-2 justify-end">
               <StatusBadge
-                title={"Order Status"}
+                title="Order Status"
                 label={orderStatus}
-                className={ORDER_STATUS_STYLES[orderStatus]}
+                color={ORDER_STATUS_COLORS[orderStatus as OrderStatus]}
               />
               <StatusBadge
-                title={"Payment Status"}
+                title="Payment Status"
                 label={paymentStatus}
-                className={PAYMENT_STATUS_STYLES[paymentStatus]}
+                color={PAYMENT_STATUS_COLORS[paymentStatus as PaymentStatus]}
               />
             </div>
             <ChevronDown
-              className={`h-5 w-5 text-default-500 transition-transform ${expanded ? "rotate-180" : ""
-                }`}
+              className={`h-5 w-5 text-default-500 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
               aria-hidden
             />
           </div>
@@ -219,79 +81,16 @@ function OrderCard({ order }: { order: IOrderWithItems }) {
         </p>
       </button>
 
-      {expanded ? (
-        <div className="px-6 pb-5 pt-0 border-t border-default-100">
-          <div className="grid lg:grid-cols-2 gap-4 mb-4 mt-4">
-            <DetailSection title="Order">
-              <DetailField
-                label="Order ID"
-                value={displayValue(order.id)}
-                mono
-              />
-              <DetailField
-                label="Fulfillment"
-                value={FULFILLMENT_LABELS[order.fulfillment_type]}
-              />
-              <DetailField
-                label="Payment method"
-                value={PAYMENT_METHOD_LABELS[order.payment_method]}
-              />
-              <DetailField label="Subtotal" value={formatCurrency(order.subtotal)} />
-              <DetailField label="Total" value={formatCurrency(order.total)} />
-              <DetailField
-                label="Updated at"
-                value={
-                  order.updated_at
-                    ? formatCustomerSince(order.updated_at)
-                    : "—"
-                }
-              />
-            </DetailSection>
-
-            {
-              order.payment_method === "online" ? (
-                <DetailSection title="Payment (Razorpay)">
-                  <DetailField
-                    label="Razorpay order ID"
-                    value={displayValue(order.razorpay_order_id)}
-                    mono
-                  />
-                  <DetailField
-                    label="Razorpay payment ID"
-                    value={displayValue(order.razorpay_payment_id)}
-                    mono
-                  />
-                </DetailSection>
-              ) : null
-            }
-
-            <FulfillmentDetails order={order} />
-          </div>
-
-          <div className="rounded-lg border border-default-200">
-            <div className="px-4 py-3 border-b border-default-200 bg-default-50">
-              <h5 className="text-sm font-medium text-default-900">
-                Items ({items.length})
-              </h5>
-            </div>
-            {items.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-default-400">No items</p>
-            ) : (
-              <div className="px-4">
-                {items.map((item) => (
-                  <OrderLineItem
-                    key={
-                      item.id ??
-                      `${order.id}-${item.product_id}-${item.product_name}`
-                    }
-                    item={item}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <OrderDetailsPanel
+            order={order}
+            className="px-6 pb-5 pt-0 border-t border-default-100"
+          />
         </div>
-      ) : null}
+      </div>
     </article>
   );
 }
@@ -368,38 +167,6 @@ export default function CustomerOrderHistory({
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function OrderLineItem({ item }: { item: IOrderItem }) {
-  const imageSrc = item.image_url?.trim() || PLACEHOLDER_IMAGE;
-  const lineTotal = item.quantity * item.unit_price;
-
-  return (
-    <div className="flex gap-4 py-3 border-b border-default-100 last:border-b-0">
-      <div className="shrink">
-        <div className="h-14 w-14 overflow-hidden rounded border border-default-200">
-          <img
-            src={imageSrc}
-            alt={item.product_name}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      </div>
-      <div className="grow min-w-0 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <DetailField label="Item ID" value={displayValue(item.id)} mono />
-        <DetailField label="Product" value={item.product_name} />
-        <DetailField label="Quantity" value={item.quantity} />
-        <DetailField label="Unit price" value={formatCurrency(item.unit_price)} />
-        <DetailField label="Line total" value={formatCurrency(lineTotal)} />
-        {item.created_at ? (
-          <DetailField
-            label="Added at"
-            value={formatCustomerSince(item.created_at)}
-          />
-        ) : null}
       </div>
     </div>
   );

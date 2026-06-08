@@ -179,7 +179,9 @@ export default function Navbar() {
 
                                 <li className="flex menu-item">
                                     <div className="hs-dropdown relative inline-flex [--trigger:hover] [--placement:bottom]">
-                                        <Link className="hs-dropdown-toggle after:absolute hover:after:-bottom-10 after:inset-0 relative flex items-center text-base transition-all text-default-600 hover:text-primary" href={`${user ? "/admin/settings" : "/login"}`}>
+                                        <Link className="hs-dropdown-toggle after:absolute hover:after:-bottom-10 after:inset-0 relative flex items-center text-base transition-all text-default-600 hover:text-primary"
+                                            href={`${user ? (isAdmin ? "/admin/settings" : "/user/settings") : "/login"}`}
+                                        >
                                             <User className="size-5 mr-2" />
                                             {user ? getUserDisplayName(user) : "Login"}
                                         </Link>
@@ -235,29 +237,26 @@ export default function Navbar() {
                 <div className="fixed inset-x-0 bottom-0 h-16 w-full grid grid-cols-3 items-center justify-items-center border-t border-default-200 bg-white dark:bg-default-50 z-40">
                     <Link
                         href="/home"
-                        className={`flex flex-col items-center justify-center gap-1 ${
-                            pathname === "/" || isActivePath(pathname, "/home")
+                        className={`flex flex-col items-center justify-center gap-1 ${pathname === "/" || isActivePath(pathname, "/home")
                                 ? "text-primary"
                                 : "text-default-600"
-                        }`}
+                            }`}
                     >
                         <Home className="text-lg" aria-hidden />
                         <span className="text-xs font-medium">Home</span>
                     </Link>
                     <Link
                         href="/products"
-                        className={`flex flex-col items-center justify-center gap-1 ${
-                            isActivePath(pathname, "/products") ? "text-primary" : "text-default-600"
-                        }`}
+                        className={`flex flex-col items-center justify-center gap-1 ${isActivePath(pathname, "/products") ? "text-primary" : "text-default-600"
+                            }`}
                     >
                         <Utensils className="text-lg" aria-hidden />
                         <span className="text-xs font-medium">Food</span>
                     </Link>
                     <Link
                         href="/wishlist"
-                        className={`flex flex-col items-center justify-center gap-1 ${
-                            isActivePath(pathname, "/wishlist") ? "text-primary" : "text-default-600"
-                        }`}
+                        className={`flex flex-col items-center justify-center gap-1 ${isActivePath(pathname, "/wishlist") ? "text-primary" : "text-default-600"
+                            }`}
                     >
                         <Heart className="text-lg" aria-hidden />
                         <span className="text-xs font-medium">Wishlist</span>
@@ -276,9 +275,8 @@ export default function Navbar() {
 
             <div
                 id="mobile-menu"
-                className={`fixed top-0 left-0 transition-all transform h-full max-w-[270px] w-full z-60 border-r border-default-200 bg-white dark:bg-default-50 lg:hidden ${
-                    isMobileMenuOpen ? "translate-x-0 block" : "-translate-x-full hidden"
-                }`}
+                className={`fixed top-0 left-0 transition-all transform h-full max-w-[270px] w-full z-60 border-r border-default-200 bg-white dark:bg-default-50 lg:hidden ${isMobileMenuOpen ? "translate-x-0 block" : "-translate-x-full hidden"
+                    }`}
                 tabIndex={-1}
             >
                 <div className="flex justify-between items-center border-b border-dashed border-default-200 h-16 px-4 transition-all duration-300">
@@ -311,18 +309,16 @@ export default function Navbar() {
                             <li>
                                 <button
                                     type="button"
-                                    className={`flex w-full items-center gap-x-3.5 py-2 px-2.5 text-sm font-medium rounded-md hover:bg-default-100 ${
-                                        isProductMenuOpen
+                                    className={`flex w-full items-center gap-x-3.5 py-2 px-2.5 text-sm font-medium rounded-md hover:bg-default-100 ${isProductMenuOpen
                                             ? "text-primary bg-default-100"
                                             : "text-default-700"
-                                    }`}
+                                        }`}
                                     onClick={() => setIsProductMenuOpen((open) => !open)}
                                 >
                                     Product
                                     <ChevronDown
-                                        className={`w-5 h-5 ms-auto transition-transform ${
-                                            isProductMenuOpen ? "rotate-180" : ""
-                                        }`}
+                                        className={`w-5 h-5 ms-auto transition-transform ${isProductMenuOpen ? "rotate-180" : ""
+                                            }`}
                                         aria-hidden
                                     />
                                 </button>
@@ -414,14 +410,12 @@ export default function Navbar() {
 
             <div
                 id="mobileSearchSidebar"
-                className={`fixed inset-0 z-60 overflow-x-hidden overflow-y-auto 2xl:hidden pointer-events-none ${
-                    isMobileSearchOpen ? "block" : "hidden"
-                }`}
+                className={`fixed inset-0 z-60 overflow-x-hidden overflow-y-auto 2xl:hidden pointer-events-none ${isMobileSearchOpen ? "block" : "hidden"
+                    }`}
             >
                 <div
-                    className={`transition-all duration-500 ease-out sm:max-w-lg sm:w-full m-3 sm:mx-auto pointer-events-auto ${
-                        isMobileSearchOpen ? "mt-7 opacity-100" : "mt-0 opacity-0"
-                    }`}
+                    className={`transition-all duration-500 ease-out sm:max-w-lg sm:w-full m-3 sm:mx-auto pointer-events-auto ${isMobileSearchOpen ? "mt-7 opacity-100" : "mt-0 opacity-0"
+                        }`}
                 >
                     <div className="flex flex-col bg-white dark:bg-default-50 shadow-sm rounded-lg">
                         <div className="relative flex w-full">

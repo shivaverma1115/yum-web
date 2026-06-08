@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { BadgeColor } from "@/lib/badge-colors";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { verifyRazorpayPaymentSignature } from "@/lib/razorpay/server";
 import type {
@@ -6,7 +7,16 @@ import type {
   IOrder,
   IOrderItem,
   IOrderWithItems,
+  OrderStatus,
 } from "@/types/order";
+
+const ORDER_STATUSES: OrderStatus[] = [
+  "pending",
+  "confirmed",
+  "processing",
+  "cancelled",
+  "completed",
+];
 
 export type CreateOrderResult =
   | { success: true; order: IOrder; items: IOrderItem[] }
@@ -436,13 +446,73 @@ export async function handleRazorpayWebhookWithSupabase(
 
 export type CustomerOrdersFilter = "all" | "paid" | "failed" | "cancelled";
 
+export const ORDER_LIST_FILTERS: CustomerOrdersFilter[] = [
+  "all",
+  "paid",
+  "failed",
+  "cancelled",
+];
+
+export function parseOrderListFilter(
+  value: string | null,
+): CustomerOrdersFilter {
+  if (value && ORDER_LIST_FILTERS.includes(value as CustomerOrdersFilter)) {
+    return value as CustomerOrdersFilter;
+  }
+  return "all";
+}
+
 export type ListCustomerOrdersResult =
   | { success: true; orders: IOrderWithItems[] }
   | { success: false; message: string; status: number };
 
+export type ListAllOrdersResult = ListCustomerOrdersResult;
+
 type OrderRowWithItems = IOrder & {
   order_items?: IOrderItem[];
 };
+
+function mapOrderRowsWithItems(data: OrderRowWithItems[] | null): IOrderWithItems[] {
+  return (data ?? []).map((row) => {
+    const { order_items, ...order } = row;
+    return {
+      ...(order as IOrder),
+      items: (order_items ?? []) as IOrderItem[],
+    };
+  });
+}
+
+export async function listAllOrdersWithSupabase(
+  supabase: SupabaseClient,
+  options?: { filter?: CustomerOrdersFilter },
+): Promise<ListAllOrdersResult> {
+  const filter = options?.filter ?? "all";
+
+  let query = supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+
+  if (filter === "paid") {
+    query = query.eq("payment_status", "paid");
+  } else if (filter === "failed") {
+    query = query.eq("payment_status", "failed");
+  } else if (filter === "cancelled") {
+    query = query.eq("status", "cancelled");
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message ?? ERROR_MESSAGE_GENERIC,
+      status: 400,
+    };
+  }
+
+  return { success: true, orders: mapOrderRowsWithItems(data as OrderRowWithItems[]) };
+}
 
 export async function listCustomerOrdersWithSupabase(
   supabase: SupabaseClient,
@@ -464,7 +534,7 @@ export async function listCustomerOrdersWithSupabase(
   } else {
     return { success: true, orders: [] };
   }
-
+  
   if (filter === "paid") {
     query = query.eq("payment_status", "paid");
   } else if (filter === "failed") {
@@ -483,44 +553,72 @@ export async function listCustomerOrdersWithSupabase(
     };
   }
 
-  const orders = (data ?? []).map((row) => {
-    const { order_items, ...order } = row as OrderRowWithItems;
-    return {
-      ...(order as IOrder),
-      items: (order_items ?? []) as IOrderItem[],
-    };
-  });
-
-  return { success: true, orders };
+  return {
+    success: true,
+    orders: mapOrderRowsWithItems(data as OrderRowWithItems[]),
+  };
 }
 
-export function getOrderDisplayStatus(order: IOrder): {
-  label: string;
-  className: string;
-} {
-  if (order.status === "cancelled") {
+export async function updateOrderStatusWithSupabase(
+  supabase: SupabaseClient,
+  orderId: string,
+  status: OrderStatus,
+): Promise<
+  { success: true; order: IOrder } | { success: false; message: string; status: number }
+> {
+  if (!ORDER_STATUSES.includes(status)) {
     return {
-      label: "Cancelled",
-      className: "bg-red-500/20 text-red-500",
+      success: false,
+      message: "Invalid order status.",
+      status: 400,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status })
+    .eq("id", orderId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    return {
+      success: false,
+      message: error?.message ?? "Failed to update order status.",
+      status: 400,
+    };
+  }
+
+  return { success: true, order: data as IOrder };
+}
+
+export function getOrderPaymentStatus(order: IOrder): {
+  label: string;
+  color: BadgeColor;
+} {
+  if (order.payment_status === 'pending') {
+    return {
+      label: "Pending",
+      color: "amber",
     };
   }
 
   if (order.payment_status === "paid") {
     return {
       label: "Paid",
-      className: "bg-green-500/20 text-green-500",
+      color: "green",
     };
   }
 
   if (order.payment_status === "failed") {
     return {
       label: "Failed",
-      className: "bg-yellow-500/20 text-yellow-500",
+      color: "red",
     };
   }
 
   return {
     label: "Pending",
-    className: "bg-amber-500/20 text-amber-500",
+    color: "amber",
   };
 }

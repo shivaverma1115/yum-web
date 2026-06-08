@@ -10,7 +10,12 @@ export type PaymentMethod =
 
 export type PaymentStatus = "pending" | "paid" | "failed";
 
-export type OrderStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "cancelled"
+  | "completed";
 
 export type IOrderItem = {
   id?: string;

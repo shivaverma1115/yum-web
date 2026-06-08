@@ -7,13 +7,13 @@ import { UserRole } from '@/types/user';
 const OrdersList = dynamic(() => import('@/components/admin/orders/OrdersList'));
 
 export const metadata: Metadata = {
-    title: "Admin Orders List",
-    description: "Admin Orders List",
+    title: "User Orders List",
+    description: "User Orders List",
 };
-export default function AdminOrdersPage() {
+export default function UserOrdersPage() {
     return (
         <Suspense fallback={<Preloader />}>
-            <OrdersList userRole={UserRole.ADMIN} />
+            <OrdersList userRole={UserRole.USER} />
         </Suspense>
     )
 }
