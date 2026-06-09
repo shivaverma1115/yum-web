@@ -1,4 +1,3 @@
-import { IUser } from "./user";
 
 export type FulfillmentType = "delivery" | "pickup" | "dine_in";
 
@@ -9,6 +8,8 @@ export type PaymentMethod =
   | "online";
 
 export type PaymentStatus = "pending" | "paid" | "failed";
+
+export type OnlinePaymentPhase = "pending" | "complete";
 
 export type OrderStatus =
   | "pending"
@@ -34,7 +35,7 @@ export type IOrderWithItems = IOrder & {
 
 export type IOrder = {
   id?: string;
-  user_id?: string | null;
+  user_id: string;
   fulfillment_type: FulfillmentType;
   status: OrderStatus;
   payment_method: PaymentMethod;
@@ -45,7 +46,7 @@ export type IOrder = {
   total: number;
   customer_first_name: string;
   customer_last_name: string;
-  customer_email: string;
+  customer_email: string | null;
   customer_phone: string;
   delivery_address?: string | null;
   delivery_country?: string | null;
@@ -58,32 +59,4 @@ export type IOrder = {
   additional_notes?: string | null;
   created_at?: string;
   updated_at?: string;
-};
-
-/** Online: create DB row before Razorpay modal; complete after payment. */
-export type OnlinePaymentPhase = "pending" | "complete";
-
-export type CheckoutPayload = Pick<
-  IUser,
-  "first_name" | "last_name" | "email" | "phone" | "country" | "state" | "zip_code"
-> & {
-  fulfillment_type: FulfillmentType;
-  payment_method: PaymentMethod;
-  payment_phase?: OnlinePaymentPhase;
-  address?: string;
-  city?: string;
-  pickup_time?: string;
-  table_number?: string;
-  party_size?: number;
-  additional_notes?: string;
-  razorpay_order_id?: string;
-  razorpay_payment_id?: string;
-  razorpay_signature?: string;
-  items: {
-    productId: string;
-    name: string;
-    quantity: number;
-    price: number;
-    imageUrl?: string | null;
-  }[];
 };

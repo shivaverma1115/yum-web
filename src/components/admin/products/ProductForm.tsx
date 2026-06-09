@@ -10,7 +10,7 @@ import { formatCurrency, MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import ImageUploadField, {
     type ImageUploadValue,
-} from "@/components/ui/ImageUploadField";
+} from "@/components/common/image/ImageUploadField";
 import Input from "@/components/ui/Input";
 import MultiSelect from "@/components/ui/MultiSelect";
 import { validateProductImageFiles } from "@/lib/products/imageValidation";

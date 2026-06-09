@@ -1,0 +1,185 @@
+.yum-phone-input.react-tel-input {
+  width: 100%;
+  font-family: inherit;
+  color: var(--color-default-800);
+}
+
+/* Input field — override library `.form-control` defaults */
+.yum-phone-input.react-tel-input .form-control,
+.yum-phone-input.react-tel-input .yum-phone-input__field {
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+  padding-right: 1rem !important;
+  padding-left: 3.25rem !important;
+  border: 1px solid var(--color-default-200) !important;
+  background-color: transparent !important;
+  color: var(--color-default-800) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+}
+
+.yum-phone-input--pill.react-tel-input .form-control,
+.yum-phone-input--pill.react-tel-input .yum-phone-input__field {
+  border-radius: 9999px !important;
+}
+
+.dark .yum-phone-input.react-tel-input .form-control,
+.dark .yum-phone-input.react-tel-input .yum-phone-input__field {
+  background-color: var(--color-default-50) !important;
+  color: var(--color-default-800) !important;
+}
+
+.yum-phone-input.react-tel-input .form-control::placeholder {
+  color: var(--color-default-400);
+}
+
+.yum-phone-input.react-tel-input .form-control:focus {
+  border-color: var(--color-default-200) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.dark .yum-phone-input.react-tel-input .form-control:focus {
+  background-color: var(--color-default-50) !important;
+}
+
+/* Flag / country code button */
+.yum-phone-input.react-tel-input .flag-dropdown,
+.yum-phone-input.react-tel-input .yum-phone-input__button {
+  border: 1px solid var(--color-default-200) !important;
+  border-right: 0 !important;
+  background-color: transparent !important;
+  border-radius: 0.5rem 0 0 0.5rem !important;
+}
+
+.yum-phone-input--pill.react-tel-input .flag-dropdown,
+.yum-phone-input--pill.react-tel-input .yum-phone-input__button {
+  border-radius: 9999px 0 0 9999px !important;
+}
+
+.dark .yum-phone-input.react-tel-input .flag-dropdown,
+.dark .yum-phone-input.react-tel-input .yum-phone-input__button {
+  background-color: var(--color-default-50) !important;
+}
+
+.yum-phone-input.react-tel-input .selected-flag {
+  background-color: transparent !important;
+  border-radius: inherit !important;
+}
+
+.yum-phone-input.react-tel-input .selected-flag:hover,
+.yum-phone-input.react-tel-input .selected-flag:focus,
+.yum-phone-input.react-tel-input .flag-dropdown.open .selected-flag {
+  background-color: var(--color-default-100) !important;
+}
+
+.yum-phone-input.react-tel-input .selected-flag .arrow {
+  border-top-color: var(--color-default-600) !important;
+}
+
+.yum-phone-input.react-tel-input .selected-flag .arrow.up {
+  border-bottom-color: var(--color-default-600) !important;
+  border-top-color: transparent !important;
+}
+
+/* Error state */
+.yum-phone-input--error.react-tel-input .form-control,
+.yum-phone-input--error.react-tel-input .yum-phone-input__field,
+.yum-phone-input--error.react-tel-input .flag-dropdown,
+.yum-phone-input--error.react-tel-input .yum-phone-input__button {
+  border-color: rgb(239 68 68) !important;
+}
+
+/* Country dropdown */
+.yum-phone-input.react-tel-input .country-list,
+.yum-phone-input.react-tel-input .yum-phone-input__dropdown {
+  z-index: 50;
+  width: 100%;
+  max-width: 20rem;
+  border: 1px solid var(--color-default-200) !important;
+  border-radius: 0.5rem;
+  background-color: #fff !important;
+  color: var(--color-default-800) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.dark .yum-phone-input.react-tel-input .country-list,
+.dark .yum-phone-input.react-tel-input .yum-phone-input__dropdown {
+  background-color: var(--color-default-50) !important;
+  color: var(--color-default-800) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.35);
+}
+
+.yum-phone-input.react-tel-input .country-list .country {
+  color: var(--color-default-800);
+}
+
+.yum-phone-input.react-tel-input .country-list .country .dial-code {
+  color: var(--color-default-500) !important;
+}
+
+.yum-phone-input.react-tel-input .country-list .country:hover,
+.yum-phone-input.react-tel-input .country-list .country.highlight {
+  background-color: var(--color-default-100) !important;
+}
+
+.yum-phone-input.react-tel-input .country-list .divider {
+  border-bottom-color: var(--color-default-200) !important;
+}
+
+.yum-phone-input.react-tel-input .country-list .search,
+.yum-phone-input.react-tel-input .yum-phone-input__search {
+  background-color: inherit !important;
+}
+
+.yum-phone-input.react-tel-input .country-list .search-box,
+.yum-phone-input.react-tel-input .yum-phone-input__search {
+  width: calc(100% - 1rem);
+  margin: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-default-200) !important;
+  border-radius: 0.375rem;
+  background-color: transparent !important;
+  color: var(--color-default-800) !important;
+}
+
+.yum-phone-input.react-tel-input .country-list .no-entries-message {
+  color: var(--color-default-500);
+}
+
+/* Disabled */
+.yum-phone-input.react-tel-input .form-control:disabled,
+.yum-phone-input.react-tel-input .yum-phone-input__field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.yum-phone-input.react-tel-input input[disabled] + .flag-dropdown {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.yum-phone-input.react-tel-input input[disabled] + .flag-dropdown:hover .selected-flag {
+  background-color: transparent !important;
+}
+
+/* Invalid number state from library */
+.yum-phone-input.react-tel-input .form-control.invalid-number {
+  border-color: rgb(239 68 68) !important;
+  background-color: transparent !important;
+}
+
+.dark .yum-phone-input.react-tel-input .form-control.invalid-number {
+  background-color: var(--color-default-50) !important;
+}
+
+.yum-phone-input.react-tel-input .invalid-number-message {
+  background: var(--color-default-50);
+  color: rgb(239 68 68);
+}

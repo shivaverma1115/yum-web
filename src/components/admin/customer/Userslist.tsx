@@ -220,18 +220,6 @@ export default function Userslist() {
                     scope="col"
                     className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
                   >
-                    Country
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
-                  >
-                    State
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
-                  >
                     Zip Code
                   </th>
                   <th
@@ -271,7 +259,7 @@ export default function Userslist() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={13}
+                      colSpan={11}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       Loading customers...
@@ -280,7 +268,7 @@ export default function Userslist() {
                 ) : users.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={13}
+                      colSpan={11}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       <i data-lucide="search" className="w-5 h-5 text-default-600" />
@@ -306,12 +294,6 @@ export default function Userslist() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.phone || "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.country || "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.state || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.zip_code || "—"}

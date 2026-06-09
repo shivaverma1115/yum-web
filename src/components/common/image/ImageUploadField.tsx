@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { Camera, ImageIcon, UploadCloud, X } from "lucide-react";
 import { toast } from "react-toastify";
 
-const ImageCropModal = dynamic(() => import("@/components/ui/ImageCropModal"), {
+const ImageCropModal = dynamic(() => import("@/components/common/image/ImageCropModal"), {
   ssr: false,
 });
 import {

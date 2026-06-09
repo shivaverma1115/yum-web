@@ -3,12 +3,12 @@ import type { BadgeColor } from "@/lib/badge-colors";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { verifyRazorpayPaymentSignature } from "@/lib/razorpay/server";
 import type {
-  CheckoutPayload,
   IOrder,
   IOrderItem,
   IOrderWithItems,
   OrderStatus,
 } from "@/types/order";
+import { CheckoutPayload } from "@/components/storefront/Checkout";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "pending",
@@ -25,8 +25,17 @@ export type CreateOrderResult =
 export async function createOrderWithSupabase(
   supabase: SupabaseClient,
   payload: CheckoutPayload,
-  userId?: string | null,
+  userId: string,
 ): Promise<CreateOrderResult> {
+  if (!userId?.trim()) {
+    return {
+      success: false,
+      message: "Customer account is required to place an order.",
+      status: 400,
+      errors: { user_id: "Missing customer account." },
+    };
+  }
+
   if (!payload.items.length) {
     return {
       success: false,
@@ -36,8 +45,7 @@ export async function createOrderWithSupabase(
     };
   }
 
-  const isOnlinePending =
-    payload.payment_method === "online" && payload.payment_phase === "pending";
+  const isOnlinePending = payload.payment_method === "online" && payload.payment_phase === "pending";
 
   if (payload.payment_method === "online" && !isOnlinePending) {
     const orderId = payload.razorpay_order_id?.trim() ?? "";
@@ -78,44 +86,18 @@ export async function createOrderWithSupabase(
   );
 
   const orderRow = {
-    user_id: userId ?? null,
+    user_id: userId,
     fulfillment_type: payload.fulfillment_type,
     status: "pending" as const,
     payment_method: payload.payment_method,
-    payment_status:
-      payload.payment_method === "online"
-        ? isOnlinePending
-          ? ("pending" as const)
-          : ("paid" as const)
-        : ("pending" as const),
-    razorpay_order_id:
-      payload.payment_method === "online" ? payload.razorpay_order_id?.trim() ?? null : null,
-    razorpay_payment_id:
-      payload.payment_method === "online" && !isOnlinePending
-        ? payload.razorpay_payment_id?.trim() ?? null
-        : null,
+    payment_status: payload.payment_method === "online" ? isOnlinePending ? ("pending" as const) : ("paid" as const) : ("pending" as const),
+    razorpay_order_id: payload.payment_method === "online" ? payload.razorpay_order_id?.trim() ?? null : null,
+    razorpay_payment_id: payload.payment_method === "online" && !isOnlinePending ? payload.razorpay_payment_id?.trim() ?? null : null,
     subtotal,
     total: subtotal,
-    customer_first_name: payload.first_name.trim(),
-    customer_last_name: payload.last_name.trim(),
-    customer_email: payload.email.trim(),
-    customer_phone: payload.phone.trim(),
-    delivery_address:
-      payload.fulfillment_type === "delivery" ? payload.address?.trim() ?? null : null,
-    delivery_country:
-      payload.fulfillment_type === "delivery" ? payload.country?.trim() ?? null : null,
-    delivery_state:
-      payload.fulfillment_type === "delivery" ? payload.state?.trim() ?? null : null,
-    delivery_city:
-      payload.fulfillment_type === "delivery" ? payload.city?.trim() ?? null : null,
-    delivery_zip_code:
-      payload.fulfillment_type === "delivery" ? payload.zip_code?.trim() ?? null : null,
-    pickup_time:
-      payload.fulfillment_type === "pickup" ? payload.pickup_time?.trim() ?? null : null,
-    table_number:
-      payload.fulfillment_type === "dine_in" ? payload.table_number?.trim() ?? null : null,
-    party_size:
-      payload.fulfillment_type === "dine_in" ? payload.party_size ?? null : null,
+    customer_phone: payload.phone?.trim() || "",
+    delivery_address: payload.fulfillment_type === "delivery" ? payload.address?.trim() ?? null : null,
+    table_number: payload.fulfillment_type === "dine_in" ? payload.table_number?.trim() ?? null : null,
     additional_notes: payload.additional_notes?.trim() ?? null,
   };
 
@@ -534,7 +516,7 @@ export async function listCustomerOrdersWithSupabase(
   } else {
     return { success: true, orders: [] };
   }
-  
+
   if (filter === "paid") {
     query = query.eq("payment_status", "paid");
   } else if (filter === "failed") {

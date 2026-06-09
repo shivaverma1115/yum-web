@@ -1,4 +1,4 @@
-import type { RazorpayCheckoutResponse } from "@/lib/checkout/razorpay-client";
+import type { RazorpayCheckoutResponse } from "@/lib/razorpay/client";
 import { waitForOrderPaymentStatus } from "@/lib/checkout/wait-for-payment";
 
 type ConfirmPaymentResponse = {

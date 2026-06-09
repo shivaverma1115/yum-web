@@ -10,13 +10,14 @@ import {
     fetchProduct,
     fetchProductsPage,
     getProductImages,
-} from "@/lib/api/products";
-import HtmlContent from "@/components/ui/HtmlContent";
-import OrderTypeBadges from "@/components/ui/OrderTypeBadges";
+} from "@/lib/products/products";
+import HtmlContent from "@/components/common/HtmlContent";
+import OrderTypeBadges from "@/components/common/OrderTypeBadges";
 import { isRichTextEmpty } from "@/lib/rich-text";
 import { formatCurrency } from "@/lib/constants";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import type { IProduct } from "@/types/product";
+import { HeartIcon } from "lucide-react";
 
 interface ProductDetailsProps {
     /** Route param: product UUID (folder is named [slug]). */
@@ -141,8 +142,8 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                             type="button"
                                             onClick={() => setActiveImageIndex(index)}
                                             className={`cursor-pointer rounded overflow-hidden border-2 transition-all !w-24 !h-24 lg:!w-32 lg:!h-32 ${index === activeImageIndex
-                                                    ? "border-primary"
-                                                    : "border-transparent"
+                                                ? "border-primary"
+                                                : "border-transparent"
                                                 }`}
                                         >
                                             <img
@@ -203,8 +204,8 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
 
                             <h4 className="text-3xl font-semibold text-primary mb-6">
                                 {product.add_discount &&
-                                product.discount_percent != null &&
-                                product.selling_price != null ? (
+                                    product.discount_percent != null &&
+                                    product.selling_price != null ? (
                                     <>
                                         {formatCurrency(
                                             calculateDiscountedPrice(
@@ -228,48 +229,12 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                             </p>
 
                             <div className="flex items-center gap-2 mb-8">
-                                <div className="relative z-10 inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                    <button
-                                        type="button"
-                                        className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-9 w-9 text-sm inline-flex items-center justify-center"
-                                        onClick={() =>
-                                            setQuantity((q) => Math.max(1, q - 1))
-                                        }
-                                    >
-                                        –
-                                    </button>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={quantity}
-                                        className="w-12 border-0 text-sm text-center focus:ring-0 p-0 bg-transparent"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-9 w-9 text-sm inline-flex items-center justify-center"
-                                        onClick={() =>
-                                            setQuantity((q) =>
-                                                Math.min(product.quantity || 99, q + 1),
-                                            )
-                                        }
-                                    >
-                                        +
-                                    </button>
-                                </div>
 
                                 <AddToCartButton
                                     product={product}
-                                    quantity={quantity}
-                                    redirectToCart
-                                    className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
-                                >
-                                    Buy Now
-                                </AddToCartButton>
-
-                                <i
-                                    data-lucide="heart"
-                                    className="h-8 w-8 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600"
+                                    className="relative z-10 inline-flex items-center justify-center rounded-full border border-primary bg-primary px-12 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
                                 />
+                                <HeartIcon className="size-5 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600" /> 
                             </div>
                         </div>
                     </div>

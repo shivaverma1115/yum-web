@@ -15,8 +15,7 @@ export function getCustomerDisplayName(user: IUser) {
 }
 
 export function getCustomerLocation(user: IUser) {
-  const parts = [user.state, user.country].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "—";
+  return user.zip_code?.trim() || "—";
 }
 
 export function useAdminCustomer(userId: string) {

@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { COUNTRIES, STATES } from "@/lib/constants";
 import type { IUserAddress, UserAddressType } from "@/types/user-address";
 
 const inputClassName =
@@ -18,9 +17,6 @@ const emptyAddress = (addressType: UserAddressType): IUserAddress => ({
   last_name: "",
   company_name: "",
   address_line: "",
-  country: COUNTRIES[0] ?? "",
-  state: STATES[0] ?? "",
-  city: "",
   zip_code: "",
   email: "",
   phone: "",
@@ -63,9 +59,6 @@ export default function UserAddressForm({
           last_name: values.last_name,
           company_name: values.company_name,
           address_line: values.address_line,
-          country: values.country,
-          state: values.state,
-          city: values.city,
           zip_code: values.zip_code,
           email: values.email,
           phone: values.phone,
@@ -155,56 +148,6 @@ export default function UserAddressForm({
             disabled={isSubmitting}
             className={inputClassName}
             {...register("address_line")}
-          />
-        </div>
-
-        <div className="lg:col-span-2">
-          <label className="block text-sm font-medium text-default-900 mb-2" htmlFor={`${addressType}_country`}>
-            Country/Region
-          </label>
-          <select
-            id={`${addressType}_country`}
-            disabled={isSubmitting}
-            className={inputClassName}
-            {...register("country")}
-          >
-            {COUNTRIES.map((country) => (
-              <option key={country} value={country}>
-                {country}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="lg:col-span-2">
-          <label className="block text-sm font-medium text-default-900 mb-2" htmlFor={`${addressType}_state`}>
-            State
-          </label>
-          <select
-            id={`${addressType}_state`}
-            disabled={isSubmitting}
-            className={inputClassName}
-            {...register("state")}
-          >
-            {STATES.map((state) => (
-              <option key={state} value={state}>
-                {state}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-default-900 mb-2" htmlFor={`${addressType}_city`}>
-            City
-          </label>
-          <input
-            id={`${addressType}_city`}
-            type="text"
-            placeholder="City"
-            disabled={isSubmitting}
-            className={inputClassName}
-            {...register("city")}
           />
         </div>
 

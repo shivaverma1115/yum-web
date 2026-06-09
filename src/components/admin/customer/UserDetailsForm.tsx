@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
-import { COUNTRIES, STATES } from "@/lib/constants";
 import { Info, Save, X } from "lucide-react";
 import { useContextApi } from "@/context-api/use-context";
 
@@ -208,58 +207,6 @@ export default function UserDetailsForm({
             />
             {errors.phone?.message ? (
               <span className={errorClassName}>{errors.phone.message}</span>
-            ) : null}
-          </div>
-
-          <div>
-            <label
-              className="block text-sm font-medium text-default-900 mb-2"
-              htmlFor="country"
-            >
-              Country/Region <span className="text-required">*</span>
-            </label>
-            <select
-              id="country"
-              disabled={isSubmitting}
-              className={inputClassName}
-              {...register("country", {
-                required: "Country is required.",
-              })}
-            >
-              {COUNTRIES.map((country: string) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
-              ))}
-            </select>
-            {errors.country?.message ? (
-              <span className={errorClassName}>{errors.country.message}</span>
-            ) : null}
-          </div>
-
-          <div>
-            <label
-              className="block text-sm font-medium text-default-900 mb-2"
-              htmlFor="state"
-            >
-              State <span className="text-required">*</span>
-            </label>
-            <select
-              id="state"
-              disabled={isSubmitting}
-              className={inputClassName}
-              {...register("state", {
-                required: "State is required.",
-              })}
-            >
-              {STATES.map((state: string) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
-            {errors.state?.message ? (
-              <span className={errorClassName}>{errors.state.message}</span>
             ) : null}
           </div>
 

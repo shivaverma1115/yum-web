@@ -12,7 +12,7 @@ import {
 } from "@/lib/supabase/product/product-images";
 
 const PRODUCT_COLUMNS =
-  "id, user_id, name, category, selling_price, cost_price, quantity, order_type, short_description, long_description, add_discount, discount_percent, add_expiry_date, expiry_start_date, expiry_end_date, return_policy, image_url, image_urls, created_at, updated_at";
+  "id, user_id, name, category, selling_price, cost_price, quantity, order_type, short_description, long_description, add_discount, add_expiry_date, return_policy, image_url, image_urls, created_at, updated_at";
 
 export type CreateProductResult =
   | { success: true; product: IProduct }

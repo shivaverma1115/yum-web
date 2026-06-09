@@ -4,9 +4,9 @@ import Link from "next/link";
 import type { IProduct } from "@/types/product";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { fetchProductsPage } from "@/lib/api/products";
+import { fetchProductsPage } from "@/lib/products/products";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
-import OrderTypeBadges from "@/components/ui/OrderTypeBadges";
+import OrderTypeBadges from "@/components/common/OrderTypeBadges";
 import { Eye, Pencil, Trash } from "lucide-react";
 
 const TABLE_COL_SPAN = 19;

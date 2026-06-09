@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useCallback, useRef } from 'react';
 import { useContextApi } from '@/context-api/use-context';
-import ImageUploadField, { type ImageUploadValue } from '@/components/ui/ImageUploadField';
+import ImageUploadField, { type ImageUploadValue } from '@/components/common/image/ImageUploadField';
 import ChangePasswordForm from '@/components/auth/ChangePasswordForm';
 import UserDetailsForm from '../customer/UserDetailsForm';
 import UserAddressForm from '@/components/admin/settings/UserAddressForm';

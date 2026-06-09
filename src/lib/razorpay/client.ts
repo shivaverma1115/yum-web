@@ -83,7 +83,7 @@ export type OpenRazorpayCheckoutParams = {
   description: string;
   prefill: {
     name: string;
-    email: string;
+    email?: string;
     contact: string;
   };
 };

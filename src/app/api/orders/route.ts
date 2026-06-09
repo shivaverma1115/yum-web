@@ -1,38 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { CookieOptions } from "@supabase/ssr";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
-import { validateCheckoutPayload } from "@/lib/checkout/validate-order-payload";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { establishCheckoutSession } from "@/lib/supabase/checkout-session";
+import { resolveCheckoutUserId } from "@/lib/supabase/checkout-user";
 import { createOrderWithSupabase } from "@/lib/supabase/orders";
 import { getCurrentUser } from "@/lib/supabase/account/profile";
 import { createClient } from "@/lib/supabase/server";
-import type { CheckoutPayload } from "@/types/order";
+import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
+import { CheckoutPayload } from "@/components/storefront/Checkout";
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: CookieOptions;
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as Partial<CheckoutPayload>;
-    const validation = validateCheckoutPayload(body);
+    const body: CheckoutPayload = (await request.json().catch(() => ({})));
 
-    if (!validation.valid) {
+    const fulfillment = body.fulfillment_type;
+    if (
+      (fulfillment === "delivery" || fulfillment === "pickup") &&
+      !isPhoneVerifiedOnRequest(request, body.phone)
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: validation.message,
-          errors: validation.errors ?? {},
+          message: "Please verify your phone number with OTP before placing the order.",
+          errors: { phone: "Phone verification required." },
         },
-        { status: 400 },
+        { status: 403 },
       );
     }
 
     const supabase = await createClient();
     const session = await getCurrentUser(supabase);
-    const userId = session?.authUser.id ?? null;
+    const wasGuest = !session?.authUser.id;
 
     const adminClient = createAdminClient();
+    const userResult = await resolveCheckoutUserId(
+      adminClient,
+      body,
+      session?.authUser.id,
+    );
+
+    if (!userResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: userResult.message,
+          errors: {},
+        },
+        { status: userResult.status },
+      );
+    }
+
     const result = await createOrderWithSupabase(
       adminClient,
-      validation.data,
-      userId,
+      body,
+      userResult.userId,
     );
 
     if (!result.success) {
@@ -46,11 +75,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isPendingOnline =
-      validation.data.payment_method === "online" &&
-      validation.data.payment_phase === "pending";
+    const isPendingOnline = body.payment_method === "online" && body.payment_phase === "pending";
 
-    return NextResponse.json({
+    const cookiesToApply: CookieToSet[] = [];
+    let loggedIn = !wasGuest;
+
+    if (wasGuest) {
+      const sessionResult = await establishCheckoutSession(
+        {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookies) => {
+            cookiesToApply.push(...cookies);
+          },
+        },
+        userResult.userId,
+      );
+      loggedIn = sessionResult.success;
+    }
+
+    const response = NextResponse.json({
       success: true,
       message: isPendingOnline
         ? "Order created. Complete payment to confirm."
@@ -58,8 +101,15 @@ export async function POST(request: NextRequest) {
       data: {
         order: result.order,
         items: result.items,
+        loggedIn,
       },
     });
+
+    cookiesToApply.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options);
+    });
+
+    return response;
   } catch (error) {
     logError(error, {
       context: "Create Order API",
@@ -68,8 +118,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message:
-          error instanceof Error ? error.message : ERROR_MESSAGE_GENERIC,
+        message: ERROR_MESSAGE_GENERIC,
       },
       { status: 500 },
     );

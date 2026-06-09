@@ -1,24 +1,14 @@
 import type { FulfillmentType } from "@/types/order";
 
-export const ORDER_TYPE_VALUES: FulfillmentType[] = [
-  "delivery",
-  "pickup",
-  "dine_in",
-];
-
 export const ORDER_TYPE_OPTIONS: { value: FulfillmentType; label: string }[] = [
   { value: "delivery", label: "Delivery" },
   { value: "pickup", label: "Pickup" },
   { value: "dine_in", label: "Dine in" },
 ];
 
-const ORDER_TYPE_LABELS: Record<FulfillmentType, string> = {
-  delivery: "Delivery",
-  pickup: "Pickup",
-  dine_in: "Dine in",
-};
-
-const ORDER_TYPE_SET = new Set<string>(ORDER_TYPE_VALUES);
+const ORDER_TYPE_SET = new Set<string>(
+  ORDER_TYPE_OPTIONS.map((option) => option.value),
+);
 
 export function isOrderType(value: string): value is FulfillmentType {
   return ORDER_TYPE_SET.has(value);
@@ -61,7 +51,8 @@ export function normalizeOrderTypes(value: unknown): FulfillmentType[] {
 }
 
 export function getOrderTypeLabel(value: string): string {
-  return isOrderType(value) ? ORDER_TYPE_LABELS[value] : value;
+  if (!isOrderType(value)) return value;
+  return ORDER_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
 
 export function formatOrderTypes(types: unknown): string {

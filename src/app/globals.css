@@ -87,6 +87,8 @@ File: style Css File
 @import "../styles/custom/_flatpickr.css";
 @import "../styles/custom/_quill.css";
 @import "../styles/custom/_rangeslider.css";
+@import "react-phone-input-2/lib/style.css";
+@import "../styles/custom/_phone-input.css";
 
 .text-required {
     color: red;

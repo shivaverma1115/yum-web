@@ -4,7 +4,7 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { deleteProductWithSupabase } from "@/lib/supabase/product/products";
 
 const PROFILE_COLUMNS =
-  "id, email, first_name, last_name, phone, country, state, zip_code, description, role, created_at, updated_at";
+  "id, email, first_name, last_name, phone, zip_code, description, role, created_at, updated_at";
 
 export type ListCustomersResult =
   | {
@@ -311,7 +311,7 @@ export async function forceDeleteCustomerWithSupabase(
   const orderIdsResult = await collectCustomerOrderIds(
     supabase,
     userId,
-    customerResult.user.email,
+    customerResult.user.email ?? undefined,
   );
 
   if ("error" in orderIdsResult) {
@@ -363,7 +363,15 @@ export async function createCustomerWithSupabase(
   supabase: SupabaseClient,
   input: IUser,
 ): Promise<CustomerMutationResult> {
-  const email = input.email.trim();
+  const email = input.email?.trim() ?? "";
+  if (!email) {
+    return {
+      success: false,
+      message: "Email is required.",
+      status: 400,
+      errors: { email: "Email is required." },
+    };
+  }
   const first_name = input.first_name.trim();
   const last_name = input.last_name.trim();
 
@@ -453,10 +461,11 @@ export async function updateCustomerWithSupabase(
     }
   }
 
-  if (input.email.trim() !== profile.email) {
+  const nextEmail = input.email?.trim() ?? "";
+  if (nextEmail && nextEmail !== profile.email) {
     const { error: emailError } = await supabase.auth.admin.updateUserById(
       userId,
-      { email: input.email.trim() },
+      { email: nextEmail },
     );
 
     if (emailError) {

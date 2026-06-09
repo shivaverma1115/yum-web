@@ -3,6 +3,7 @@ import {
   getOrderTypeLabel,
   normalizeOrderTypes,
 } from "@/lib/order-types";
+import Badge from "../ui/Badge";
 
 type OrderTypeBadgesProps = {
   types: unknown;
@@ -30,12 +31,13 @@ export default function OrderTypeBadges({
   return (
     <div className={`flex flex-wrap gap-1.5 ${className}`.trim()}>
       {orderTypes.map((type) => (
-        <span
+        <Badge
           key={type}
-          className="inline-flex items-center rounded-full border border-default-200 px-2.5 py-1 text-xs text-default-700"
+          color="default"
+          size="sm"
         >
           {getOrderTypeLabel(type)}
-        </span>
+        </Badge>
       ))}
     </div>
   );

@@ -114,8 +114,6 @@ function buildRegisterUserStub(
     first_name,
     last_name,
     phone: "",
-    country: "",
-    state: "",
     zip_code: "",
     description: "",
     role: UserRole.USER,
@@ -150,7 +148,7 @@ async function getProfileByUserIdAdmin(
   const { data, error } = await adminClient
     .from("profiles")
     .select(
-      "id, email, first_name, last_name, phone, country, state, zip_code, description, role, created_at, updated_at",
+      "id, email, first_name, last_name, phone, zip_code, description, role, created_at, updated_at",
     )
     .eq("id", userId)
     .maybeSingle();

@@ -5,7 +5,7 @@ import ProductViewModeToggle, {
     type ProductViewMode,
 } from "@/components/storefront/Products/ProductViewModeToggle";
 import { fetchProductCategories } from "@/lib/api/categories";
-import { fetchProductsPage } from "@/lib/api/products";
+import { fetchProductsPage } from "@/lib/products/products";
 import type { IProductCategory } from "@/types/product-category";
 import type { IProduct } from "@/types/product";
 import { Settings2, X } from "lucide-react";

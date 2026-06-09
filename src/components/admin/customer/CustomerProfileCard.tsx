@@ -10,7 +10,7 @@ import {
 import { formatCustomerSince } from "@/lib/constants";
 import type { IUser } from "@/types/user";
 
-function displayValue(value: string | undefined) {
+function displayValue(value: string | null | undefined) {
   if (!value?.trim()) return "—";
   return value.trim();
 }
@@ -93,12 +93,8 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
               <dd className="text-default-800">{displayValue(customer.phone)}</dd>
             </div>
             <div className="flex gap-2">
-              <dt className="text-default-500 shrink-0">Location</dt>
-              <dd className="text-default-800">{getCustomerLocation(customer)}</dd>
-            </div>
-            <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">ZIP</dt>
-              <dd className="text-default-800">{displayValue(customer.zip_code)}</dd>
+              <dd className="text-default-800">{getCustomerLocation(customer)}</dd>
             </div>
             <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">Role</dt>

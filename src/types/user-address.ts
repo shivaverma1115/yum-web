@@ -8,9 +8,6 @@ export type IUserAddress = {
   last_name: string;
   company_name: string;
   address_line: string;
-  country: string;
-  state: string;
-  city: string;
   zip_code: string;
   email: string;
   phone: string;

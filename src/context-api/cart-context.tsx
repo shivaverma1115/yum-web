@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getProductImages } from "@/lib/api/products";
+import { getProductImages } from "@/lib/products/products";
 import { loadCartFromStorage, saveCartToStorage } from "@/lib/cart/storage";
 import type { ICartItem } from "@/types/cart";
 import type { IProduct } from "@/types/product";
