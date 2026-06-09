@@ -1,7 +1,9 @@
 .yum-phone-input.react-tel-input {
+  position: relative;
   width: 100%;
   font-family: inherit;
   color: var(--color-default-800);
+  overflow: visible;
 }
 
 /* Input field — override library `.form-control` defaults */
@@ -13,7 +15,9 @@
   padding-top: 0.625rem !important;
   padding-bottom: 0.625rem !important;
   padding-right: 1rem !important;
-  padding-left: 3.25rem !important;
+  position: relative;
+  z-index: 1;
+  padding-left: 3.75rem !important;
   border: 1px solid var(--color-default-200) !important;
   background-color: transparent !important;
   color: var(--color-default-800) !important;
@@ -52,6 +56,7 @@
 /* Flag / country code button */
 .yum-phone-input.react-tel-input .flag-dropdown,
 .yum-phone-input.react-tel-input .yum-phone-input__button {
+  z-index: 3;
   border: 1px solid var(--color-default-200) !important;
   border-right: 0 !important;
   background-color: transparent !important;
@@ -69,8 +74,15 @@
 }
 
 .yum-phone-input.react-tel-input .selected-flag {
+  width: 3rem;
+  padding: 0 0.5rem 0 0.75rem !important;
   background-color: transparent !important;
   border-radius: inherit !important;
+  cursor: pointer;
+}
+
+.yum-phone-input.react-tel-input .selected-flag .flag {
+  left: 0.75rem;
 }
 
 .yum-phone-input.react-tel-input .selected-flag:hover,
@@ -99,8 +111,10 @@
 /* Country dropdown */
 .yum-phone-input.react-tel-input .country-list,
 .yum-phone-input.react-tel-input .yum-phone-input__dropdown {
-  z-index: 50;
+  z-index: 60;
+  left: 0;
   width: 100%;
+  min-width: 18rem;
   max-width: 20rem;
   border: 1px solid var(--color-default-200) !important;
   border-radius: 0.5rem;

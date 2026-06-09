@@ -105,13 +105,21 @@ export default function Checkout() {
         })),
     });
 
-    const finishOrderSuccess = async (loggedIn?: boolean) => {
+    const finishOrderSuccess = async (
+        loggedIn?: boolean,
+        redirectTo?: string,
+    ) => {
         toast.success("Order placed successfully.");
+        clearCart();
+
         if (loggedIn) {
             await refreshUser();
-            router.push(`/${user?.role}/orders`);
+            router.push(redirectTo ?? "/user/orders");
+            router.refresh();
+            return;
         }
-        clearCart();
+
+        router.push(redirectTo ?? "/home");
         router.refresh();
     };
 
@@ -119,6 +127,7 @@ export default function Checkout() {
         const response = await fetch("/api/orders", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(buildOrderBody(values)),
         });
 
@@ -129,7 +138,10 @@ export default function Checkout() {
             return false;
         }
 
-        await finishOrderSuccess(Boolean(data.data?.loggedIn));
+        await finishOrderSuccess(
+            Boolean(data.data?.loggedIn),
+            data.data?.redirectTo as string | undefined,
+        );
         return true;
     };
 
@@ -175,6 +187,7 @@ export default function Checkout() {
                 const pendingResponse = await fetch("/api/orders", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
+                    credentials: "include",
                     body: JSON.stringify(
                         buildOrderBody(values, {
                             payment_phase: "pending",
@@ -191,6 +204,9 @@ export default function Checkout() {
 
                 const yumOrderId = pendingData.data?.order?.id as string | undefined;
                 const guestLoggedIn = Boolean(pendingData.data?.loggedIn);
+                const guestRedirectTo = pendingData.data?.redirectTo as
+                    | string
+                    | undefined;
                 if (!yumOrderId) {
                     toast.error("Order id missing from server response.");
                     return;
@@ -213,7 +229,7 @@ export default function Checkout() {
 
                     toast.info("Confirming payment. Please wait...");
                     await confirmOrderPayment(yumOrderId, payment);
-                    await finishOrderSuccess(guestLoggedIn);
+                    await finishOrderSuccess(guestLoggedIn, guestRedirectTo);
                 } catch (error) {
                     if (error instanceof Error && error.message === "Payment cancelled.") {
                         toast.info(

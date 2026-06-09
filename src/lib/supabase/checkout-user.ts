@@ -6,9 +6,10 @@ import {
   getPhoneDigits,
   isValidPhoneNumber,
   normalizePhoneE164,
-  phonesMatch,
+  phonesMatchNational,
 } from "@/lib/phone-otp/phone";
 import { CheckoutPayload } from "@/components/storefront/Checkout";
+import { UserRole } from "@/types/user";
 
 export type ResolveCheckoutUserResult =
   | { success: true; userId: string }
@@ -23,7 +24,51 @@ function profilePhone(payload: CheckoutPayload): string {
 function phoneLookupValues(phone: string): string[] {
   const e164 = normalizePhoneE164(phone);
   const digits = getPhoneDigits(phone);
-  return [...new Set([e164, digits, digits ? `+${digits}` : ""].filter(Boolean))];
+  const national = getNationalMobileDigits(phone);
+  return [
+    ...new Set(
+      [e164, digits, digits ? `+${digits}` : "", national].filter(Boolean),
+    ),
+  ];
+}
+
+function phoneMatchesLookup(stored: string, phone: string): boolean {
+  const trimmed = stored.trim();
+  if (!trimmed || trimmed === "-") return false;
+
+  const candidates = new Set(phoneLookupValues(phone));
+  if (candidates.has(trimmed) || candidates.has(normalizePhoneE164(trimmed))) {
+    return true;
+  }
+
+  return phonesMatchNational(trimmed, phone);
+}
+
+async function findAuthUserIdByPhone(
+  admin: SupabaseClient,
+  phone: string,
+): Promise<string | null> {
+  if (!isValidPhoneNumber(phone)) return null;
+
+  let page = 1;
+  const perPage = 1000;
+  const maxPages = 20;
+
+  while (page <= maxPages) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error || !data.users?.length) break;
+
+    for (const user of data.users) {
+      if (user.phone && phoneMatchesLookup(user.phone, phone)) {
+        return user.id;
+      }
+    }
+
+    if (data.users.length < perPage) break;
+    page += 1;
+  }
+
+  return null;
 }
 
 async function findProfileIdByPhone(
@@ -55,8 +100,18 @@ async function findProfileIdByPhone(
 
   if (error || !rows?.length) return null;
 
-  const match = rows.find((row) => phonesMatch(row.phone, phone));
+  const match = rows.find((row) => phoneMatchesLookup(row.phone, phone));
   return match?.id ?? null;
+}
+
+async function findUserIdByPhone(
+  admin: SupabaseClient,
+  phone: string,
+): Promise<string | null> {
+  const byAuth = await findAuthUserIdByPhone(admin, phone);
+  if (byAuth) return byAuth;
+
+  return findProfileIdByPhone(admin, phone);
 }
 
 async function findProfileIdByEmail(
@@ -71,6 +126,85 @@ async function findProfileIdByEmail(
 
   if (error || !data) return null;
   return data.id as string;
+}
+
+/** Ensures a profiles row exists and phone/email are set when missing. */
+export async function ensureCheckoutProfile(
+  admin: SupabaseClient,
+  userId: string,
+  payload: Pick<CheckoutPayload, "phone" | "email">,
+): Promise<string | null> {
+  const checkoutPhone = profilePhone(payload as CheckoutPayload);
+  const checkoutEmail = payload.email?.trim() || null;
+
+  const { data: existing, error: readError } = await admin
+    .from("profiles")
+    .select("id, phone, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (readError) {
+    return readError.message;
+  }
+
+  if (!existing) {
+    const { data: authData, error: authError } =
+      await admin.auth.admin.getUserById(userId);
+
+    if (authError || !authData.user) {
+      return authError?.message ?? "User not found.";
+    }
+
+    const authUser = authData.user;
+    const phone =
+      checkoutPhone ||
+      (authUser.phone?.trim() ? normalizePhoneE164(authUser.phone) : "") ||
+      "-";
+
+    const { error: insertError } = await admin.from("profiles").insert({
+      id: userId,
+      email: checkoutEmail ?? authUser.email?.trim() ?? null,
+      first_name: "Guest",
+      last_name: "-",
+      phone,
+      role: UserRole.USER,
+    });
+
+    return insertError?.message ?? null;
+  }
+
+  const updates: { phone?: string; email?: string | null } = {};
+
+  if (
+    checkoutPhone &&
+    (!existing.phone?.trim() || existing.phone.trim() === "-")
+  ) {
+    updates.phone = checkoutPhone;
+  }
+
+  if (checkoutEmail && !existing.email?.trim()) {
+    updates.email = checkoutEmail;
+  }
+
+  if (!Object.keys(updates).length) {
+    return null;
+  }
+
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update(updates)
+    .eq("id", userId);
+
+  return updateError?.message ?? null;
+}
+
+function isDuplicateUserError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("already") ||
+    lower.includes("registered") ||
+    lower.includes("exists")
+  );
 }
 
 async function createAuthUserForCheckout(
@@ -102,23 +236,14 @@ async function createAuthUserForCheckout(
   const { data, error } = createResult;
 
   if (error) {
-    if (
-      phone &&
-      (error.message.toLowerCase().includes("already") ||
-        error.message.toLowerCase().includes("registered") ||
-        error.message.toLowerCase().includes("exists"))
-    ) {
-      const existingId = await findProfileIdByPhone(admin, phone);
+    if (phone && isDuplicateUserError(error.message)) {
+      const existingId = await findUserIdByPhone(admin, phone);
       if (existingId) {
         return { userId: existingId };
       }
     }
 
-    if (
-      email &&
-      (error.message.toLowerCase().includes("already") ||
-        error.message.toLowerCase().includes("registered"))
-    ) {
+    if (email && isDuplicateUserError(error.message)) {
       const existingId = await findProfileIdByEmail(admin, email);
       if (existingId) {
         return { userId: existingId };
@@ -135,6 +260,19 @@ async function createAuthUserForCheckout(
   return { userId: data.user.id };
 }
 
+async function finalizeCheckoutUser(
+  admin: SupabaseClient,
+  userId: string,
+  payload: CheckoutPayload,
+): Promise<ResolveCheckoutUserResult> {
+  const profileError = await ensureCheckoutProfile(admin, userId, payload);
+  if (profileError) {
+    return { success: false, message: profileError, status: 400 };
+  }
+
+  return { success: true, userId };
+}
+
 /**
  * Returns an existing session user or finds/creates a customer from checkout data.
  */
@@ -144,14 +282,14 @@ export async function resolveCheckoutUserId(
   sessionUserId?: string | null,
 ): Promise<ResolveCheckoutUserResult> {
   if (sessionUserId) {
-    return { success: true, userId: sessionUserId };
+    return finalizeCheckoutUser(admin, sessionUserId, payload);
   }
 
   const phone = profilePhone(payload);
   if (phone && isValidPhoneNumber(phone)) {
-    const byPhone = await findProfileIdByPhone(admin, phone);
+    const byPhone = await findUserIdByPhone(admin, phone);
     if (byPhone) {
-      return { success: true, userId: byPhone };
+      return finalizeCheckoutUser(admin, byPhone, payload);
     }
   }
 
@@ -159,7 +297,7 @@ export async function resolveCheckoutUserId(
   if (email) {
     const byEmail = await findProfileIdByEmail(admin, email);
     if (byEmail) {
-      return { success: true, userId: byEmail };
+      return finalizeCheckoutUser(admin, byEmail, payload);
     }
   }
 
@@ -168,5 +306,5 @@ export async function resolveCheckoutUserId(
     return { success: false, message: created.error, status: 400 };
   }
 
-  return { success: true, userId: created.userId };
+  return finalizeCheckoutUser(admin, created.userId, payload);
 }

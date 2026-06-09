@@ -9,6 +9,7 @@ import type {
   OrderStatus,
 } from "@/types/order";
 import { CheckoutPayload } from "@/components/storefront/Checkout";
+import { getProfileByUserId } from "@/lib/supabase/account/profile";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "pending",
@@ -85,6 +86,10 @@ export async function createOrderWithSupabase(
     0,
   );
 
+  const profile = await getProfileByUserId(supabase, userId);
+  const checkoutPhone = payload.phone?.trim();
+  const profilePhone = profile?.phone?.trim();
+
   const orderRow = {
     user_id: userId,
     fulfillment_type: payload.fulfillment_type,
@@ -95,7 +100,15 @@ export async function createOrderWithSupabase(
     razorpay_payment_id: payload.payment_method === "online" && !isOnlinePending ? payload.razorpay_payment_id?.trim() ?? null : null,
     subtotal,
     total: subtotal,
-    customer_phone: payload.phone?.trim() || "",
+    customer_first_name: profile?.first_name?.trim() || "Guest",
+    customer_last_name: profile?.last_name?.trim() || "-",
+    customer_email: payload.email?.trim() || profile?.email?.trim() || null,
+    customer_phone:
+      checkoutPhone && checkoutPhone !== "-"
+        ? checkoutPhone
+        : profilePhone && profilePhone !== "-"
+          ? profilePhone
+          : "-",
     delivery_address: payload.fulfillment_type === "delivery" ? payload.address?.trim() ?? null : null,
     table_number: payload.fulfillment_type === "dine_in" ? payload.table_number?.trim() ?? null : null,
     additional_notes: payload.additional_notes?.trim() ?? null,

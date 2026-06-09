@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
+import { getProfileByUserId } from "@/lib/supabase/account/profile";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureCheckoutProfile } from "@/lib/supabase/checkout-user";
 
 export async function GET() {
   try {
@@ -14,11 +17,22 @@ export async function GET() {
       );
     }
 
+    let profile = auth.profile;
+
+    if (!profile) {
+      const admin = createAdminClient();
+      await ensureCheckoutProfile(admin, auth.user.id, {
+        phone: auth.user.phone ?? "",
+        email: auth.user.email ?? null,
+      });
+      profile = await getProfileByUserId(auth.supabase, auth.user.id);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         authUser: auth.user,
-        user: auth.profile,
+        user: profile,
       },
     });
   } catch (error) {

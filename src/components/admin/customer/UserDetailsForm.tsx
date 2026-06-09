@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { Info, Save, X } from "lucide-react";
 import { useContextApi } from "@/context-api/use-context";
+import { PhoneVerification } from "@/components/common/phone-verification";
+import { validateOptionalPhoneValue } from "@/lib/phone-otp/phone";
 
 export interface UserDetailsFormProps {
   user?: IUser;
@@ -17,6 +19,38 @@ const inputClassName =
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
+function optionalMinLength(min: number, message: string) {
+  return {
+    validate: (value?: string | null) =>
+      !value?.trim() || value.trim().length >= min || message,
+  };
+}
+
+function optionalEmailPattern() {
+  return {
+    validate: (value?: string | null) => {
+      const email = value?.trim();
+      if (!email) return true;
+      return (
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+        "Enter a valid email address."
+      );
+    },
+  };
+}
+
+function optionalZipCode() {
+  return {
+    validate: (value?: string | null) => {
+      const zip = value?.trim();
+      if (!zip) return true;
+      return (
+        /^[A-Za-z0-9\s-]{3,10}$/.test(zip) || "Enter a valid zip code."
+      );
+    },
+  };
+}
+
 export default function UserDetailsForm({
   user,
   mode = "admin",
@@ -24,10 +58,12 @@ export default function UserDetailsForm({
   const router = useRouter();
   const isEditMode = Boolean(user?.id);
   const isSelfMode = mode === "self";
+  const isCreateMode = !isEditMode && !isSelfMode;
   const { setUser } = useContextApi();
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<IUser>({
@@ -83,7 +119,10 @@ export default function UserDetailsForm({
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="first_name"
             >
-              First Name <span className="text-required">*</span>
+              First Name
+              {isCreateMode ? (
+                <span className="text-required"> *</span>
+              ) : null}
             </label>
             <input
               id="first_name"
@@ -91,13 +130,18 @@ export default function UserDetailsForm({
               placeholder="Enter Your First Name"
               disabled={isSubmitting}
               className={inputClassName}
-              {...register("first_name", {
-                required: "First name is required.",
-                minLength: {
-                  value: 2,
-                  message: "Enter at least 2 characters.",
-                },
-              })}
+              {...register(
+                "first_name",
+                isCreateMode
+                  ? {
+                      required: "First name is required.",
+                      minLength: {
+                        value: 2,
+                        message: "Enter at least 2 characters.",
+                      },
+                    }
+                  : optionalMinLength(2, "Enter at least 2 characters."),
+              )}
             />
             {errors.first_name?.message ? (
               <span className={errorClassName}>{errors.first_name.message}</span>
@@ -109,7 +153,10 @@ export default function UserDetailsForm({
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="last_name"
             >
-              Last Name <span className="text-required">*</span>
+              Last Name
+              {isCreateMode ? (
+                <span className="text-required"> *</span>
+              ) : null}
             </label>
             <input
               id="last_name"
@@ -117,13 +164,18 @@ export default function UserDetailsForm({
               placeholder="Enter Your Last Name"
               disabled={isSubmitting}
               className={inputClassName}
-              {...register("last_name", {
-                required: "Last name is required.",
-                minLength: {
-                  value: 2,
-                  message: "Enter at least 2 characters.",
-                },
-              })}
+              {...register(
+                "last_name",
+                isCreateMode
+                  ? {
+                      required: "Last name is required.",
+                      minLength: {
+                        value: 2,
+                        message: "Enter at least 2 characters.",
+                      },
+                    }
+                  : optionalMinLength(2, "Enter at least 2 characters."),
+              )}
             />
             {errors.last_name?.message ? (
               <span className={errorClassName}>{errors.last_name.message}</span>
@@ -136,7 +188,10 @@ export default function UserDetailsForm({
               htmlFor="email"
             >
               <span>
-                Email <span className="text-required">*</span>
+                Email
+                {isCreateMode ? (
+                  <span className="text-required"> *</span>
+                ) : null}
               </span>
               {isEditMode ? (
                 <span className="relative inline-flex group">
@@ -165,13 +220,18 @@ export default function UserDetailsForm({
               disabled={isSubmitting}
               className={inputClassName}
               aria-describedby={isEditMode ? "email-help" : undefined}
-              {...register("email", {
-                required: "Email is required.",
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "Enter a valid email address.",
-                },
-              })}
+              {...register(
+                "email",
+                isCreateMode
+                  ? {
+                      required: "Email is required.",
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                        message: "Enter a valid email address.",
+                      },
+                    }
+                  : optionalEmailPattern(),
+              )}
             />
             {isEditMode ? (
               <p id="email-help" className="sr-only">
@@ -184,30 +244,28 @@ export default function UserDetailsForm({
           </div>
 
           <div>
-            <label
-              className="block text-sm font-medium text-default-900 mb-2"
-              htmlFor="phone"
-            >
-              Phone Number <span className="text-required">*</span>
-            </label>
-            <input
+            <PhoneVerification<IUser>
+              control={control}
+              name="phone"
               id="phone"
-              type="tel"
-              placeholder="Please enter your phone number"
-              autoComplete="tel"
+              label={
+                <>
+                  Phone number
+                  {isCreateMode ? (
+                    <span className="text-required"> *</span>
+                  ) : null}
+                </>
+              }
+              rules={
+                isCreateMode
+                  ? undefined
+                  : { validate: validateOptionalPhoneValue }
+              }
+              placeholder="Enter your phone number"
+              variant="pill"
               disabled={isSubmitting}
-              className={inputClassName}
-              {...register("phone", {
-                required: "Phone number is required.",
-                pattern: {
-                  value: /^[+]?[\d\s()-]{7,20}$/,
-                  message: "Enter a valid phone number.",
-                },
-              })}
+              showOtpHint={false}
             />
-            {errors.phone?.message ? (
-              <span className={errorClassName}>{errors.phone.message}</span>
-            ) : null}
           </div>
 
           {!isSelfMode ? (
@@ -216,15 +274,19 @@ export default function UserDetailsForm({
                 className="block text-sm font-medium text-default-900 mb-2"
                 htmlFor="role"
               >
-                Role <span className="text-required">*</span>
+                Role
+                {isCreateMode ? (
+                  <span className="text-required"> *</span>
+                ) : null}
               </label>
               <select
                 id="role"
                 disabled={isSubmitting}
                 className={inputClassName}
-                {...register("role", {
-                  required: "Role is required.",
-                })}
+                {...register(
+                  "role",
+                  isCreateMode ? { required: "Role is required." } : {},
+                )}
               >
                 {Object.values(UserRole).map((role) => (
                   <option key={role} value={role}>
@@ -243,7 +305,10 @@ export default function UserDetailsForm({
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor="zip_code"
             >
-              Zip Code <span className="text-required">*</span>
+              Zip Code
+              {isCreateMode ? (
+                <span className="text-required"> *</span>
+              ) : null}
             </label>
             <input
               id="zip_code"
@@ -251,13 +316,18 @@ export default function UserDetailsForm({
               placeholder="Please enter your zip code"
               disabled={isSubmitting}
               className={inputClassName}
-              {...register("zip_code", {
-                required: "Zip code is required.",
-                pattern: {
-                  value: /^[A-Za-z0-9\s-]{3,10}$/,
-                  message: "Enter a valid zip code.",
-                },
-              })}
+              {...register(
+                "zip_code",
+                isCreateMode
+                  ? {
+                      required: "Zip code is required.",
+                      pattern: {
+                        value: /^[A-Za-z0-9\s-]{3,10}$/,
+                        message: "Enter a valid zip code.",
+                      },
+                    }
+                  : optionalZipCode(),
+              )}
             />
             {errors.zip_code?.message ? (
               <span className={errorClassName}>{errors.zip_code.message}</span>

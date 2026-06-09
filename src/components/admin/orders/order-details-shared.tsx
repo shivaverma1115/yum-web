@@ -59,11 +59,6 @@ export function getItemsSummary(items: IOrderItem[]) {
   return `${first} +${items.length - 1} more`;
 }
 
-export function getCustomerName(order: IOrderWithItems) {
-  const name = `${order.customer_first_name} ${order.customer_last_name}`.trim();
-  return name || order.customer_email || "Guest";
-}
-
 export function StatusBadge({
   title,
   label,
@@ -124,10 +119,10 @@ export function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
     return (
       <DetailSection title="Delivery">
         <DetailField label="Address" value={displayValue(order.delivery_address)} />
-        <DetailField label="City" value={displayValue(order.delivery_city)} />
+        {/* <DetailField label="City" value={displayValue(order.delivery_city)} />
         <DetailField label="State" value={displayValue(order.delivery_state)} />
         <DetailField label="Country" value={displayValue(order.delivery_country)} />
-        <DetailField label="ZIP code" value={displayValue(order.delivery_zip_code)} />
+        <DetailField label="ZIP code" value={displayValue(order.delivery_zip_code)} /> */}
       </DetailSection>
     );
   }
@@ -448,11 +443,11 @@ export function OrderDetailsPanel({ order, className = "" }: OrderDetailsPanelPr
 
         <FulfillmentDetails order={order} />
 
-        <DetailSection title="Customer">
+        {/* <DetailSection title="Customer">
           <DetailField label="Name" value={getCustomerName(order)} />
           <DetailField label="Email" value={displayValue(order.customer_email)} />
           <DetailField label="Phone" value={displayValue(order.customer_phone)} />
-        </DetailSection>
+        </DetailSection> */}
       </div>
 
       <OrderTimeline

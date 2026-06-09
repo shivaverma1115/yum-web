@@ -35,6 +35,8 @@ type FieldProps = {
   className?: string;
   error?: string | boolean;
   onVerifiedChange?: (verified: boolean) => void;
+  /** When false, hides the OTP helper text (e.g. profile forms). Default: true */
+  showOtpHint?: boolean;
 };
 
 type ControlledPhoneVerificationProps = FieldProps & {
@@ -66,6 +68,7 @@ function PhoneVerificationField(
     className = "",
     error,
     onVerifiedChange,
+    showOtpHint = true,
     verification,
   }: {
     phone: string;
@@ -79,6 +82,7 @@ function PhoneVerificationField(
     className?: string;
     error?: string | boolean;
     onVerifiedChange?: (verified: boolean) => void;
+    showOtpHint?: boolean;
     verification: ReturnType<typeof usePhoneVerification>;
   },
 ) {
@@ -104,7 +108,7 @@ function PhoneVerificationField(
         </label>
       ) : null}
 
-      <div className="space-y-2">
+      <div className="relative space-y-2 overflow-visible">
         <PhoneInput
           id={id}
           value={phone}
@@ -117,15 +121,17 @@ function PhoneVerificationField(
           className={className}
         />
 
-        {isVerified ? (
-          <p className="text-xs font-medium text-green-600 dark:text-green-400">
-            Phone number verified
-          </p>
-        ) : (
-          <p className="text-xs text-default-500">
-            Verify your phone with OTP before placing the order.
-          </p>
-        )}
+        {showOtpHint ? (
+          isVerified ? (
+            <p className="text-xs font-medium text-green-600 dark:text-green-400">
+              Phone number verified
+            </p>
+          ) : (
+            <p className="text-xs text-default-500">
+              Verify your phone with OTP before placing the order.
+            </p>
+          )
+        ) : null}
 
         {errorMessage ? (
           <span className="block text-sm text-red-500">{errorMessage}</span>
@@ -175,6 +181,7 @@ const PhoneVerificationControlled = forwardRef<
       className={props.className}
       error={props.error}
       onVerifiedChange={props.onVerifiedChange}
+      showOtpHint={props.showOtpHint}
       verification={verification}
     />
   );

@@ -10,7 +10,6 @@ import OrderStatusDropdown from "@/components/admin/orders/OrderStatusDropdown";
 import Badge from "@/components/ui/Badge";
 import {
   formatOrderIdShort,
-  getCustomerName,
   getItemsSummary,
   getOrderStatusLabel,
   ORDER_STATUS_COLORS,
@@ -65,10 +64,10 @@ export default function OrderExpandableTableRow({
           </span>
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
-          <p>
+          {/* <p>
             {getCustomerName(order)}
           </p>
-          <p className="text-xs text-default-500 mt-0.5">{order.customer_email}</p>
+          <p className="text-xs text-default-500 mt-0.5">{order.customer_email}</p> */}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
           <div className="flex items-center gap-4">

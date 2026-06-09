@@ -22,6 +22,16 @@ export function getNationalMobileDigits(phone?: string | null): string {
   return digits;
 }
 
+/** Validates format only when a value is present (profile forms). */
+export function validateOptionalPhoneValue(
+  phone?: string | null,
+): true | string {
+  if (!getPhoneDigits(phone)) {
+    return true;
+  }
+  return validatePhoneValue(phone);
+}
+
 export function validatePhoneValue(phone?: string | null): true | string {
   const digits = getPhoneDigits(phone);
   if (!digits) {
@@ -53,4 +63,18 @@ export function phonesMatch(
   const da = getPhoneDigits(a);
   const db = getPhoneDigits(b);
   return Boolean(da && db && da === db);
+}
+
+/** Matches India mobiles whether stored as 10 digits or +91 E.164. */
+export function phonesMatchNational(
+  a?: string | null,
+  b?: string | null,
+): boolean {
+  const na = getNationalMobileDigits(a);
+  const nb = getNationalMobileDigits(b);
+  return (
+    na.length === REQUIRED_MOBILE_DIGITS &&
+    nb.length === REQUIRED_MOBILE_DIGITS &&
+    na === nb
+  );
 }

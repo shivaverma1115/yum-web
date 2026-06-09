@@ -25,13 +25,11 @@ export type CurrentUserSession = {
   user: IUser | null;
 };
 
-export type UpdateOwnProfileInput = Pick<
-  IUser,
-  | "first_name"
-  | "last_name"
-  | "phone"
-  | "zip_code"
-  | "description"
+export type UpdateOwnProfileInput = Partial<
+  Pick<
+    IUser,
+    "first_name" | "last_name" | "phone" | "zip_code" | "description"
+  >
 >;
 
 export type UpdateOwnProfileResult =
@@ -48,15 +46,36 @@ export async function updateOwnProfileWithSupabase(
   userId: string,
   input: UpdateOwnProfileInput,
 ): Promise<UpdateOwnProfileResult> {
+  const updates: Record<string, string> = {};
+
+  if (input.first_name !== undefined) {
+    updates.first_name = (input.first_name ?? "").trim();
+  }
+  if (input.last_name !== undefined) {
+    updates.last_name = (input.last_name ?? "").trim();
+  }
+  if (input.phone !== undefined) {
+    updates.phone = (input.phone ?? "").trim();
+  }
+  if (input.zip_code !== undefined) {
+    updates.zip_code = (input.zip_code ?? "").trim();
+  }
+  if (input.description !== undefined) {
+    updates.description = (input.description ?? "").trim();
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return {
+      success: false,
+      message: "No profile fields to update.",
+      status: 400,
+      errors: {},
+    };
+  }
+
   const { data, error } = await supabase
     .from("profiles")
-    .update({
-      first_name: input.first_name.trim(),
-      last_name: input.last_name.trim(),
-      phone: input.phone.trim(),
-      zip_code: input.zip_code.trim(),
-      description: input.description.trim(),
-    })
+    .update(updates)
     .eq("id", userId)
     .select(
       "id, email, first_name, last_name, phone, zip_code, description, role, created_at, updated_at",

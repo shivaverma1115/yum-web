@@ -24,7 +24,7 @@ import {
   ADMIN_NAV_ITEMS,
   getOpenSectionForPath,
   USER_NAV_ITEMS,
-} from "@/components/layout/profile-navigation";
+} from "@/lib/profile-navigation";
 import { useContextApi } from "@/context-api/use-context";
 
 const navLinkClass =

@@ -89,8 +89,15 @@ export async function POST(request: NextRequest) {
           },
         },
         userResult.userId,
+        { checkoutPhone: body.phone },
       );
       loggedIn = sessionResult.success;
+      if (!sessionResult.success) {
+        logError(new Error(sessionResult.message), {
+          context: "Create Order API — guest session",
+          meta: { userId: userResult.userId },
+        });
+      }
     }
 
     const response = NextResponse.json({
@@ -102,6 +109,7 @@ export async function POST(request: NextRequest) {
         order: result.order,
         items: result.items,
         loggedIn,
+        redirectTo: loggedIn ? "/user/orders" : "/home",
       },
     });
 

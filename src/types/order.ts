@@ -49,10 +49,6 @@ export type IOrder = {
   customer_email: string | null;
   customer_phone: string;
   delivery_address?: string | null;
-  delivery_country?: string | null;
-  delivery_state?: string | null;
-  delivery_city?: string | null;
-  delivery_zip_code?: string | null;
   pickup_time?: string | null;
   table_number?: string | null;
   party_size?: string | null;

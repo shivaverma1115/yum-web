@@ -58,7 +58,7 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setUser(data.data.user);
+      setUser(data.data.user ?? null);
     } catch (err) {
       setUser(null);
       setError(
