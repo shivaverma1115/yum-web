@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { UserRole, type IUser } from "@/types/user";
+import { UserRole, type IUserWithVerification } from "@/types/user";
 import { formatCustomerSince } from "@/lib/constants";
 import { getUserDisplayName } from "@/lib/user/display-name";
+import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import { Eye, Pencil, Trash, TriangleAlert } from "lucide-react";
 
 const DEFAULT_LIMIT = 10;
@@ -14,7 +15,7 @@ type CustomersListResponse = {
   success: boolean;
   message?: string;
   data?: {
-    users: IUser[];
+    users: IUserWithVerification[];
     total: number;
     page: number;
     limit: number;
@@ -23,7 +24,7 @@ type CustomersListResponse = {
 };
 
 export default function Userslist() {
-  const [users, setUsers] = useState<IUser[]>([]);
+  const [users, setUsers] = useState<IUserWithVerification[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -105,7 +106,7 @@ export default function Userslist() {
     }
   };
 
-  const handleDelete = async (user: IUser, force = false) => {
+  const handleDelete = async (user: IUserWithVerification, force = false) => {
     if (!user.id) return;
 
     const name = getUserDisplayName(user);
@@ -220,6 +221,12 @@ export default function Userslist() {
                     scope="col"
                     className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
                   >
+                    Verified
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-start whitespace-nowrap text-sm font-medium text-default-500"
+                  >
                     Zip Code
                   </th>
                   <th
@@ -259,7 +266,7 @@ export default function Userslist() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={12}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       Loading customers...
@@ -268,7 +275,7 @@ export default function Userslist() {
                 ) : users.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={12}
                       className="px-6 py-10 text-center text-sm text-default-500"
                     >
                       <i data-lucide="search" className="w-5 h-5 text-default-600" />
@@ -294,6 +301,18 @@ export default function Userslist() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.phone || "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <VerificationBadge
+                            verified={user.verification.phone_verified}
+                            label="Phone"
+                          />
+                          <VerificationBadge
+                            verified={user.verification.email_verified}
+                            label="Email"
+                          />
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.zip_code || "—"}

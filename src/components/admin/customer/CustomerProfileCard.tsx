@@ -8,7 +8,8 @@ import {
   getCustomerLocation,
 } from "@/hooks/use-admin-customer";
 import { formatCustomerSince } from "@/lib/constants";
-import type { IUser } from "@/types/user";
+import VerificationBadge from "@/components/admin/customer/VerificationBadge";
+import type { IUserWithVerification } from "@/types/user";
 
 function displayValue(value: string | null | undefined) {
   if (!value?.trim()) return "—";
@@ -16,7 +17,7 @@ function displayValue(value: string | null | undefined) {
 }
 
 type CustomerProfileCardProps = {
-  customer: IUser;
+  customer: IUserWithVerification;
 };
 
 export default function CustomerProfileCard({ customer }: CustomerProfileCardProps) {
@@ -57,6 +58,16 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
             <p className="text-sm text-default-500 mt-0.5">
               {customer.phone || "—"}
             </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <VerificationBadge
+                verified={customer.verification.phone_verified}
+                label="Phone"
+              />
+              <VerificationBadge
+                verified={customer.verification.email_verified}
+                label="Email"
+              />
+            </div>
             <p className="text-xs text-primary mt-2">
               {expanded ? "Hide details" : "View full profile"}
             </p>
@@ -86,11 +97,27 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
             </div>
             <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">Email</dt>
-              <dd className="text-default-800 break-all">{displayValue(customer.email)}</dd>
+              <dd className="text-default-800 break-all">
+                <span>{displayValue(customer.email)}</span>
+                <span className="block mt-1">
+                  <VerificationBadge
+                    verified={customer.verification.email_verified}
+                    label="Email"
+                  />
+                </span>
+              </dd>
             </div>
             <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">Phone</dt>
-              <dd className="text-default-800">{displayValue(customer.phone)}</dd>
+              <dd className="text-default-800">
+                <span>{displayValue(customer.phone)}</span>
+                <span className="block mt-1">
+                  <VerificationBadge
+                    verified={customer.verification.phone_verified}
+                    label="Phone"
+                  />
+                </span>
+              </dd>
             </div>
             <div className="flex gap-2">
               <dt className="text-default-500 shrink-0">ZIP</dt>

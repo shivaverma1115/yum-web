@@ -3,6 +3,7 @@ import type { SupabaseCookieAdapter } from "@/lib/supabase/ssr-server";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logError } from "@/lib/utils/logError";
+import { isRealUserEmail } from "@/lib/auth/verification";
 import { normalizePhoneE164 } from "@/lib/phone-otp/phone";
 
 export type EstablishSessionResult =
@@ -13,14 +14,6 @@ const INTERNAL_AUTH_EMAIL_DOMAIN = "phone.yum.internal";
 
 function internalAuthEmail(userId: string): string {
   return `${userId}@${INTERNAL_AUTH_EMAIL_DOMAIN}`;
-}
-
-function isRealUserEmail(email?: string | null): boolean {
-  const value = email?.trim();
-  if (!value) return false;
-  if (value.endsWith("@checkout.internal")) return false;
-  if (value.endsWith(`@${INTERNAL_AUTH_EMAIL_DOMAIN}`)) return false;
-  return true;
 }
 
 /**

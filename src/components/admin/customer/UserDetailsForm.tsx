@@ -1,13 +1,25 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { Info, Save, X } from "lucide-react";
 import { useContextApi } from "@/context-api/use-context";
-import { PhoneVerification } from "@/components/common/phone-verification";
-import { validateOptionalPhoneValue } from "@/lib/phone-otp/phone";
+import VerificationBadge from "@/components/admin/customer/VerificationBadge";
+import EmailOtpModal from "@/components/common/email-verification/EmailOtpModal";
+import {
+  PhoneVerification,
+  type PhoneVerificationHandle,
+} from "@/components/common/phone-verification";
+import { sendEmailOtp } from "@/lib/email-otp/client";
+import { isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
+import {
+  profileEmailNeedsVerification,
+  profilePhoneNeedsVerification,
+} from "@/lib/profile/contact-verification";
+import { phonesMatch, validateOptionalPhoneValue } from "@/lib/phone-otp/phone";
 
 export interface UserDetailsFormProps {
   user?: IUser;
@@ -59,16 +71,94 @@ export default function UserDetailsForm({
   const isEditMode = Boolean(user?.id);
   const isSelfMode = mode === "self";
   const isCreateMode = !isEditMode && !isSelfMode;
-  const { setUser } = useContextApi();
+  const { user: sessionUser, verification, setUser, refresh } = useContextApi();
+  const profileUser = isSelfMode ? (sessionUser ?? user) : user;
+
+  const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false);
 
   const {
     register,
     control,
     handleSubmit,
+    watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<IUser>({
     defaultValues: user ?? {},
   });
+
+  const email = watch("email");
+  const phone = watch("phone");
+
+  useEffect(() => {
+    setEmailVerified(false);
+  }, [email]);
+
+  const emailOk =
+    !isSelfMode ||
+    !profileEmailNeedsVerification(
+      email,
+      profileUser?.email,
+      verification,
+      emailVerified,
+    );
+
+  const phoneOk =
+    !isSelfMode ||
+    !profilePhoneNeedsVerification(
+      phone,
+      profileUser?.phone,
+      verification,
+      phoneVerified,
+    );
+
+  const canSave = emailOk && phoneOk;
+  const trustedPhone =
+    isSelfMode &&
+    phonesMatch(phone, profileUser?.phone) &&
+    verification?.phone_verified
+      ? profileUser?.phone ?? null
+      : null;
+
+  const handleSendEmailOtp = async () => {
+    const value = normalizeEmail(email);
+    if (!isValidEmail(value)) {
+      toast.error("Please enter a valid email address first.");
+      return;
+    }
+
+    setIsSendingEmailOtp(true);
+    try {
+      const result = await sendEmailOtp(value);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      if (result.data.debugOtp) {
+        toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
+      }
+      setEmailModalOpen(true);
+    } catch {
+      toast.error("Could not send OTP. Please try again.");
+    } finally {
+      setIsSendingEmailOtp(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    setIsSendingPhoneOtp(true);
+    try {
+      await phoneVerificationRef.current?.requestOtp();
+    } finally {
+      setIsSendingPhoneOtp(false);
+    }
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -88,11 +178,21 @@ export default function UserDetailsForm({
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
+        const fieldErrors = data.errors as Record<string, string> | undefined;
+        if (fieldErrors?.email) {
+          setError("email", { type: "server", message: fieldErrors.email });
+        }
+        if (fieldErrors?.phone) {
+          setError("phone", { type: "server", message: fieldErrors.phone });
+        }
         toast.error(data.message ?? "Something went wrong.");
         return;
       }
       if (isSelfMode) {
         setUser(data.data.user);
+        await refresh();
+        setEmailVerified(false);
+        setPhoneVerified(false);
       }
       toast.success(data.message);
     } catch (error) {
@@ -193,7 +293,7 @@ export default function UserDetailsForm({
                   <span className="text-required"> *</span>
                 ) : null}
               </span>
-              {isEditMode ? (
+              {isEditMode && !isSelfMode ? (
                 <span className="relative inline-flex group">
                   <button
                     type="button"
@@ -216,10 +316,10 @@ export default function UserDetailsForm({
               type="email"
               placeholder="Please enter your email address"
               autoComplete="email"
-              readOnly={isEditMode}
+              readOnly={isEditMode && !isSelfMode}
               disabled={isSubmitting}
               className={inputClassName}
-              aria-describedby={isEditMode ? "email-help" : undefined}
+              aria-describedby={isEditMode && !isSelfMode ? "email-help" : undefined}
               {...register(
                 "email",
                 isCreateMode
@@ -233,7 +333,7 @@ export default function UserDetailsForm({
                   : optionalEmailPattern(),
               )}
             />
-            {isEditMode ? (
+            {isEditMode && !isSelfMode ? (
               <p id="email-help" className="sr-only">
                 Email cannot be edited after account creation.
               </p>
@@ -241,10 +341,21 @@ export default function UserDetailsForm({
             {errors.email?.message ? (
               <span className={errorClassName}>{errors.email.message}</span>
             ) : null}
+            {isSelfMode && normalizeEmail(email) ? (
+              <div className="mt-2 space-y-1">
+                <VerificationBadge verified={emailOk} label="Email" />
+                {!emailOk ? (
+                  <p className="text-xs text-default-500">
+                    Verify your email with OTP before saving.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div>
             <PhoneVerification<IUser>
+              ref={phoneVerificationRef}
               control={control}
               name="phone"
               id="phone"
@@ -264,9 +375,25 @@ export default function UserDetailsForm({
               placeholder="Enter your phone number"
               variant="pill"
               disabled={isSubmitting}
-              showOtpHint={false}
+              showOtpHint={isSelfMode}
+              trustedPhone={trustedPhone}
+              onVerifiedChange={setPhoneVerified}
             />
+            {isSelfMode && phone?.trim() ? (
+              <div className="mt-2">
+                <VerificationBadge verified={phoneOk} label="Phone" />
+              </div>
+            ) : null}
           </div>
+
+          {isSelfMode ? (
+            <EmailOtpModal
+              open={emailModalOpen}
+              email={normalizeEmail(email)}
+              onClose={() => setEmailModalOpen(false)}
+              onVerified={() => setEmailVerified(true)}
+            />
+          ) : null}
 
           {!isSelfMode ? (
             <div>
@@ -375,14 +502,39 @@ export default function UserDetailsForm({
             </button>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-500 disabled:opacity-60"
-          >
-            <Save className="size-5" />
-            {isSubmitting ? "Saving..." : "Save"}
-          </button>
+          {isSelfMode && !canSave ? (
+            <div className="flex flex-wrap justify-end gap-3">
+              {!emailOk ? (
+                <button
+                  type="button"
+                  onClick={() => void handleSendEmailOtp()}
+                  disabled={isSubmitting || isSendingEmailOtp}
+                  className="flex items-center justify-center gap-2 rounded-full border border-primary px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/10 disabled:opacity-60"
+                >
+                  {isSendingEmailOtp ? "Sending..." : "Send OTP to email"}
+                </button>
+              ) : null}
+              {!phoneOk ? (
+                <button
+                  type="button"
+                  onClick={() => void handleSendPhoneOtp()}
+                  disabled={isSubmitting || isSendingPhoneOtp}
+                  className="flex items-center justify-center gap-2 rounded-full border border-primary px-6 py-2.5 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/10 disabled:opacity-60"
+                >
+                  {isSendingPhoneOtp ? "Sending..." : "Send OTP to phone"}
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-500 disabled:opacity-60"
+            >
+              <Save className="size-5" />
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
+          )}
         </div>
       </div>
     </form>

@@ -23,7 +23,7 @@ const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full 
 
 export default function Checkout() {
     const router = useRouter();
-    const { user, loading: userLoading, refresh: refreshUser } = useContextApi();
+    const { user, verification, loading: userLoading, refresh: refreshUser } = useContextApi();
     const { items, subtotal, clearCart } = useCart();
 
     const {
@@ -54,6 +54,8 @@ export default function Checkout() {
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
+    const trustedPhone =
+        verification?.phone_verified && user?.phone ? user.phone : null;
     const showSendOtp = needsContact && !phoneVerified && hasPhoneEntered;
 
     useEffect(() => {
@@ -221,9 +223,9 @@ export default function Checkout() {
                         name: "Yum",
                         description: "Food order payment",
                         prefill: {
-                            name: "Guest",
-                            email: undefined,
-                            contact: values.phone || "",
+                            name: `${user?.first_name ?? "Guest"} ${user?.last_name ?? ""}`,
+                            email: user?.email ?? undefined,
+                            contact: values.phone ?? user?.phone ?? "",
                         },
                     });
 
@@ -344,6 +346,7 @@ export default function Checkout() {
                                         placeholder="Enter your phone number"
                                         variant="pill"
                                         disabled={isSubmitting}
+                                        trustedPhone={trustedPhone}
                                         onVerifiedChange={setPhoneVerified}
                                     />
                                 </div>

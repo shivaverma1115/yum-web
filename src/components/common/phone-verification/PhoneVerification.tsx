@@ -37,6 +37,8 @@ type FieldProps = {
   onVerifiedChange?: (verified: boolean) => void;
   /** When false, hides the OTP helper text (e.g. profile forms). Default: true */
   showOtpHint?: boolean;
+  /** Pre-verified phone from the signed-in account (skips OTP when it matches). */
+  trustedPhone?: string | null;
 };
 
 type ControlledPhoneVerificationProps = FieldProps & {
@@ -152,7 +154,7 @@ const PhoneVerificationControlled = forwardRef<
   PhoneVerificationHandle,
   ControlledPhoneVerificationProps
 >(function PhoneVerificationControlled(props, ref) {
-  const verification = usePhoneVerification(props.value);
+  const verification = usePhoneVerification(props.value, props.trustedPhone);
 
   useImperativeHandle(
     ref,

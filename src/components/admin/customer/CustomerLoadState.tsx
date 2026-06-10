@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { IUser } from "@/types/user";
+import type { IUserWithVerification } from "@/types/user";
 
 type CustomerLoadStateProps = {
-  user: IUser | null;
+  user: IUserWithVerification | null;
   loading: boolean;
   error: string | null;
-  children: (user: IUser) => ReactNode;
+  children: (user: IUserWithVerification) => ReactNode;
 };
 
 export default function CustomerLoadState({

@@ -1,4 +1,7 @@
 import { IUser } from "@/types/user";
+import { normalizeEmail } from "@/lib/email-otp/email";
+import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-errors";
+import { getPhoneDigits } from "@/lib/phone-otp/phone";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export async function getProfileByUserId(
@@ -28,7 +31,7 @@ export type CurrentUserSession = {
 export type UpdateOwnProfileInput = Partial<
   Pick<
     IUser,
-    "first_name" | "last_name" | "phone" | "zip_code" | "description"
+    "first_name" | "last_name" | "email" | "phone" | "zip_code" | "description"
   >
 >;
 
@@ -53,6 +56,9 @@ export async function updateOwnProfileWithSupabase(
   }
   if (input.last_name !== undefined) {
     updates.last_name = (input.last_name ?? "").trim();
+  }
+  if (input.email !== undefined) {
+    updates.email = normalizeEmail(input.email);
   }
   if (input.phone !== undefined) {
     updates.phone = (input.phone ?? "").trim();
@@ -83,6 +89,15 @@ export async function updateOwnProfileWithSupabase(
     .single();
 
   if (error || !data) {
+    if (error?.code === "23505") {
+      return {
+        success: false,
+        message: "This email is already registered to another account.",
+        status: 409,
+        errors: { email: "This email is already registered to another account." },
+      };
+    }
+
     return {
       success: false,
       message: error?.message ?? "Failed to update profile.",
@@ -95,6 +110,58 @@ export async function updateOwnProfileWithSupabase(
     success: true,
     user: data as IUser,
   };
+}
+
+export async function syncAuthContactWithAdmin(
+  admin: SupabaseClient,
+  userId: string,
+  input: { email?: string; phone?: string },
+): Promise<
+  | { success: true }
+  | { success: false; message: string; status: number; errors?: Record<string, string> }
+> {
+  const patch: {
+    email?: string;
+    email_confirm?: boolean;
+    phone?: string;
+    phone_confirm?: boolean;
+  } = {};
+
+  if (input.email) {
+    patch.email = normalizeEmail(input.email);
+    patch.email_confirm = true;
+  }
+
+  if (input.phone) {
+    patch.phone = getPhoneDigits(input.phone);
+    patch.phone_confirm = true;
+  }
+
+  if (!Object.keys(patch).length) {
+    return { success: true };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, patch);
+
+  if (error) {
+    const duplicate = mapAuthContactDuplicateError(error.message, input);
+    if (duplicate) {
+      return {
+        success: false,
+        message: duplicate.message,
+        status: duplicate.status,
+        errors: duplicate.errors,
+      };
+    }
+
+    return {
+      success: false,
+      message: error.message,
+      status: error.status ?? 400,
+    };
+  }
+
+  return { success: true };
 }
 
 export async function getCurrentUser(

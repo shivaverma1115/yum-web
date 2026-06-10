@@ -1,15 +1,54 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { UserRole, type IUser } from "@/types/user";
+import { getUserVerificationStatus } from "@/lib/auth/verification";
+import { normalizeEmail } from "@/lib/email-otp/email";
+import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-errors";
+import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
+import { UserRole, type IUser, type IUserWithVerification } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { deleteProductWithSupabase } from "@/lib/supabase/product/products";
 
 const PROFILE_COLUMNS =
   "id, email, first_name, last_name, phone, zip_code, description, role, created_at, updated_at";
 
+async function attachVerification(
+  supabase: SupabaseClient,
+  user: IUser,
+): Promise<IUserWithVerification> {
+  if (!user.id) {
+    return {
+      ...user,
+      verification: {
+        phone_verified: false,
+        phone_verified_at: null,
+        email_verified: false,
+        email_verified_at: null,
+      },
+    };
+  }
+
+  const { data, error } = await supabase.auth.admin.getUserById(user.id);
+  if (error || !data.user) {
+    return {
+      ...user,
+      verification: {
+        phone_verified: false,
+        phone_verified_at: null,
+        email_verified: false,
+        email_verified_at: null,
+      },
+    };
+  }
+
+  return {
+    ...user,
+    verification: getUserVerificationStatus(data.user),
+  };
+}
+
 export type ListCustomersResult =
   | {
       success: true;
-      users: IUser[];
+      users: IUserWithVerification[];
       total: number;
       page: number;
       limit: number;
@@ -64,10 +103,14 @@ export async function listCustomersWithSupabase(
   }
 
   const total = count ?? 0;
+  const profiles = (data ?? []) as IUser[];
+  const users = await Promise.all(
+    profiles.map((profile) => attachVerification(supabase, profile)),
+  );
 
   return {
     success: true,
-    users: (data ?? []) as IUser[],
+    users,
     total,
     page,
     limit,
@@ -76,7 +119,7 @@ export async function listCustomersWithSupabase(
 }
 
 export type GetCustomerResult =
-  | { success: true; user: IUser }
+  | { success: true; user: IUserWithVerification }
   | {
       success: false;
       message: string;
@@ -109,9 +152,11 @@ export async function getCustomerByIdWithSupabase(
     };
   }
 
+  const user = await attachVerification(supabase, data as IUser);
+
   return {
     success: true,
-    user: data as IUser,
+    user,
   };
 }
 
@@ -375,6 +420,20 @@ export async function createCustomerWithSupabase(
   const first_name = input.first_name.trim();
   const last_name = input.last_name.trim();
 
+  const contactConflict = await assertContactAvailable(supabase, {
+    email,
+    phone: input.phone,
+  });
+
+  if (!contactConflict.ok) {
+    return {
+      success: false,
+      message: contactConflict.message,
+      status: contactConflict.status,
+      errors: contactConflict.errors,
+    };
+  }
+
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     email_confirm: true,
@@ -385,6 +444,19 @@ export async function createCustomerWithSupabase(
   });
 
   if (error) {
+    const duplicate = mapAuthContactDuplicateError(error.message, {
+      email,
+      phone: input.phone,
+    });
+    if (duplicate) {
+      return {
+        success: false,
+        message: duplicate.message,
+        status: duplicate.status,
+        errors: duplicate.errors,
+      };
+    }
+
     return {
       success: false,
       message: error.message,
@@ -429,6 +501,24 @@ export async function updateCustomerWithSupabase(
   userId: string,
   input: IUser & { password?: string },
 ): Promise<CustomerMutationResult> {
+  const contactConflict = await assertContactAvailable(
+    supabase,
+    {
+      email: input.email,
+      phone: input.phone,
+    },
+    userId,
+  );
+
+  if (!contactConflict.ok) {
+    return {
+      success: false,
+      message: contactConflict.message,
+      status: contactConflict.status,
+      errors: contactConflict.errors,
+    };
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .update(input)
@@ -437,6 +527,15 @@ export async function updateCustomerWithSupabase(
     .single();
 
   if (profileError || !profile) {
+    if (profileError?.code === "23505") {
+      return {
+        success: false,
+        message: "This email is already registered to another account.",
+        status: 409,
+        errors: { email: "This email is already registered to another account." },
+      };
+    }
+
     return {
       success: false,
       message: profileError?.message ?? ERROR_MESSAGE_GENERIC,
@@ -461,14 +560,26 @@ export async function updateCustomerWithSupabase(
     }
   }
 
-  const nextEmail = input.email?.trim() ?? "";
-  if (nextEmail && nextEmail !== profile.email) {
+  const nextEmail = normalizeEmail(input.email);
+  if (nextEmail && nextEmail !== normalizeEmail(profile.email)) {
     const { error: emailError } = await supabase.auth.admin.updateUserById(
       userId,
       { email: nextEmail },
     );
 
     if (emailError) {
+      const duplicate = mapAuthContactDuplicateError(emailError.message, {
+        email: nextEmail,
+      });
+      if (duplicate) {
+        return {
+          success: false,
+          message: duplicate.message,
+          status: duplicate.status,
+          errors: duplicate.errors,
+        };
+      }
+
       return {
         success: false,
         message: emailError.message,

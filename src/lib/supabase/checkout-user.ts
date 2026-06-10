@@ -2,11 +2,12 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import {
-  getNationalMobileDigits,
-  getPhoneDigits,
+  findProfileIdByEmail,
+  findUserIdByPhone,
+} from "@/lib/supabase/contact-lookup";
+import {
   isValidPhoneNumber,
   normalizePhoneE164,
-  phonesMatchNational,
 } from "@/lib/phone-otp/phone";
 import { CheckoutPayload } from "@/components/storefront/Checkout";
 import { UserRole } from "@/types/user";
@@ -19,113 +20,6 @@ function profilePhone(payload: CheckoutPayload): string {
   const phone = payload.phone?.trim();
   if (!phone || phone === "-") return "";
   return normalizePhoneE164(phone);
-}
-
-function phoneLookupValues(phone: string): string[] {
-  const e164 = normalizePhoneE164(phone);
-  const digits = getPhoneDigits(phone);
-  const national = getNationalMobileDigits(phone);
-  return [
-    ...new Set(
-      [e164, digits, digits ? `+${digits}` : "", national].filter(Boolean),
-    ),
-  ];
-}
-
-function phoneMatchesLookup(stored: string, phone: string): boolean {
-  const trimmed = stored.trim();
-  if (!trimmed || trimmed === "-") return false;
-
-  const candidates = new Set(phoneLookupValues(phone));
-  if (candidates.has(trimmed) || candidates.has(normalizePhoneE164(trimmed))) {
-    return true;
-  }
-
-  return phonesMatchNational(trimmed, phone);
-}
-
-async function findAuthUserIdByPhone(
-  admin: SupabaseClient,
-  phone: string,
-): Promise<string | null> {
-  if (!isValidPhoneNumber(phone)) return null;
-
-  let page = 1;
-  const perPage = 1000;
-  const maxPages = 20;
-
-  while (page <= maxPages) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-    if (error || !data.users?.length) break;
-
-    for (const user of data.users) {
-      if (user.phone && phoneMatchesLookup(user.phone, phone)) {
-        return user.id;
-      }
-    }
-
-    if (data.users.length < perPage) break;
-    page += 1;
-  }
-
-  return null;
-}
-
-async function findProfileIdByPhone(
-  admin: SupabaseClient,
-  phone: string,
-): Promise<string | null> {
-  if (!isValidPhoneNumber(phone)) return null;
-
-  for (const candidate of phoneLookupValues(phone)) {
-    const { data, error } = await admin
-      .from("profiles")
-      .select("id, phone")
-      .eq("phone", candidate)
-      .maybeSingle();
-
-    if (!error && data) {
-      return data.id as string;
-    }
-  }
-
-  const national = getNationalMobileDigits(phone);
-  if (national.length !== 10) return null;
-
-  const { data: rows, error } = await admin
-    .from("profiles")
-    .select("id, phone")
-    .not("phone", "eq", "")
-    .not("phone", "eq", "-");
-
-  if (error || !rows?.length) return null;
-
-  const match = rows.find((row) => phoneMatchesLookup(row.phone, phone));
-  return match?.id ?? null;
-}
-
-async function findUserIdByPhone(
-  admin: SupabaseClient,
-  phone: string,
-): Promise<string | null> {
-  const byAuth = await findAuthUserIdByPhone(admin, phone);
-  if (byAuth) return byAuth;
-
-  return findProfileIdByPhone(admin, phone);
-}
-
-async function findProfileIdByEmail(
-  admin: SupabaseClient,
-  email: string,
-): Promise<string | null> {
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data.id as string;
 }
 
 /** Ensures a profiles row exists and phone/email are set when missing. */

@@ -5,8 +5,13 @@ import { toast } from "react-toastify";
 import { sendPhoneOtp } from "@/lib/phone-otp/client";
 import { phonesMatch } from "@/lib/phone-otp/phone";
 
-export function usePhoneVerification(phone: string) {
-  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
+export function usePhoneVerification(
+  phone: string,
+  trustedPhone?: string | null,
+) {
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(() =>
+    trustedPhone && phonesMatch(trustedPhone, phone) ? trustedPhone : null,
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -15,10 +20,15 @@ export function usePhoneVerification(phone: string) {
   );
 
   useEffect(() => {
+    if (trustedPhone && phonesMatch(trustedPhone, phone)) {
+      setVerifiedPhone(trustedPhone);
+      return;
+    }
+
     if (verifiedPhone && !phonesMatch(verifiedPhone, phone)) {
       setVerifiedPhone(null);
     }
-  }, [phone, verifiedPhone]);
+  }, [phone, trustedPhone, verifiedPhone]);
 
   const openModal = useCallback(() => setModalOpen(true), []);
   const closeModal = useCallback(() => setModalOpen(false), []);

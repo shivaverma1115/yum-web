@@ -8,7 +8,9 @@ import { resolveCheckoutUserId } from "@/lib/supabase/checkout-user";
 import { createOrderWithSupabase } from "@/lib/supabase/orders";
 import { getCurrentUser } from "@/lib/supabase/account/profile";
 import { createClient } from "@/lib/supabase/server";
+import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
+import { phonesMatch } from "@/lib/phone-otp/phone";
 import { CheckoutPayload } from "@/components/storefront/Checkout";
 
 type CookieToSet = {
@@ -17,14 +19,41 @@ type CookieToSet = {
   options?: CookieOptions;
 };
 
+function isCheckoutPhoneVerified(
+  request: NextRequest,
+  phone: string,
+  session: Awaited<ReturnType<typeof getCurrentUser>>,
+): boolean {
+  if (isPhoneVerifiedOnRequest(request, phone)) {
+    return true;
+  }
+
+  if (!session?.authUser) {
+    return false;
+  }
+
+  const verification = getUserVerificationStatus(session.authUser);
+  if (!verification.phone_verified) {
+    return false;
+  }
+
+  return (
+    phonesMatch(session.authUser.phone, phone) ||
+    phonesMatch(session.user?.phone, phone)
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutPayload = (await request.json().catch(() => ({})));
 
+    const supabase = await createClient();
+    const session = await getCurrentUser(supabase);
+
     const fulfillment = body.fulfillment_type;
     if (
       (fulfillment === "delivery" || fulfillment === "pickup") &&
-      !isPhoneVerifiedOnRequest(request, body.phone)
+      !isCheckoutPhoneVerified(request, body.phone, session)
     ) {
       return NextResponse.json(
         {
@@ -35,9 +64,6 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    const supabase = await createClient();
-    const session = await getCurrentUser(supabase);
     const wasGuest = !session?.authUser.id;
 
     const adminClient = createAdminClient();

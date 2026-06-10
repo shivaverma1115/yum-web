@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { IUser } from "@/types/user";
+import type { IUser, IUserWithVerification } from "@/types/user";
 import { getUserDisplayName } from "@/lib/user/display-name";
 
 type CustomerResponse = {
   success: boolean;
   message?: string;
-  data?: { user: IUser };
+  data?: { user: IUserWithVerification };
 };
 
 export function getCustomerDisplayName(user: IUser) {
@@ -19,7 +19,7 @@ export function getCustomerLocation(user: IUser) {
 }
 
 export function useAdminCustomer(userId: string) {
-  const [user, setUser] = useState<IUser | null>(null);
+  const [user, setUser] = useState<IUserWithVerification | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

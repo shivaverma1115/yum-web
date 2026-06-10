@@ -9,13 +9,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { IUser } from "@/types/user";
+import type { IUser, UserVerificationStatus } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 
 export type MeApiResponse =
   | {
     success: true;
-    data: { user: IUser };
+    data: { user: IUser; verification: UserVerificationStatus };
   }
   | {
     success: false;
@@ -24,6 +24,7 @@ export type MeApiResponse =
 
 type ContextApiValue = {
   user: IUser | null;
+  verification: UserVerificationStatus | null;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -35,6 +36,7 @@ const ContextApi = createContext<ContextApiValue | null>(null);
 
 export function ContextApiProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IUser | null>(null);
+  const [verification, setVerification] = useState<UserVerificationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +54,7 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok || !data.success) {
         setUser(null);
+        setVerification(null);
         if (response.status !== 401) {
           setError((data as { message: string })?.message ?? ERROR_MESSAGE_GENERIC);
         }
@@ -59,8 +62,10 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(data.data.user ?? null);
+      setVerification(data.data.verification ?? null);
     } catch (err) {
       setUser(null);
+      setVerification(null);
       setError(
         err instanceof Error ? err.message : "Failed to load current user.",
       );
@@ -76,13 +81,14 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      verification,
       loading,
       error,
       isAuthenticated: Boolean(user),
       refresh,
       setUser,
     }),
-    [user, loading, error, refresh],
+    [user, verification, loading, error, refresh],
   );
 
   return (

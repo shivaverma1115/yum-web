@@ -4,6 +4,7 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { getProfileByUserId } from "@/lib/supabase/account/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { ensureCheckoutProfile } from "@/lib/supabase/checkout-user";
 
 export async function GET() {
@@ -31,8 +32,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        authUser: auth.user,
         user: profile,
+        verification: getUserVerificationStatus(auth.user),
       },
     });
   } catch (error) {
