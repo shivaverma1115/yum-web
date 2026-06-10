@@ -4,16 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-    PhoneVerification,
-    type PhoneVerificationHandle,
-} from "@/components/common/phone-verification";
 import { toast } from "react-toastify";
+import PhoneVerification, { PhoneVerificationHandle } from "@/components/common/phone-verification/PhoneVerification";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
-import { confirmOrderPayment } from "@/lib/payment/confirm-payment";
-import { openRazorpayCheckout } from "@/lib/razorpay/client";
+import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { formatCurrency } from "@/lib/constants";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
 import { IUser } from "@/types/user";
@@ -53,6 +49,7 @@ export default function Checkout() {
     const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [orderCompleted, setOrderCompleted] = useState(false);
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const trustedPhone =
         verification?.phone_verified && user?.phone ? user.phone : null;
@@ -64,10 +61,11 @@ export default function Checkout() {
     }, [user, userLoading, reset]);
 
     useEffect(() => {
+        if (orderCompleted) return;
         if (items.length === 0 && !isSubmitting) {
             router.replace("/cart");
         }
-    }, [items.length, isSubmitting, router]);
+    }, [items.length, isSubmitting, orderCompleted, router]);
 
     useEffect(() => {
         if (!paymentOptions.some((option) => option.value === paymentMethod)) {
@@ -111,17 +109,20 @@ export default function Checkout() {
         loggedIn?: boolean,
         redirectTo?: string,
     ) => {
+        setOrderCompleted(true);
         toast.success("Order placed successfully.");
-        clearCart();
+
+        const ordersPath = `/${user?.role ?? "user"}/orders`;
+        const destination = loggedIn
+            ? (redirectTo ?? ordersPath)
+            : (redirectTo ?? "/home");
 
         if (loggedIn) {
             await refreshUser();
-            router.push(redirectTo ?? "/user/orders");
-            router.refresh();
-            return;
         }
 
-        router.push(redirectTo ?? "/home");
+        router.replace(destination);
+        clearCart();
         router.refresh();
     };
 
@@ -172,75 +173,66 @@ export default function Checkout() {
 
         try {
             if (values.payment_method === "online") {
-                const createResponse = await fetch("/api/payments/razorpay/create-order", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ amount: subtotal }),
+                const paymentResult = await runCheckoutOnlinePayment({
+                    subtotal,
+                    prefill: {
+                        name: `${user?.first_name ?? "Guest"} ${user?.last_name ?? ""}`.trim(),
+                        email: user?.email ?? undefined,
+                        contact: values.phone ?? user?.phone ?? "",
+                    },
+                    createPendingOrder: async (razorpayOrderId) => {
+                        const pendingResponse = await fetch("/api/orders", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "include",
+                            body: JSON.stringify(
+                                buildOrderBody(values, {
+                                    payment_phase: "pending",
+                                    razorpay_order_id: razorpayOrderId,
+                                }),
+                            ),
+                        });
+                        const pendingData = await pendingResponse.json().catch(() => ({}));
+
+                        if (!pendingResponse.ok || !pendingData.success) {
+                            throw new Error(
+                                pendingData.message ?? "Failed to create order.",
+                            );
+                        }
+
+                        const orderId = pendingData.data?.order?.id as string | undefined;
+                        if (!orderId) {
+                            throw new Error("Order id missing from server response.");
+                        }
+
+                        return {
+                            orderId,
+                            loggedIn: Boolean(pendingData.data?.loggedIn),
+                            redirectTo: pendingData.data?.redirectTo as string | undefined,
+                        };
+                    },
                 });
-                const createData = await createResponse.json().catch(() => ({}));
 
-                if (!createResponse.ok || !createData.success) {
-                    toast.error(createData.message ?? "Could not start online payment.");
+                if (paymentResult.status === "success") {
+                    await finishOrderSuccess(
+                        paymentResult.loggedIn,
+                        paymentResult.redirectTo,
+                    );
                     return;
                 }
 
-                const razorpayOrderId = createData.data.orderId as string;
+                const ordersPath = `/${user?.role ?? "user"}/orders`;
 
-                const pendingResponse = await fetch("/api/orders", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(
-                        buildOrderBody(values, {
-                            payment_phase: "pending",
-                            razorpay_order_id: razorpayOrderId,
-                        }),
-                    ),
-                });
-                const pendingData = await pendingResponse.json().catch(() => ({}));
-
-                if (!pendingResponse.ok || !pendingData.success) {
-                    toast.error(pendingData.message ?? "Failed to create order.");
+                if (paymentResult.status === "cancelled") {
+                    toast.info(
+                        "Payment cancelled. Your order is saved — you can pay anytime from My Orders.",
+                    );
+                    router.replace(paymentResult.redirectTo ?? ordersPath);
                     return;
                 }
 
-                const yumOrderId = pendingData.data?.order?.id as string | undefined;
-                const guestLoggedIn = Boolean(pendingData.data?.loggedIn);
-                const guestRedirectTo = pendingData.data?.redirectTo as
-                    | string
-                    | undefined;
-                if (!yumOrderId) {
-                    toast.error("Order id missing from server response.");
-                    return;
-                }
-
-                try {
-                    const payment = await openRazorpayCheckout({
-                        keyId: createData.data.keyId,
-                        orderId: razorpayOrderId,
-                        amount: createData.data.amount,
-                        currency: createData.data.currency,
-                        name: "Yum",
-                        description: "Food order payment",
-                        prefill: {
-                            name: `${user?.first_name ?? "Guest"} ${user?.last_name ?? ""}`,
-                            email: user?.email ?? undefined,
-                            contact: values.phone ?? user?.phone ?? "",
-                        },
-                    });
-
-                    toast.info("Confirming payment. Please wait...");
-                    await confirmOrderPayment(yumOrderId, payment);
-                    await finishOrderSuccess(guestLoggedIn, guestRedirectTo);
-                } catch (error) {
-                    if (error instanceof Error && error.message === "Payment cancelled.") {
-                        toast.info(
-                            "Payment cancelled. Your order is saved as pending payment.",
-                        );
-                        return;
-                    }
-                    throw error;
-                }
+                toast.error(paymentResult.message);
+                router.replace(paymentResult.redirectTo ?? ordersPath);
                 return;
             }
 
@@ -256,7 +248,9 @@ export default function Checkout() {
         return (
             <section className="lg:py-10 py-6">
                 <div className="container text-center py-16 text-sm text-default-500">
-                    Redirecting to cart...
+                    {orderCompleted
+                        ? "Order placed! Redirecting..."
+                        : "Redirecting to cart..."}
                 </div>
             </section>
         );

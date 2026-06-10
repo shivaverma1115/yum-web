@@ -83,10 +83,7 @@ export default function PhoneOtpModal({
         toast.error(result.message);
         return;
       }
-      toast.success(result.message);
-      if (result.data.debugOtp) {
-        toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
-      }
+      toast.success(result.message, { autoClose: 8000 });
     } catch {
       toast.error("Could not resend OTP.");
     } finally {

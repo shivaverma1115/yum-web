@@ -7,13 +7,9 @@ import {
 import {
   isValidPhoneNumber,
   normalizePhoneE164,
-  phonesMatch,
 } from "@/lib/phone-otp/phone";
-import {
-  createVerifiedPhoneToken,
-  otpMatchesHash,
-  readPendingOtpToken,
-} from "@/lib/phone-otp/tokens";
+import { verifySupabasePhoneOtp } from "@/lib/phone-otp/supabase-auth";
+import { createVerifiedPhoneToken } from "@/lib/phone-otp/tokens";
 import { logError } from "@/lib/utils/logError";
 
 export async function POST(request: NextRequest) {
@@ -48,28 +44,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pendingToken = request.cookies.get(PHONE_OTP_PENDING_COOKIE)?.value;
-    const pending = readPendingOtpToken(pendingToken);
+    const result = await verifySupabasePhoneOtp(phone, otp);
 
-    if (!pending || !phonesMatch(pending.phone, phone)) {
+    if (!result.success) {
       return NextResponse.json(
         {
           success: false,
-          message: "OTP expired or not requested. Please send a new OTP.",
-          errors: { otp: "OTP session expired." },
+          message: result.message,
+          errors: { otp: result.message },
         },
-        { status: 400 },
-      );
-    }
-
-    if (!otpMatchesHash(otp, pending.otpHash)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Incorrect OTP. Please try again.",
-          errors: { otp: "Incorrect OTP." },
-        },
-        { status: 400 },
+        { status: result.status },
       );
     }
 
@@ -77,7 +61,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       message: "Phone number verified.",
-      data: { phone },
+      data: { phone: result.phone },
     });
 
     response.cookies.set(verified.cookieName, verified.token, {

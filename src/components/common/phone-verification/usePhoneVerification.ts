@@ -50,10 +50,7 @@ export function usePhoneVerification(
         toast.error(result.message);
         return false;
       }
-      toast.success(result.message);
-      if (result.data.debugOtp) {
-        toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
-      }
+      toast.success(result.message, { autoClose: 8000 });
       setModalOpen(true);
       return true;
     } catch {

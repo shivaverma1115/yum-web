@@ -8,6 +8,7 @@ import { formatCustomerSince } from "@/lib/constants";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import { Eye, Pencil, Trash, TriangleAlert } from "lucide-react";
+import HtmlContent from "@/components/common/HtmlContent";
 
 const DEFAULT_LIMIT = 10;
 
@@ -112,11 +113,11 @@ export default function Userslist() {
     const name = getUserDisplayName(user);
     const confirmed = force
       ? window.confirm(
-          `FORCE DELETE "${name}"?\n\nThis permanently removes:\n- All orders linked to this customer\n- All products they created (including storage images)\n- Their account and profile\n\nThis cannot be undone.`,
-        )
+        `FORCE DELETE "${name}"?\n\nThis permanently removes:\n- All orders linked to this customer\n- All products they created (including storage images)\n- Their account and profile\n\nThis cannot be undone.`,
+      )
       : window.confirm(
-          `Delete customer "${name}"? This cannot be undone.`,
-        );
+        `Delete customer "${name}"? This cannot be undone.`,
+      );
 
     if (!confirmed) return;
 
@@ -318,7 +319,7 @@ export default function Userslist() {
                         {user.zip_code || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        {user.description || "—"}
+                        <HtmlContent html={user.description} className="text-sm text-default-600" />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.role || "—"}

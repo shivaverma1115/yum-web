@@ -42,6 +42,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const filter = parseFilter(
       request.nextUrl.searchParams.get("filter"),
     );
+    const page = Number(request.nextUrl.searchParams.get("page") ?? "1");
+    const limit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
 
     const adminClient = createAdminClient();
     const customerResult = await getCustomerByIdWithSupabase(
@@ -59,6 +61,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const result = await listCustomerOrdersWithSupabase(adminClient, userId, {
       filter,
       customerEmail: customerResult.user.email ?? undefined,
+      page,
+      limit,
     });
 
     if (!result.success) {
@@ -70,7 +74,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
-      data: { orders: result.orders },
+      data: {
+        orders: result.orders,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     logError(error, {

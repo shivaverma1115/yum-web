@@ -16,6 +16,7 @@ import {
   OrderDetailsPanel,
   PLACEHOLDER_IMAGE,
 } from "@/components/admin/orders/order-details-shared";
+import PayOrderButton from "@/components/storefront/PayOrderButton";
 import { UserRole } from "@/types/user";
 
 type OrderExpandableTableRowProps = {
@@ -23,6 +24,7 @@ type OrderExpandableTableRowProps = {
   columnCount: number;
   userRole: UserRole;
   onStatusUpdated?: (orderId: string, status: OrderStatus) => void;
+  onPaymentUpdated?: () => void;
 };
 
 export default function OrderExpandableTableRow({
@@ -30,6 +32,7 @@ export default function OrderExpandableTableRow({
   columnCount,
   userRole,
   onStatusUpdated,
+  onPaymentUpdated,
 }: OrderExpandableTableRowProps) {
   const [expanded, setExpanded] = useState(false);
   const items = order.items ?? [];
@@ -134,6 +137,18 @@ export default function OrderExpandableTableRow({
             className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
           >
             <div className="overflow-hidden">
+              {userRole === UserRole.USER ? (
+                <div
+                  className="px-6 pt-5 flex justify-end"
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <PayOrderButton
+                    order={order}
+                    onPaymentUpdated={onPaymentUpdated}
+                  />
+                </div>
+              ) : null}
               <OrderDetailsPanel
                 order={order}
                 className="px-6 py-5 border-t border-default-100"

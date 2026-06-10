@@ -22,8 +22,14 @@ export async function GET(request: NextRequest) {
     const filter = parseOrderListFilter(
       request.nextUrl.searchParams.get("filter"),
     );
+    const page = Number(request.nextUrl.searchParams.get("page") ?? "1");
+    const limit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
     const adminClient = createAdminClient();
-    const result = await listAllOrdersWithSupabase(adminClient, { filter });
+    const result = await listAllOrdersWithSupabase(adminClient, {
+      filter,
+      page,
+      limit,
+    });
 
     if (!result.success) {
       return NextResponse.json(
@@ -34,7 +40,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { orders: result.orders },
+      data: {
+        orders: result.orders,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     logError(error, {

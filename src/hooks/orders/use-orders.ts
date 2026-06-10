@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
 import type { IOrderWithItems, OrderStatus } from "@/types/order";
 import { UserRole } from "@/types/user";
@@ -8,13 +8,47 @@ import { UserRole } from "@/types/user";
 type OrdersResponse = {
   success: boolean;
   message?: string;
-  data?: { orders: IOrderWithItems[] };
+  data?: {
+    orders: IOrderWithItems[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
 };
 
-export function useOrders(filter: CustomerOrdersFilter = "all", userRole: UserRole) {
+function buildOrdersUrl(
+  userRole: UserRole,
+  filter: CustomerOrdersFilter,
+  page?: number,
+  limit?: number,
+) {
+  const params = new URLSearchParams();
+  if (filter !== "all") {
+    params.set("filter", filter);
+  }
+
+  if (userRole === UserRole.ADMIN && page != null && limit != null) {
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+  }
+
+  const query = params.toString();
+  return `/api/${userRole === UserRole.ADMIN ? "admin" : "account"}/orders${query ? `?${query}` : ""}`;
+}
+
+export function useOrders(
+  filter: CustomerOrdersFilter = "all",
+  userRole: UserRole,
+  page = 1,
+  limit = 10,
+) {
   const [orders, setOrders] = useState<IOrderWithItems[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isAdmin = userRole === UserRole.ADMIN;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -25,13 +59,12 @@ export function useOrders(filter: CustomerOrdersFilter = "all", userRole: UserRo
       setError(null);
 
       try {
-        const params = new URLSearchParams();
-        if (filter !== "all") {
-          params.set("filter", filter);
-        }
-
-        const query = params.toString();
-        const url = `/api/${userRole === UserRole.ADMIN ? "admin" : "account"}/orders${query ? `?${query}` : ""}`;
+        const url = buildOrdersUrl(
+          userRole,
+          filter,
+          isAdmin ? page : undefined,
+          isAdmin ? limit : undefined,
+        );
 
         const response = await fetch(url, { signal: controller.signal });
         const data = (await response.json().catch(
@@ -43,16 +76,22 @@ export function useOrders(filter: CustomerOrdersFilter = "all", userRole: UserRo
         if (!response.ok || !data.success) {
           setError(data.message ?? "Failed to load orders.");
           setOrders([]);
+          setTotal(0);
+          setTotalPages(1);
           return;
         }
 
         setOrders(data.data?.orders ?? []);
+        setTotal(isAdmin ? (data.data?.total ?? 0) : (data.data?.orders?.length ?? 0));
+        setTotalPages(isAdmin ? (data.data?.totalPages ?? 1) : 1);
       } catch (err) {
         if (!active || controller.signal.aborted) return;
         setError(
           err instanceof Error ? err.message : "Failed to load orders.",
         );
         setOrders([]);
+        setTotal(0);
+        setTotalPages(1);
       } finally {
         if (active) {
           setLoading(false);
@@ -66,7 +105,7 @@ export function useOrders(filter: CustomerOrdersFilter = "all", userRole: UserRo
       active = false;
       controller.abort();
     };
-  }, [filter, userRole]);
+  }, [filter, userRole, page, limit, isAdmin]);
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders((current) =>
@@ -76,5 +115,52 @@ export function useOrders(filter: CustomerOrdersFilter = "all", userRole: UserRo
     );
   };
 
-  return { orders, loading, error, updateOrderStatus };
+  const updateOrderPaymentStatus = (
+    orderId: string,
+    paymentStatus: IOrderWithItems["payment_status"],
+  ) => {
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === orderId
+          ? { ...order, payment_status: paymentStatus }
+          : order,
+      ),
+    );
+  };
+
+  const refreshOrders = useCallback(() => {
+    setLoading(true);
+    setError(null);
+
+    const url = buildOrdersUrl(
+      userRole,
+      filter,
+      isAdmin ? page : undefined,
+      isAdmin ? limit : undefined,
+    );
+
+    void fetch(url)
+      .then((response) => response.json().catch(() => ({})))
+      .then((data: OrdersResponse) => {
+        if (data.success) {
+          setOrders(data.data?.orders ?? []);
+          setTotal(isAdmin ? (data.data?.total ?? 0) : (data.data?.orders?.length ?? 0));
+          setTotalPages(isAdmin ? (data.data?.totalPages ?? 1) : 1);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [userRole, filter, page, limit, isAdmin]);
+
+  return {
+    orders,
+    loading,
+    error,
+    total,
+    totalPages,
+    page,
+    limit,
+    updateOrderStatus,
+    updateOrderPaymentStatus,
+    refreshOrders,
+  };
 }

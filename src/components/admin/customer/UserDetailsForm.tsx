@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { UserRole, type IUser } from "@/types/user";
 import { Info, Save, X } from "lucide-react";
@@ -20,6 +20,8 @@ import {
   profilePhoneNeedsVerification,
 } from "@/lib/profile/contact-verification";
 import { phonesMatch, validateOptionalPhoneValue } from "@/lib/phone-otp/phone";
+import { isRichTextEmpty } from "@/lib/rich-text";
+import RichTextEditor from "@/components/ui/RichTextEditor";
 
 export interface UserDetailsFormProps {
   user?: IUser;
@@ -468,18 +470,37 @@ export default function UserDetailsForm({
             >
               Description
             </label>
-            <textarea
-              id="description"
-              rows={5}
-              placeholder="Please enter your description"
-              disabled={isSubmitting}
-              className="block w-full bg-transparent rounded-lg py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200 disabled:opacity-60"
-              {...register("description", {
-                maxLength: {
-                  value: 500,
-                  message: "Description must be 500 characters or fewer.",
+            <Controller
+              name="description"
+              control={control}
+              rules={{
+                validate: (value) => {
+                  if (isRichTextEmpty(value)) return true;
+
+                  const text = value
+                    .replace(/<[^>]*>/g, " ")
+                    .replace(/&nbsp;/gi, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                  return (
+                    text.length <= 500 ||
+                    "Description must be 500 characters or fewer."
+                  );
                 },
-              })}
+              }}
+              render={({ field }) => (
+                <RichTextEditor
+                  id="description"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={isSubmitting}
+                  toolbar="minimal"
+                  minHeight={120}
+                  placeholder="Please enter your description"
+                />
+              )}
             />
             {errors.description?.message ? (
               <span className={errorClassName}>

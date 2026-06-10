@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Banknote, ChevronDown, ShoppingBag, Wallet } from "lucide-react";
 import OrderExpandableTableRow from "@/components/admin/orders/OrderExpandableTableRow";
 import { formatCurrency } from "@/lib/constants";
@@ -16,16 +16,34 @@ const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
 ];
 
 const TABLE_COLUMN_COUNT = 7;
+const DEFAULT_LIMIT = 10;
 
 export default function OrdersList({ userRole }: { userRole: UserRole }) {
   const [filter, setFilter] = useState<CustomerOrdersFilter>("all");
-  const { orders, loading, error, updateOrderStatus } = useOrders(filter, userRole);
+  const [page, setPage] = useState(1);
+  const isAdmin = userRole === UserRole.ADMIN;
+  const {
+    orders,
+    loading,
+    error,
+    total,
+    totalPages,
+    updateOrderStatus,
+    refreshOrders,
+  } = useOrders(filter, userRole, page, DEFAULT_LIMIT);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   const activeLabel =
     FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? "All";
 
+  const startItem = total === 0 ? 0 : (page - 1) * DEFAULT_LIMIT + 1;
+  const endItem = Math.min(page * DEFAULT_LIMIT, total);
+
   const stats = useMemo(() => {
-    const totalOrders = orders.length;
+    const totalOrders = isAdmin ? total : orders.length;
     const paidRevenue = orders
       .filter((order) => order.payment_status === "paid")
       .reduce((sum, order) => sum + order.total, 0);
@@ -34,7 +52,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     ).length;
 
     return { totalOrders, paidRevenue, pendingCount };
-  }, [orders]);
+  }, [orders, isAdmin, total]);
 
   return (
     <div className="space-y-6">
@@ -175,12 +193,43 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                     columnCount={TABLE_COLUMN_COUNT}
                     userRole={userRole}
                     onStatusUpdated={updateOrderStatus}
+                    onPaymentUpdated={refreshOrders}
                   />
                 ))}
               </tbody>
             </table>
           )}
         </div>
+
+        {isAdmin && !loading && !error && total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-default-200 px-6 py-4">
+            <p className="text-sm text-default-500">
+              Showing {startItem}–{endItem} of {total} orders
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((current) => current - 1)}
+                className="rounded-md px-4 py-2 text-sm font-medium text-default-700 bg-default-100 hover:bg-default-200 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-default-600">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages || loading}
+                onClick={() => setPage((current) => current + 1)}
+                className="rounded-md px-4 py-2 text-sm font-medium text-default-700 bg-default-100 hover:bg-default-200 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

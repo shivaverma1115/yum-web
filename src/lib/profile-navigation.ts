@@ -68,17 +68,10 @@ export const ADMIN_NAV_ITEMS: ProfileNavItem[] = [
     ],
   },
   {
-    type: "group",
-    id: "menuProduct",
+    type: "link",
+    href: "/admin/products",
     label: "Products",
     icon: "shopping-bag",
-    prefix: "/admin/products",
-    children: [
-      { href: "/admin/products", label: "All Products" },
-      { href: "/admin/products/1", label: "Product Details" },
-      { href: "/admin/products/add", label: "Add Product" },
-      { href: "/admin/products/1/edit", label: "Edit Product" },
-    ],
   },
   {
     type: "group",

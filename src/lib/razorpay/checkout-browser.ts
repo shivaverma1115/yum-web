@@ -1,4 +1,17 @@
-const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js";
+"use client";
+
+import {
+  RAZORPAY_SCRIPT_URL,
+  RAZORPAY_THEME_COLOR,
+} from "@/lib/razorpay/constants";
+import {
+  RazorpayPaymentCancelledError,
+  RazorpayPaymentFailedError,
+} from "@/lib/razorpay/errors";
+import type {
+  OpenRazorpayCheckoutParams,
+  RazorpayCheckoutResponse,
+} from "@/lib/razorpay/types";
 
 let scriptPromise: Promise<void> | null = null;
 
@@ -36,28 +49,6 @@ export function loadRazorpayCheckoutScript(): Promise<void> {
   return scriptPromise;
 }
 
-export type RazorpayCheckoutResponse = {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-};
-
-export class RazorpayPaymentFailedError extends Error {
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
-
-  constructor(
-    message: string,
-    meta?: { razorpayOrderId?: string; razorpayPaymentId?: string },
-  ) {
-    super(message);
-    this.name = "RazorpayPaymentFailedError";
-    this.razorpayOrderId = meta?.razorpayOrderId;
-    this.razorpayPaymentId = meta?.razorpayPaymentId;
-  }
-}
-
-/** Razorpay handler payloads vary slightly; normalize before sending to the API. */
 export function normalizeRazorpayHandlerResponse(
   response: Record<string, unknown>,
 ): RazorpayCheckoutResponse {
@@ -73,20 +64,6 @@ export function normalizeRazorpayHandlerResponse(
     ).trim(),
   };
 }
-
-export type OpenRazorpayCheckoutParams = {
-  keyId: string;
-  orderId: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  prefill: {
-    name: string;
-    email?: string;
-    contact: string;
-  };
-};
 
 export async function openRazorpayCheckout(
   params: OpenRazorpayCheckoutParams,
@@ -106,11 +83,11 @@ export async function openRazorpayCheckout(
       description: params.description,
       order_id: params.orderId,
       prefill: params.prefill,
-      theme: { color: "#ea580c" },
+      theme: { color: RAZORPAY_THEME_COLOR },
       handler: (response: Record<string, unknown>) =>
         resolve(normalizeRazorpayHandlerResponse(response)),
       modal: {
-        ondismiss: () => reject(new Error("Payment cancelled.")),
+        ondismiss: () => reject(new RazorpayPaymentCancelledError()),
       },
     });
 

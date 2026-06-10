@@ -8,6 +8,7 @@ import { fetchProductsPage } from "@/lib/products/products";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
 import OrderTypeBadges from "@/components/common/OrderTypeBadges";
 import { Eye, Pencil, Trash } from "lucide-react";
+import HtmlContent from "@/components/common/HtmlContent";
 
 const TABLE_COL_SPAN = 19;
 const DEFAULT_LIMIT = 10;
@@ -237,10 +238,10 @@ export default function ProductsList() {
                                                         <OrderTypeBadges types={product.order_type} />
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-default-600 min-w-[220px]" title={product.short_description}>
-                                                        {product.short_description.length > 50 ? product.short_description.substring(0, 50) + "..." : product.short_description}
+                                                        <HtmlContent html={product.short_description} className="text-sm text-default-600" />
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-default-600 min-w-[260px]" title={product.long_description}>
-                                                        {product.long_description.length > 50 ? product.long_description.substring(0, 50) + "..." : product.long_description}
+                                                        <HtmlContent html={product.long_description} className="text-sm text-default-600" />
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.add_discount ? "Yes" : "No"}

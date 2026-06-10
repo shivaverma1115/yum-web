@@ -287,38 +287,7 @@ export async function failOrderPaymentWithSupabase(
   return { success: true, order: updated as IOrder, items: [] };
 }
 
-export type RazorpayWebhookResult =
-  | { success: true; handled: boolean; order?: IOrder }
-  | { success: false; message: string; status: number };
-
-type RazorpayWebhookPaymentEntity = {
-  id?: string;
-  order_id?: string;
-  status?: string;
-};
-
-type RazorpayWebhookPayload = {
-  event?: string;
-  payload?: {
-    payment?: { entity?: RazorpayWebhookPaymentEntity };
-    order?: { entity?: { id?: string } };
-  };
-};
-
-function getRazorpayOrderIdFromWebhook(body: RazorpayWebhookPayload): string | null {
-  const paymentEntity = body.payload?.payment?.entity;
-  const orderEntity = body.payload?.order?.entity;
-
-  const fromPayment = paymentEntity?.order_id?.trim();
-  if (fromPayment) return fromPayment;
-
-  const fromOrder = orderEntity?.id?.trim();
-  if (fromOrder) return fromOrder;
-
-  return null;
-}
-
-async function findOrderByRazorpayOrderId(
+export async function findOrderByRazorpayOrderId(
   supabase: SupabaseClient,
   razorpayOrderId: string,
 ): Promise<IOrder | null> {
@@ -330,6 +299,59 @@ async function findOrderByRazorpayOrderId(
 
   if (error || !data) return null;
   return data as IOrder;
+}
+
+export async function prepareOrderPaymentRetryWithSupabase(
+  supabase: SupabaseClient,
+  orderId: string,
+  razorpayOrderId: string,
+): Promise<CreateOrderResult> {
+  const { data: order, error: fetchError } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (fetchError || !order) {
+    return { success: false, message: "Order not found.", status: 404 };
+  }
+
+  if (order.payment_method !== "online") {
+    return {
+      success: false,
+      message: "This order does not use online payment.",
+      status: 400,
+    };
+  }
+
+  if (order.payment_status === "paid") {
+    return {
+      success: false,
+      message: "This order is already paid.",
+      status: 400,
+    };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("orders")
+    .update({
+      razorpay_order_id: razorpayOrderId,
+      payment_status: "pending",
+      razorpay_payment_id: null,
+    })
+    .eq("id", orderId)
+    .select("*")
+    .single();
+
+  if (updateError || !updated) {
+    return {
+      success: false,
+      message: updateError?.message ?? ERROR_MESSAGE_GENERIC,
+      status: 400,
+    };
+  }
+
+  return { success: true, order: updated as IOrder, items: [] };
 }
 
 export async function getOrderByIdWithSupabase(
@@ -347,96 +369,6 @@ export async function getOrderByIdWithSupabase(
   }
 
   return { success: true, order: data as IOrder };
-}
-
-export async function handleRazorpayWebhookWithSupabase(
-  supabase: SupabaseClient,
-  body: RazorpayWebhookPayload,
-): Promise<RazorpayWebhookResult> {
-  const event = body.event?.trim();
-  const razorpayOrderId = getRazorpayOrderIdFromWebhook(body);
-
-  if (!event || !razorpayOrderId) {
-    return { success: true, handled: false };
-  }
-
-  const order = await findOrderByRazorpayOrderId(supabase, razorpayOrderId);
-  if (!order?.id) {
-    return { success: true, handled: false };
-  }
-
-  const paymentEntity = body.payload?.payment?.entity;
-  const razorpayPaymentId = paymentEntity?.id?.trim();
-
-  if (event === "payment.captured" || event === "order.paid") {
-    if (order.payment_status === "paid") {
-      return { success: true, handled: true, order };
-    }
-
-    const { data: updated, error } = await supabase
-      .from("orders")
-      .update({
-        payment_status: "paid",
-        ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
-      })
-      .eq("id", order.id)
-      .select("*")
-      .single();
-
-    if (error || !updated) {
-      return {
-        success: false,
-        message: error?.message ?? ERROR_MESSAGE_GENERIC,
-        status: 400,
-      };
-    }
-
-    return { success: true, handled: true, order: updated as IOrder };
-  }
-
-  if (event === "payment.failed") {
-    const result = await failOrderPaymentWithSupabase(supabase, order.id, {
-      razorpay_payment_id: razorpayPaymentId,
-    });
-
-    if (!result.success) {
-      return {
-        success: false,
-        message: result.message,
-        status: result.status,
-      };
-    }
-
-    return { success: true, handled: true, order: result.order };
-  }
-
-  if (event === "payment.pending" || event === "payment.authorized") {
-    if (order.payment_status === "paid") {
-      return { success: true, handled: true, order };
-    }
-
-    const { data: updated, error } = await supabase
-      .from("orders")
-      .update({
-        payment_status: "pending",
-        ...(razorpayPaymentId ? { razorpay_payment_id: razorpayPaymentId } : {}),
-      })
-      .eq("id", order.id)
-      .select("*")
-      .single();
-
-    if (error || !updated) {
-      return {
-        success: false,
-        message: error?.message ?? ERROR_MESSAGE_GENERIC,
-        status: 400,
-      };
-    }
-
-    return { success: true, handled: true, order: updated as IOrder };
-  }
-
-  return { success: true, handled: false };
 }
 
 export type CustomerOrdersFilter = "all" | "paid" | "failed" | "cancelled";
@@ -458,7 +390,14 @@ export function parseOrderListFilter(
 }
 
 export type ListCustomerOrdersResult =
-  | { success: true; orders: IOrderWithItems[] }
+  | {
+      success: true;
+      orders: IOrderWithItems[];
+      total?: number;
+      page?: number;
+      limit?: number;
+      totalPages?: number;
+    }
   | { success: false; message: string; status: number };
 
 export type ListAllOrdersResult = ListCustomerOrdersResult;
@@ -479,13 +418,22 @@ function mapOrderRowsWithItems(data: OrderRowWithItems[] | null): IOrderWithItem
 
 export async function listAllOrdersWithSupabase(
   supabase: SupabaseClient,
-  options?: { filter?: CustomerOrdersFilter },
+  options?: {
+    filter?: CustomerOrdersFilter;
+    page?: number;
+    limit?: number;
+  },
 ): Promise<ListAllOrdersResult> {
   const filter = options?.filter ?? "all";
+  const shouldPaginate =
+    options?.page !== undefined || options?.limit !== undefined;
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 10));
+  const offset = (page - 1) * limit;
 
   let query = supabase
     .from("orders")
-    .select("*, order_items(*)")
+    .select("*, order_items(*)", shouldPaginate ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false });
 
   if (filter === "paid") {
@@ -496,7 +444,9 @@ export async function listAllOrdersWithSupabase(
     query = query.eq("status", "cancelled");
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = shouldPaginate
+    ? await query.range(offset, offset + limit - 1)
+    : await query;
 
   if (error) {
     return {
@@ -506,20 +456,45 @@ export async function listAllOrdersWithSupabase(
     };
   }
 
-  return { success: true, orders: mapOrderRowsWithItems(data as OrderRowWithItems[]) };
+  const orders = mapOrderRowsWithItems(data as OrderRowWithItems[]);
+
+  if (!shouldPaginate) {
+    return { success: true, orders };
+  }
+
+  const total = count ?? 0;
+
+  return {
+    success: true,
+    orders,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  };
 }
 
 export async function listCustomerOrdersWithSupabase(
   supabase: SupabaseClient,
   userId: string,
-  options?: { filter?: CustomerOrdersFilter; customerEmail?: string },
+  options?: {
+    filter?: CustomerOrdersFilter;
+    customerEmail?: string;
+    page?: number;
+    limit?: number;
+  },
 ): Promise<ListCustomerOrdersResult> {
   const filter = options?.filter ?? "all";
   const email = options?.customerEmail?.trim().toLowerCase();
+  const shouldPaginate =
+    options?.page !== undefined || options?.limit !== undefined;
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = Math.min(100, Math.max(1, options?.limit ?? 10));
+  const offset = (page - 1) * limit;
 
   let query = supabase
     .from("orders")
-    .select("*, order_items(*)")
+    .select("*, order_items(*)", shouldPaginate ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false });
 
   if (userId && email) {
@@ -527,7 +502,9 @@ export async function listCustomerOrdersWithSupabase(
   } else if (userId) {
     query = query.eq("user_id", userId);
   } else {
-    return { success: true, orders: [] };
+    return shouldPaginate
+      ? { success: true, orders: [], total: 0, page, limit, totalPages: 1 }
+      : { success: true, orders: [] };
   }
 
   if (filter === "paid") {
@@ -538,7 +515,9 @@ export async function listCustomerOrdersWithSupabase(
     query = query.eq("status", "cancelled");
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = shouldPaginate
+    ? await query.range(offset, offset + limit - 1)
+    : await query;
 
   if (error) {
     return {
@@ -548,9 +527,21 @@ export async function listCustomerOrdersWithSupabase(
     };
   }
 
+  const orders = mapOrderRowsWithItems(data as OrderRowWithItems[]);
+
+  if (!shouldPaginate) {
+    return { success: true, orders };
+  }
+
+  const total = count ?? 0;
+
   return {
     success: true,
-    orders: mapOrderRowsWithItems(data as OrderRowWithItems[]),
+    orders,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
   };
 }
 

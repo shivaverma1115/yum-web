@@ -3,13 +3,15 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { verifyRazorpayWebhookSignature } from "@/lib/razorpay/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { handleRazorpayWebhookWithSupabase } from "@/lib/supabase/orders";
+import { handleRazorpayWebhook } from "@/lib/razorpay/webhook";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("Webhook received");
     const rawBody = await request.text();
+
     const signature = request.headers.get("x-razorpay-signature")?.trim() ?? "";
 
     if (!signature) {
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
     };
 
     const adminClient = createAdminClient();
-    const result = await handleRazorpayWebhookWithSupabase(adminClient, payload);
+    const result = await handleRazorpayWebhook(adminClient, payload);
 
     if (!result.success) {
       return NextResponse.json(

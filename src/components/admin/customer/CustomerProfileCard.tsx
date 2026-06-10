@@ -10,6 +10,7 @@ import {
 import { formatCustomerSince } from "@/lib/constants";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import type { IUserWithVerification } from "@/types/user";
+import HtmlContent from "@/components/common/HtmlContent";
 
 function displayValue(value: string | null | undefined) {
   if (!value?.trim()) return "—";
@@ -82,7 +83,11 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
               About
             </h5>
             <p className="text-sm text-default-600">
-              {customer.description?.trim() || "No description provided."}
+              {customer.description ? (
+                <HtmlContent html={customer.description} className="text-sm text-default-600" />
+              ) : (
+                "No description provided."
+              )}
             </p>
           </div>
 

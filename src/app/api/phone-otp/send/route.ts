@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
-import {
-  createPendingOtpToken,
-  generateOtpCode,
-} from "@/lib/phone-otp/tokens";
-import { sendPhoneOtpSms } from "@/lib/phone-otp/sms";
+import { sendSupabasePhoneOtp } from "@/lib/phone-otp/supabase-auth";
 import { logError } from "@/lib/utils/logError";
 
 export async function POST(request: NextRequest) {
@@ -24,38 +20,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const otp = generateOtpCode();
-    const pending = createPendingOtpToken(phone, otp);
-    const sms = await sendPhoneOtpSms(phone, otp);
+    const result = await sendSupabasePhoneOtp(phone);
 
-    if (!sms.sent) {
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, message: sms.message },
-        { status: 503 },
+        { success: false, message: result.message },
+        { status: result.status },
       );
     }
 
-    const response = NextResponse.json({
+    const devHint =
+      process.env.NODE_ENV === "development"
+        ? " Use the test OTP configured in Supabase Dashboard → Auth → Phone."
+        : "";
+
+    return NextResponse.json({
       success: true,
-      message: "OTP sent to your phone.",
+      message: `OTP sent to your phone.${devHint}`,
       data: {
-        phone,
-        expiresInSeconds: pending.maxAge,
-        ...(process.env.NODE_ENV === "development"
-          ? { debugOtp: otp }
-          : {}),
+        phone: result.phone,
+        expiresInSeconds: result.expiresInSeconds,
       },
     });
-
-    response.cookies.set(pending.cookieName, pending.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: pending.maxAge,
-    });
-
-    return response;
   } catch (error) {
     logError(error, {
       context: "Phone OTP Send API",
