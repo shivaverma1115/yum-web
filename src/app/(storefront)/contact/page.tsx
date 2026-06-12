@@ -1,11 +1,11 @@
 import Contact from '@/components/storefront/Contact'
 import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
-import { Metadata } from 'next';
-export const metadata: Metadata = {
-    title: "Contact",
-    description: "Contact",
-};
+import { createStorefrontMetadata } from '@/lib/seo/create-storefront-metadata';
+
+export async function generateMetadata() {
+    return createStorefrontMetadata("contact");
+}
 
 export default function ContactPage() {
     return (
@@ -14,4 +14,3 @@ export default function ContactPage() {
         </Suspense>
     )
 }
-

@@ -1,14 +1,14 @@
 
 import Preloader from '@/components/layout/Preloader'
 import { Suspense } from 'react'
-import { Metadata } from 'next';
 import dynamic from 'next/dynamic';
+import { createStorefrontMetadata } from '@/lib/seo/create-storefront-metadata';
+
 const Home = dynamic(() => import('@/components/storefront/Home'));
 
-export const metadata: Metadata = {
-    title: "Home Page",
-    description: "Home Page",
-};
+export async function generateMetadata() {
+    return createStorefrontMetadata("home");
+}
 
 export default function HomePage() {
     return (
@@ -17,4 +17,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-

@@ -1,11 +1,11 @@
 import Home from '@/components/storefront/Home'
 import Preloader from '@/components/layout/Preloader'
 import React, { Suspense } from 'react'
-import { Metadata } from 'next';
-export const metadata: Metadata = {
-    title: "Home",
-    description: "Home",
-};
+import { createStorefrontMetadata } from '@/lib/seo/create-storefront-metadata';
+
+export async function generateMetadata() {
+    return createStorefrontMetadata("home", { path: "/home" });
+}
 
 export default function HomePage() {
     return (
@@ -14,4 +14,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-

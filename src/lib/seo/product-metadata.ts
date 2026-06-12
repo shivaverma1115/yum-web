@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { richTextToPlainText } from "@/lib/rich-text";
+import { buildPageMetadata } from "@/lib/seo/build-page-metadata";
+import { productMetaTitle } from "@/lib/seo/product-meta-title";
 import type { BusinessSettings } from "@/types/business-settings";
 import type { IProduct } from "@/types/product";
 
@@ -39,40 +41,19 @@ export function buildProductPageMetadata(
   settings: BusinessSettings,
 ): Metadata {
   const siteName = settings.general.site_name.trim() || "Yum";
+  const title = productMetaTitle(product, siteName);
   const description = productMetaDescription(product, siteName);
-  const image = productOgImage(product);
   const canonicalPath = `/products/${product.slug}`;
 
-  return {
-    title: product.name,
+  return buildPageMetadata({
+    title,
     description,
-    alternates: {
-      canonical: canonicalPath,
-    },
-    openGraph: {
-      title: product.name,
-      description,
-      type: "website",
-      siteName,
-      url: canonicalPath,
-      ...(image
-        ? {
-            images: [
-              {
-                url: image,
-                alt: product.name,
-              },
-            ],
-          }
-        : {}),
-    },
-    twitter: {
-      card: image ? "summary_large_image" : "summary",
-      title: product.name,
-      description,
-      ...(image ? { images: [image] } : {}),
-    },
-  };
+    path: canonicalPath,
+    settings,
+    ogImagePath: `/api/og/product/${product.slug}`,
+    imageAlt: product.name,
+    absoluteTitle: true,
+  });
 }
 
 export function productNotFoundMetadata(): Metadata {
