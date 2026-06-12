@@ -52,7 +52,6 @@ export async function createProductOgImageResponse(
         siteName={siteName}
         currencySymbol={currencySymbol}
         productImageUrl={productPhotoDataUrl ?? productImageUrl}
-        backgroundImageUrl={backgroundImageUrl}
       />,
       {
         ...PRODUCT_OG_SIZE,
