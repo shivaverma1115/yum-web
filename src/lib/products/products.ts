@@ -1,3 +1,8 @@
+import {
+  normalizeAllergens,
+  normalizeIngredients,
+  normalizeSpiceLevels,
+} from "@/lib/products/attributes";
 import { normalizeOrderTypes } from "@/lib/order-types";
 import type { IProduct } from "@/types/product";
 
@@ -5,6 +10,10 @@ function normalizeProduct(product: IProduct): IProduct {
   return {
     ...product,
     order_type: normalizeOrderTypes(product.order_type),
+    spice_levels: normalizeSpiceLevels(product.spice_levels),
+    ingredients: normalizeIngredients(product.ingredients),
+    allergens: normalizeAllergens(product.allergens),
+    is_available: product.is_available !== false,
   };
 }
 

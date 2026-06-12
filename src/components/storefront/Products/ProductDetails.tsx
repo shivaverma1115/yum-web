@@ -15,27 +15,50 @@ import HtmlContent from "@/components/common/HtmlContent";
 import OrderTypeBadges from "@/components/common/OrderTypeBadges";
 import { isRichTextEmpty } from "@/lib/rich-text";
 import { formatCurrency } from "@/lib/constants";
+import {
+    ALLERGEN_OPTIONS,
+    getDietTypeLabel,
+    getOptionLabel,
+    INGREDIENT_OPTIONS,
+    SPICE_LEVEL_OPTIONS,
+} from "@/lib/products/attributes";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import type { IProduct } from "@/types/product";
 import { HeartIcon } from "lucide-react";
 
 interface ProductDetailsProps {
-    /** Route param: product UUID (folder is named [slug]). */
+    /** Canonical product slug from the URL. */
     slug: string;
+    initialProduct?: IProduct;
+    initialRelated?: IProduct[];
 }
 
-export default function ProductDetails({ slug: productId }: ProductDetailsProps) {
-    const [product, setProduct] = useState<IProduct | null>(null);
-    const [related, setRelated] = useState<IProduct[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+export default function ProductDetails({
+    slug,
+    initialProduct,
+    initialRelated = [],
+}: ProductDetailsProps) {
+    const [product, setProduct] = useState<IProduct | null>(initialProduct ?? null);
+    const [related, setRelated] = useState<IProduct[]>(initialRelated);
+    const [isLoading, setIsLoading] = useState(!initialProduct);
     const [error, setError] = useState<string | null>(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
-        if (!productId) {
+        if (!slug) {
             setError("Invalid product.");
             setIsLoading(false);
+            return;
+        }
+
+        if (
+            initialProduct &&
+            (initialProduct.slug === slug || initialProduct.id === slug)
+        ) {
+            setProduct(initialProduct);
+            setRelated(initialRelated);
+            setIsLoading(false);
+            setError(null);
             return;
         }
 
@@ -47,7 +70,7 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
             setError(null);
 
             try {
-                const loaded = await fetchProduct(productId, controller.signal);
+                const loaded = await fetchProduct(slug, controller.signal);
                 if (!active) return;
                 setProduct(loaded);
                 setActiveImageIndex(0);
@@ -82,7 +105,7 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
             active = false;
             controller.abort();
         };
-    }, [productId]);
+    }, [slug, initialProduct, initialRelated]);
 
     const images = useMemo(
         () => (product ? getProductImages(product) : []),
@@ -148,7 +171,7 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                         >
                                             <img
                                                 src={src}
-                                                alt=""
+                                                alt={`${product.name} ${index + 1}`}
                                                 className="w-full h-full object-cover"
                                             />
                                         </button>
@@ -158,15 +181,15 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                         </div>
 
                         <div>
-                            <h3 className="text-4xl font-medium text-default-800 mb-1">
+                            <h1 className="text-4xl font-medium text-default-800 mb-1">
                                 {product.name}
-                            </h3>
-                            <h5 className="text-lg font-medium text-default-600 mb-2">
+                            </h1>
+                            <p className="text-lg font-medium text-default-600 mb-2">
                                 <span className="text-base font-normal text-default-500">
                                     Category:
                                 </span>{" "}
                                 {product.category}
-                            </h5>
+                            </p>
 
                             {hasShortDescription ? (
                                 <HtmlContent
@@ -195,14 +218,53 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                         <span className="text-xs text-primary">Discount</span>
                                     </div>
                                 ) : null}
-                                {product.return_policy ? (
+                                {product.preparation_time_minutes != null ? (
                                     <div className="border border-default-200 rounded-full px-3 py-1.5 flex items-center">
-                                        <span className="text-xs">Return policy</span>
+                                        <span className="text-xs">
+                                            Prep {product.preparation_time_minutes} min
+                                        </span>
                                     </div>
                                 ) : null}
+                                {product.diet_type ? (
+                                    <div className="border border-green-500/30 bg-green-500/10 rounded-full px-3 py-1.5 flex items-center">
+                                        <span className="text-xs text-green-700 dark:text-green-400">
+                                            {getDietTypeLabel(product.diet_type)}
+                                        </span>
+                                    </div>
+                                ) : null}
+                                {product.spice_levels.map((level) => (
+                                    <div
+                                        key={level}
+                                        className="border border-orange-500/30 bg-orange-500/10 rounded-full px-3 py-1.5 flex items-center"
+                                    >
+                                        <span className="text-xs text-orange-700 dark:text-orange-400">
+                                            {getOptionLabel(SPICE_LEVEL_OPTIONS, level)}
+                                        </span>
+                                    </div>
+                                ))}
+                                {product.ingredients.map((ingredient) => (
+                                    <div
+                                        key={ingredient}
+                                        className="border border-default-200 rounded-full px-3 py-1.5 flex items-center"
+                                    >
+                                        <span className="text-xs">
+                                            {getOptionLabel(INGREDIENT_OPTIONS, ingredient)}
+                                        </span>
+                                    </div>
+                                ))}
+                                {product.allergens.map((allergen) => (
+                                    <div
+                                        key={allergen}
+                                        className="border border-red-500/30 bg-red-500/10 rounded-full px-3 py-1.5 flex items-center"
+                                    >
+                                        <span className="text-xs text-red-700 dark:text-red-400">
+                                            {getOptionLabel(ALLERGEN_OPTIONS, allergen)}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
 
-                            <h4 className="text-3xl font-semibold text-primary mb-6">
+                            <p className="text-3xl font-semibold text-primary mb-6">
                                 {product.add_discount &&
                                     product.discount_percent != null &&
                                     product.selling_price != null ? (
@@ -220,7 +282,7 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                                 ) : (
                                     formatCurrency(product.selling_price ?? 0)
                                 )}
-                            </h4>
+                            </p>
 
                             <p className="text-sm text-default-600 mb-6">
                                 {product.quantity != null && product.quantity > 0
@@ -229,12 +291,11 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
                             </p>
 
                             <div className="flex items-center gap-2 mb-8">
-
                                 <AddToCartButton
                                     product={product}
                                     className="relative z-10 inline-flex items-center justify-center rounded-full border border-primary bg-primary px-12 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
                                 />
-                                <HeartIcon className="size-5 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600" /> 
+                                <HeartIcon className="size-5 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600" />
                             </div>
                         </div>
                     </div>
@@ -244,9 +305,9 @@ export default function ProductDetails({ slug: productId }: ProductDetailsProps)
             {related.length > 0 ? (
                 <section className="lg:py-10 py-6">
                     <div className="container">
-                        <h4 className="text-xl font-semibold text-default-800 mb-4">
+                        <h2 className="text-xl font-semibold text-default-800 mb-4">
                             You may also like
-                        </h4>
+                        </h2>
                         <div className="grid xl:grid-cols-4 sm:grid-cols-2 gap-5 mb-10">
                             {related.map((item) => (
                                 <ProductCard key={item.id ?? item.name} product={item} />

@@ -34,6 +34,7 @@ function productToCartItem(product: IProduct, quantity: number): ICartItem | nul
 
   return {
     productId: product.id,
+    slug: product.slug,
     name: product.name,
     image_url: images[0] ?? "/images/dishes/pizza.png",
     price: product.selling_price ?? 0,

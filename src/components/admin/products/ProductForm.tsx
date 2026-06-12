@@ -14,6 +14,15 @@ import ImageUploadField, {
 import Input from "@/components/ui/Input";
 import MultiSelect from "@/components/ui/MultiSelect";
 import { validateProductImageFiles } from "@/lib/products/imageValidation";
+import {
+    ALLERGEN_OPTIONS,
+    DIET_TYPE_OPTIONS,
+    INGREDIENT_OPTIONS,
+    normalizeAllergens,
+    normalizeIngredients,
+    normalizeSpiceLevels,
+    SPICE_LEVEL_OPTIONS,
+} from "@/lib/products/attributes";
 import { normalizeOrderTypes, ORDER_TYPE_OPTIONS } from "@/lib/order-types";
 import type { IProductCategory } from "@/types/product-category";
 import type { IProduct, ProductFormInput } from "@/types/product";
@@ -26,17 +35,18 @@ const DEFAULT_FORM_VALUES: ProductFormInput = {
     name: "",
     category: "",
     selling_price: null,
-    cost_price: null,
     quantity: null,
     order_type: [],
     short_description: "",
     long_description: "",
     add_discount: false,
     discount_percent: null,
-    add_expiry_date: false,
-    expiry_start_date: null,
-    expiry_end_date: null,
-    return_policy: false,
+    preparation_time_minutes: null,
+    diet_type: "veg",
+    spice_levels: [],
+    ingredients: [],
+    allergens: [],
+    is_available: true,
     image_url: null,
     image_urls: [],
 };
@@ -58,7 +68,6 @@ function buildProductFormData(
     formData.append("name", values.name);
     formData.append("category", values.category);
     formData.append("selling_price", String(values.selling_price));
-    formData.append("cost_price", String(values.cost_price));
     formData.append("quantity", String(values.quantity));
     for (const orderType of values.order_type) {
         formData.append("order_type", orderType);
@@ -69,16 +78,25 @@ function buildProductFormData(
     if (values.add_discount && values.discount_percent != null) {
         formData.append("discount_percent", String(values.discount_percent));
     }
-    formData.append("add_expiry_date", String(values.add_expiry_date));
-    if (values.add_expiry_date) {
-        if (values.expiry_start_date) {
-            formData.append("expiry_start_date", values.expiry_start_date);
-        }
-        if (values.expiry_end_date) {
-            formData.append("expiry_end_date", values.expiry_end_date);
-        }
+    if (values.preparation_time_minutes != null) {
+        formData.append(
+            "preparation_time_minutes",
+            String(values.preparation_time_minutes),
+        );
     }
-    formData.append("return_policy", String(values.return_policy));
+    if (values.diet_type) {
+        formData.append("diet_type", values.diet_type);
+    }
+    for (const level of values.spice_levels) {
+        formData.append("spice_levels", level);
+    }
+    for (const ingredient of values.ingredients) {
+        formData.append("ingredients", ingredient);
+    }
+    for (const allergen of values.allergens) {
+        formData.append("allergens", allergen);
+    }
+    formData.append("is_available", String(values.is_available));
 
     const coverUrl = keptExistingUrls[0] ?? values.image_url;
     if (coverUrl) {
@@ -155,6 +173,10 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                 ...DEFAULT_FORM_VALUES,
                 ...product,
                 order_type: normalizeOrderTypes(product.order_type),
+                spice_levels: normalizeSpiceLevels(product.spice_levels),
+                ingredients: normalizeIngredients(product.ingredients),
+                allergens: normalizeAllergens(product.allergens),
+                is_available: product.is_available !== false,
             }
             : DEFAULT_FORM_VALUES,
     });
@@ -165,6 +187,10 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
             ...DEFAULT_FORM_VALUES,
             ...product,
             order_type: normalizeOrderTypes(product.order_type),
+            spice_levels: normalizeSpiceLevels(product.spice_levels),
+            ingredients: normalizeIngredients(product.ingredients),
+            allergens: normalizeAllergens(product.allergens),
+            is_available: product.is_available !== false,
         });
     }, [product, reset]);
 
@@ -180,7 +206,6 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     const addDiscount = watch("add_discount");
     const discountPercent = watch("discount_percent");
     const sellingPrice = watch("selling_price");
-    const addExpiryDate = watch("add_expiry_date");
     const discountedPrice = calculateDiscountedPrice(sellingPrice, discountPercent);
     const maxImageSizeMb = MAX_PRODUCT_IMAGE_SIZE_BYTES / (1024 * 1024);
 
@@ -335,61 +360,37 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 ) : null}
                             </div>
 
-                            <div className="grid lg:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="selling_price">
-                                        Selling Price <span className="text-required" >*</span>
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        id="selling_price"
-                                        step="0.01"
-                                        min={0}
-                                        placeholder="Selling Price"
-                                        disabled={isSubmitting}
-                                        {...register("selling_price", {
-                                            required: "Selling price is required.",
-                                            valueAsNumber: true,
-                                            min: { value: 0, message: "Price cannot be negative." },
-                                        })}
-                                    />
-                                    {errors.selling_price?.message ? (
-                                        <span className={errorClassName}>{errors.selling_price.message}</span>
-                                    ) : null}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="cost_price">
-                                        Cost Price <span className="text-required" >*</span>
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        id="cost_price"
-                                        step="0.01"
-                                        min={0}
-                                        placeholder="Cost Price"
-                                        disabled={isSubmitting}
-                                        {...register("cost_price", {
-                                            required: "Cost price is required.",
-                                            valueAsNumber: true,
-                                            min: { value: 0, message: "Cost cannot be negative." },
-                                        })}
-                                    />
-                                    {errors.cost_price?.message ? (
-                                        <span className={errorClassName}>{errors.cost_price.message}</span>
-                                    ) : null}
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="selling_price">
+                                    Selling Price <span className="text-required" >*</span>
+                                </label>
+                                <Input
+                                    type="number"
+                                    id="selling_price"
+                                    step="0.01"
+                                    min={0}
+                                    placeholder="Selling Price"
+                                    disabled={isSubmitting}
+                                    {...register("selling_price", {
+                                        required: "Selling price is required.",
+                                        valueAsNumber: true,
+                                        min: { value: 0, message: "Price cannot be negative." },
+                                    })}
+                                />
+                                {errors.selling_price?.message ? (
+                                    <span className={errorClassName}>{errors.selling_price.message}</span>
+                                ) : null}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="quantity">
-                                    Quantity in Stock <span className="text-required" >*</span>
+                                    Available Quantity <span className="text-required" >*</span>
                                 </label>
                                 <Input
                                     type="number"
                                     id="quantity"
                                     min={0}
-                                    placeholder="Quantity in Stock"
+                                    placeholder="Available Quantity"
                                     disabled={isSubmitting}
                                     {...register("quantity", {
                                         required: "Quantity is required.",
@@ -424,6 +425,96 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                             disabled={isSubmitting}
                                             error={errors.order_type?.message}
                                             aria-label="Order type"
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="diet_type">
+                                    Veg / Non Veg <span className="text-required">*</span>
+                                </label>
+                                <Input
+                                    as="select"
+                                    id="diet_type"
+                                    disabled={isSubmitting}
+                                    {...register("diet_type", {
+                                        required: "Please select Veg or Non Veg.",
+                                    })}
+                                >
+                                    <option value="">Select type</option>
+                                    {DIET_TYPE_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </Input>
+                                {errors.diet_type?.message ? (
+                                    <span className={errorClassName}>{errors.diet_type.message}</span>
+                                ) : null}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="spice_levels">
+                                    Spice Level
+                                </label>
+                                <Controller
+                                    name="spice_levels"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            id="spice_levels"
+                                            options={SPICE_LEVEL_OPTIONS}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="Select spice levels"
+                                            disabled={isSubmitting}
+                                            error={errors.spice_levels?.message}
+                                            aria-label="Spice level"
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="ingredients">
+                                    Ingredients
+                                </label>
+                                <Controller
+                                    name="ingredients"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            id="ingredients"
+                                            options={INGREDIENT_OPTIONS}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="Select ingredients"
+                                            disabled={isSubmitting}
+                                            error={errors.ingredients?.message}
+                                            aria-label="Ingredients"
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="allergens">
+                                    Allergens
+                                </label>
+                                <Controller
+                                    name="allergens"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            id="allergens"
+                                            options={ALLERGEN_OPTIONS}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="Select allergens"
+                                            disabled={isSubmitting}
+                                            error={errors.allergens?.message}
+                                            aria-label="Allergens"
                                         />
                                     )}
                                 />
@@ -510,87 +601,69 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 ) : null}
                             </div>
 
-                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-medium text-default-600">Expiry Date</h4>
-                                    <div className="flex items-center gap-4">
-                                        <label className="block text-sm text-default-600" htmlFor="addExpiryDate">
-                                            Add Expiry Date
-                                        </label>
-                                        <input
-                                            type="checkbox"
-                                            id="addExpiryDate"
-                                            className={toggleClassName}
-                                            disabled={isSubmitting}
-                                            {...register("add_expiry_date")}
-                                        />
-                                    </div>
-                                </div>
-
-                                {addExpiryDate ? (
-                                    <div className="grid gap-4 border-t border-default-200 pt-4 sm:grid-cols-2">
-                                        <div>
-                                            <label
-                                                className="mb-2 block text-sm font-medium text-default-900"
-                                                htmlFor="expiry_start_date"
-                                            >
-                                                Start date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                id="expiry_start_date"
-                                                disabled={isSubmitting}
-                                                {...register("expiry_start_date", {
-                                                    validate: (value, formValues) => {
-                                                        if (!formValues.add_expiry_date) return true;
-                                                        return value
-                                                            ? true
-                                                            : "Start date is required.";
-                                                    },
-                                                })}
-                                            />
-                                            {errors.expiry_start_date?.message ? (
-                                                <span className={errorClassName}>
-                                                    {errors.expiry_start_date.message}
-                                                </span>
-                                            ) : null}
-                                        </div>
-
-                                        <div>
-                                            <label
-                                                className="mb-2 block text-sm font-medium text-default-900"
-                                                htmlFor="expiry_end_date"
-                                            >
-                                                End date
-                                            </label>
-                                            <Input
-                                                type="date"
-                                                id="expiry_end_date"
-                                                disabled={isSubmitting}
-                                                {...register("expiry_end_date", {
-                                                    validate: (value, formValues) => {
-                                                        if (!formValues.add_expiry_date) return true;
-                                                        if (!value) {
-                                                            return "End date is required.";
-                                                        }
-                                                        if (
-                                                            formValues.expiry_start_date &&
-                                                            value < formValues.expiry_start_date
-                                                        ) {
-                                                            return "End date must be on or after start date.";
-                                                        }
-                                                        return true;
-                                                    },
-                                                })}
-                                            />
-                                            {errors.expiry_end_date?.message ? (
-                                                <span className={errorClassName}>
-                                                    {errors.expiry_end_date.message}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                    </div>
+                            <div>
+                                <label
+                                    className="mb-2 block text-sm font-medium text-default-900"
+                                    htmlFor="preparation_time_minutes"
+                                >
+                                    Preparation Time (minutes)
+                                </label>
+                                <Input
+                                    type="number"
+                                    id="preparation_time_minutes"
+                                    min={0}
+                                    step={1}
+                                    placeholder="e.g. 15"
+                                    disabled={isSubmitting}
+                                    {...register("preparation_time_minutes", {
+                                        setValueAs: (value) => {
+                                            if (value === "" || value == null) {
+                                                return null;
+                                            }
+                                            const parsed = Number(value);
+                                            return Number.isFinite(parsed) ? parsed : null;
+                                        },
+                                        validate: (value) => {
+                                            if (value == null) return true;
+                                            if (!Number.isInteger(value)) {
+                                                return "Enter whole minutes only.";
+                                            }
+                                            if (value < 0) {
+                                                return "Preparation time cannot be negative.";
+                                            }
+                                            return true;
+                                        },
+                                    })}
+                                />
+                                <p className="mt-2 text-sm text-default-600">
+                                    Estimated time to prepare this item. Leave empty if not applicable.
+                                </p>
+                                {errors.preparation_time_minutes?.message ? (
+                                    <span className={errorClassName}>
+                                        {errors.preparation_time_minutes.message}
+                                    </span>
                                 ) : null}
+                            </div>
+
+                            <div className="flex items-center justify-between rounded-lg border border-default-200 p-4">
+                                <div>
+                                    <h4 className="text-sm font-medium text-default-600">Availability</h4>
+                                    <p className="mt-1 text-sm text-default-500">
+                                        Unavailable products are hidden from the storefront.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="block text-sm text-default-600" htmlFor="is_available">
+                                        Available
+                                    </label>
+                                    <input
+                                        type="checkbox"
+                                        id="is_available"
+                                        className={toggleClassName}
+                                        disabled={isSubmitting}
+                                        {...register("is_available")}
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -662,21 +735,6 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 ) : null}
                             </div>
 
-                            <div className="flex justify-between">
-                                <h4 className="text-sm font-medium text-default-600">Return Policy</h4>
-                                <div className="flex items-center gap-4">
-                                    <label className="block text-sm text-default-600" htmlFor="returnPolicy">
-                                        Return Policy
-                                    </label>
-                                    <input
-                                        type="checkbox"
-                                        id="returnPolicy"
-                                        className={toggleClassName}
-                                        disabled={isSubmitting}
-                                        {...register("return_policy")}
-                                    />
-                                </div>
-                            </div>
                         </div>
                     </div>
 

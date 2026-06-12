@@ -4,13 +4,14 @@ import Link from "next/link";
 import type { IProduct } from "@/types/product";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { productPath } from "@/lib/products/slug";
 import { fetchProductsPage } from "@/lib/products/products";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
 import OrderTypeBadges from "@/components/common/OrderTypeBadges";
 import { Eye, Pencil, Trash } from "lucide-react";
 import HtmlContent from "@/components/common/HtmlContent";
 
-const TABLE_COL_SPAN = 19;
+const TABLE_COL_SPAN = 18;
 const DEFAULT_LIMIT = 10;
 
 export default function ProductsList() {
@@ -70,7 +71,7 @@ export default function ProductsList() {
                     page,
                     limit: DEFAULT_LIMIT,
                     signal: controller.signal,
-                    endpoint: "/api/products",
+                    endpoint: "/api/admin/products",
                 });
 
                 if (!active) return;
@@ -133,10 +134,10 @@ export default function ProductsList() {
                                     <thead className="bg-default-100">
                                         <tr className="text-start">
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                                Product ID
+                                                Product Images
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                                Image
+                                                Product ID
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                                 Name
@@ -146,9 +147,6 @@ export default function ProductsList() {
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                                 Selling Price
-                                            </th>
-                                            <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                                Cost Price
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                                 Quantity
@@ -166,10 +164,7 @@ export default function ProductsList() {
                                                 Discount
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                                Expiry Date
-                                            </th>
-                                            <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                                                Return Policy
+                                                Prep Time
                                             </th>
                                             <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                                                 Created By (User ID)
@@ -206,18 +201,18 @@ export default function ProductsList() {
                                             products.map((product) => (
                                                 <tr key={product.id}>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
-                                                        #{product.id}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
                                                         {product.image_url ? (
                                                             <img
                                                                 src={product.image_url}
                                                                 alt={product.name}
-                                                                className="h-12 w-12 rounded object-cover border border-default-200"
+                                                                className="size-20 rounded object-cover border border-default-200"
                                                             />
                                                         ) : (
                                                             <span className="text-default-500">-</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
+                                                        #{product.id}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
                                                         {product.name}
@@ -227,9 +222,6 @@ export default function ProductsList() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.selling_price ? formatCurrency(product.selling_price) : "-"}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {product.cost_price ? formatCurrency(product.cost_price) : "-"}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.quantity}
@@ -247,10 +239,9 @@ export default function ProductsList() {
                                                         {product.add_discount ? "Yes" : "No"}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {product.add_expiry_date ? "Yes" : "No"}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
-                                                        {product.return_policy ? "Yes" : "No"}
+                                                        {product.preparation_time_minutes != null
+                                                            ? `${product.preparation_time_minutes} min`
+                                                            : "—"}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         {product.user_id}
@@ -266,11 +257,7 @@ export default function ProductsList() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-default-600">
                                                         <Link
-                                                            href={
-                                                                product.id
-                                                                    ? `/products/${product.id}`
-                                                                    : "/products"
-                                                            }
+                                                            href={productPath(product)}
                                                             className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary hover:text-white transition-colors"
                                                         >
                                                             <Eye className="size-3.5" />

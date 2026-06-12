@@ -95,7 +95,11 @@ export default function Cart() {
                                     className="h-18 w-18 object-cover rounded"
                                   />
                                   <Link
-                                    href={`/products/${item.productId}`}
+                                    href={
+                                      item.slug
+                                        ? `/products/${item.slug}`
+                                        : `/products/${item.productId}`
+                                    }
                                     className="text-sm font-medium text-default-800 hover:text-primary"
                                   >
                                     {item.name}

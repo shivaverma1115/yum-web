@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       limit,
       search,
       categories,
+      availableOnly: true,
     });
 
     if (!result.success) {

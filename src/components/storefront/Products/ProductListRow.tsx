@@ -1,15 +1,12 @@
 import Link from "next/link";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import { formatCurrency } from "@/lib/constants";
+import { productPath } from "@/lib/products/slug";
 import type { IProduct } from "@/types/product";
 
 type ProductListRowProps = {
   product: IProduct;
 };
-
-function productHref(product: IProduct) {
-  return product.id ? `/products/${product.id}` : "/products";
-}
 
 export default function ProductListRow({ product }: ProductListRowProps) {
   const imageSrc = product.image_url ?? "/images/dishes/pizza.png";
@@ -29,7 +26,7 @@ export default function ProductListRow({ product }: ProductListRowProps) {
           <div className="grow">
             <div className="flex items-center justify-between mb-4">
               <Link
-                href={productHref(product)}
+                href={productPath(product)}
                 className="text-default-800 text-2xl font-semibold line-clamp-1 after:absolute after:inset-0"
               >
                 {product.name}
