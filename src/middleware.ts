@@ -97,7 +97,7 @@ function isStorefrontRoute(pathname: string) {
   return matchesRoute(pathname, STOREFRONT_ROUTES);
 }
 
-/** Guests may only access auth + storefront pages */
+/** Unauthenticated users may only access auth + storefront pages */
 function isPublicRoute(pathname: string) {
   return isAuthRoute(pathname) || isStorefrontRoute(pathname);
 }

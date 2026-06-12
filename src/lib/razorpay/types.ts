@@ -31,19 +31,16 @@ export type OnlinePaymentFlowResult =
   | {
       status: "success";
       orderId: string;
-      loggedIn: boolean;
       redirectTo?: string;
     }
   | {
       status: "cancelled";
       orderId: string;
-      loggedIn?: boolean;
       redirectTo?: string;
     }
   | {
       status: "failed";
       orderId: string;
       message: string;
-      loggedIn?: boolean;
       redirectTo?: string;
     };

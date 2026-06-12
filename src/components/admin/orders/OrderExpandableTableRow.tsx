@@ -67,10 +67,7 @@ export default function OrderExpandableTableRow({
           </span>
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
-          {/* <p>
-            {getCustomerName(order)}
-          </p>
-          <p className="text-xs text-default-500 mt-0.5">{order.customer_email}</p> */}
+          {order.customer_phone}
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-default-800">
           <div className="flex items-center gap-4">

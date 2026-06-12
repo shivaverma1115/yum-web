@@ -1,59 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { CookieOptions } from "@supabase/ssr";
-import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
-import { logError } from "@/lib/utils/logError";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { establishCheckoutSession } from "@/lib/supabase/checkout-session";
-import { resolveCheckoutUserId } from "@/lib/supabase/checkout-user";
-import { createOrderWithSupabase } from "@/lib/supabase/orders";
-import { getCurrentUser } from "@/lib/supabase/account/profile";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth/requireAuth";
 import { getUserVerificationStatus } from "@/lib/auth/verification";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
 import { phonesMatch } from "@/lib/phone-otp/phone";
-import { CheckoutPayload } from "@/components/storefront/Checkout";
-
-type CookieToSet = {
-  name: string;
-  value: string;
-  options?: CookieOptions;
-};
+import { logError } from "@/lib/utils/logError";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createOrderWithSupabase } from "@/lib/supabase/orders";
+import type { CheckoutPayload } from "@/types/checkout";
 
 function isCheckoutPhoneVerified(
   request: NextRequest,
   phone: string,
-  session: Awaited<ReturnType<typeof getCurrentUser>>,
+  authUser: NonNullable<Awaited<ReturnType<typeof requireAuth>>["user"]>,
+  profilePhone?: string | null,
 ): boolean {
   if (isPhoneVerifiedOnRequest(request, phone)) {
     return true;
   }
 
-  if (!session?.authUser) {
-    return false;
-  }
-
-  const verification = getUserVerificationStatus(session.authUser);
+  const verification = getUserVerificationStatus(authUser);
   if (!verification.phone_verified) {
     return false;
   }
 
   return (
-    phonesMatch(session.authUser.phone, phone) ||
-    phonesMatch(session.user?.phone, phone)
+    phonesMatch(authUser.phone, phone) || phonesMatch(profilePhone, phone)
   );
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: CheckoutPayload = (await request.json().catch(() => ({})));
+    const auth = await requireAuth();
 
-    const supabase = await createClient();
-    const session = await getCurrentUser(supabase);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
 
+    const body = (await request.json().catch(() => ({}))) as CheckoutPayload;
+    const settings = await getCachedBusinessSettings();
     const fulfillment = body.fulfillment_type;
+    const checkoutPhone = body.phone?.trim() || auth.profile?.phone?.trim() || "";
+
     if (
       (fulfillment === "delivery" || fulfillment === "pickup") &&
-      !isCheckoutPhoneVerified(request, body.phone, session)
+      isOtpRequiredFor(settings, "checkout") &&
+      checkoutPhone &&
+      !isCheckoutPhoneVerified(
+        request,
+        checkoutPhone,
+        auth.user,
+        auth.profile?.phone,
+      )
     ) {
       return NextResponse.json(
         {
@@ -64,30 +67,12 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
-    const wasGuest = !session?.authUser.id;
 
     const adminClient = createAdminClient();
-    const userResult = await resolveCheckoutUserId(
-      adminClient,
-      body,
-      session?.authUser.id,
-    );
-
-    if (!userResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: userResult.message,
-          errors: {},
-        },
-        { status: userResult.status },
-      );
-    }
-
     const result = await createOrderWithSupabase(
       adminClient,
       body,
-      userResult.userId,
+      auth.user.id,
     );
 
     if (!result.success) {
@@ -101,32 +86,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isPendingOnline = body.payment_method === "online" && body.payment_phase === "pending";
+    const isPendingOnline =
+      body.payment_method === "online" && body.payment_phase === "pending";
 
-    const cookiesToApply: CookieToSet[] = [];
-    let loggedIn = !wasGuest;
-
-    if (wasGuest) {
-      const sessionResult = await establishCheckoutSession(
-        {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookies) => {
-            cookiesToApply.push(...cookies);
-          },
-        },
-        userResult.userId,
-        { checkoutPhone: body.phone },
-      );
-      loggedIn = sessionResult.success;
-      if (!sessionResult.success) {
-        logError(new Error(sessionResult.message), {
-          context: "Create Order API — guest session",
-          meta: { userId: userResult.userId },
-        });
-      }
-    }
-
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
       message: isPendingOnline
         ? "Order created. Complete payment to confirm."
@@ -134,16 +97,9 @@ export async function POST(request: NextRequest) {
       data: {
         order: result.order,
         items: result.items,
-        loggedIn,
-        redirectTo: loggedIn ? "/user/orders" : "/home",
+        redirectTo: `/${auth.profile?.role ?? "user"}/orders`,
       },
     });
-
-    cookiesToApply.forEach(({ name, value, options }) => {
-      response.cookies.set(name, value, options);
-    });
-
-    return response;
   } catch (error) {
     logError(error, {
       context: "Create Order API",

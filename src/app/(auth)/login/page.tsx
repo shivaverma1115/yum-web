@@ -1,12 +1,14 @@
 import AuthCallbackAlerts from "@/components/auth/AuthCallbackAlerts";
-import Login from "@/components/auth/Login";
 import Preloader from "@/components/layout/Preloader";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import dynamic from "next/dynamic";
+const Login = dynamic(() => import('@/components/auth/Login'));
+
 export const metadata: Metadata = {
-  title: "Login",
-  description: "Sign in to your Yum account",
+    title: "Login",
+    description: "Sign in to your Yum account",
 };
 
 export default function LoginPage() {

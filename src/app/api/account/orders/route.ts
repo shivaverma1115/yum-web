@@ -21,13 +21,16 @@ export async function GET(request: NextRequest) {
     const filter = parseOrderListFilter(
       request.nextUrl.searchParams.get("filter"),
     );
+    const page = Number(request.nextUrl.searchParams.get("page") ?? "1");
+    const limit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
 
     const result = await listCustomerOrdersWithSupabase(
       auth.supabase,
       auth.user.id,
       {
         filter,
-        customerEmail: auth.user.email ?? undefined,
+        page,
+        limit,
       },
     );
 
@@ -40,7 +43,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { orders: result.orders },
+      data: {
+        orders: result.orders,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     logError(error, {

@@ -117,12 +117,9 @@ export function DetailSection({
 export function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
   if (order.fulfillment_type === "delivery") {
     return (
-      <DetailSection title="Delivery">
+      <DetailSection title="Delivery Details">
+        <DetailField label="Customer Phone" value={displayValue(order.customer_phone)} mono />
         <DetailField label="Address" value={displayValue(order.delivery_address)} />
-        {/* <DetailField label="City" value={displayValue(order.delivery_city)} />
-        <DetailField label="State" value={displayValue(order.delivery_state)} />
-        <DetailField label="Country" value={displayValue(order.delivery_country)} />
-        <DetailField label="ZIP code" value={displayValue(order.delivery_zip_code)} /> */}
       </DetailSection>
     );
   }
@@ -444,8 +441,6 @@ export function OrderDetailsPanel({ order, className = "" }: OrderDetailsPanelPr
         <FulfillmentDetails order={order} />
 
         {/* <DetailSection title="Customer">
-          <DetailField label="Name" value={getCustomerName(order)} />
-          <DetailField label="Email" value={displayValue(order.customer_email)} />
           <DetailField label="Phone" value={displayValue(order.customer_phone)} />
         </DetailSection> */}
       </div>

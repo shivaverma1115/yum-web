@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const result = await requestPasswordResetWithSupabase(
       supabase,
       email,
-      getPasswordResetCallbackUrl(request),
+      await getPasswordResetCallbackUrl(request),
     );
 
     if (!result.success) {

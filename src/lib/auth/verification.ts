@@ -1,12 +1,24 @@
 import type { User } from "@supabase/supabase-js";
 import type { UserVerificationStatus } from "@/types/user";
 
-const INTERNAL_EMAIL_DOMAINS = ["phone.yum.internal", "checkout.internal"];
+export const INTERNAL_EMAIL_DOMAINS = [
+  "phone.yum.internal",
+  "checkout.internal",
+] as const;
 
 export function isRealUserEmail(email?: string | null): boolean {
   const value = email?.trim();
   if (!value) return false;
   return !INTERNAL_EMAIL_DOMAINS.some((domain) => value.endsWith(`@${domain}`));
+}
+
+/** Profile email: null when the auth user has no real email address. */
+export function profileEmailFromAuth(email?: string | null): string | null {
+  const value = email?.trim();
+  if (!value || !isRealUserEmail(value)) {
+    return null;
+  }
+  return value;
 }
 
 export function getUserVerificationStatus(authUser: User): UserVerificationStatus {

@@ -24,10 +24,15 @@ export const ADMIN_NAV_ITEMS: ProfileNavItem[] = [
     icon: "layout-grid",
   },
   {
-    type: "link",
-    href: "/admin/manage",
+    type: "group",
+    id: "menuManage",
     label: "Manage",
     icon: "settings-2",
+    prefix: "/admin/manage",
+    children: [
+      { href: "/admin/manage", label: "Overview" },
+      { href: "/admin/manage/settings", label: "Business Settings" },
+    ],
   },
   {
     type: "link",

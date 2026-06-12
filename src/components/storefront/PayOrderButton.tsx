@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { useContextApi } from "@/context-api/use-context";
 import { canRetryOnlinePayment } from "@/lib/razorpay/order-eligibility";
 import { runRetryOrderPayment } from "@/lib/razorpay/order-payment-flow";
+import { getUserDisplayName } from "@/lib/user/display-name";
 import type { IOrderWithItems } from "@/types/order";
 
 type PayOrderButtonProps = {
@@ -15,6 +17,7 @@ export default function PayOrderButton({
   order,
   onPaymentUpdated,
 }: PayOrderButtonProps) {
+  const { user } = useContextApi();
   const [paying, setPaying] = useState(false);
 
   if (!order.id || !canRetryOnlinePayment(order)) {
@@ -29,8 +32,8 @@ export default function PayOrderButton({
       const result = await runRetryOrderPayment({
         orderId: order.id!,
         prefill: {
-          name: `${order.customer_first_name} ${order.customer_last_name}`.trim(),
-          email: order.customer_email ?? undefined,
+          name: user ? getUserDisplayName(user) : "",
+          email: user?.email ?? undefined,
           contact: order.customer_phone,
         },
       });

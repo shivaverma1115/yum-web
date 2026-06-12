@@ -39,6 +39,10 @@ type FieldProps = {
   showOtpHint?: boolean;
   /** Pre-verified phone from the signed-in account (skips OTP when it matches). */
   trustedPhone?: string | null;
+  /** When false, phone input is shown without OTP verification. Default: true */
+  requireVerification?: boolean;
+  /** Custom helper text shown before verification. */
+  otpHint?: string;
 };
 
 type ControlledPhoneVerificationProps = FieldProps & {
@@ -71,6 +75,8 @@ function PhoneVerificationField(
     error,
     onVerifiedChange,
     showOtpHint = true,
+    requireVerification = true,
+    otpHint = "Verify your phone with OTP before placing the order.",
     verification,
   }: {
     phone: string;
@@ -85,6 +91,8 @@ function PhoneVerificationField(
     error?: string | boolean;
     onVerifiedChange?: (verified: boolean) => void;
     showOtpHint?: boolean;
+    requireVerification?: boolean;
+    otpHint?: string;
     verification: ReturnType<typeof usePhoneVerification>;
   },
 ) {
@@ -96,8 +104,8 @@ function PhoneVerificationField(
   } = verification;
 
   useEffect(() => {
-    onVerifiedChange?.(isVerified);
-  }, [isVerified, onVerifiedChange]);
+    onVerifiedChange?.(requireVerification ? isVerified : true);
+  }, [isVerified, onVerifiedChange, requireVerification]);
 
   const errorMessage = typeof error === "string" ? error : undefined;
   const hasError = Boolean(error);
@@ -123,15 +131,13 @@ function PhoneVerificationField(
           className={className}
         />
 
-        {showOtpHint ? (
+        {showOtpHint && requireVerification ? (
           isVerified ? (
             <p className="text-xs font-medium text-green-600 dark:text-green-400">
               Phone number verified
             </p>
           ) : (
-            <p className="text-xs text-default-500">
-              Verify your phone with OTP before placing the order.
-            </p>
+            <p className="text-xs text-default-500">{otpHint}</p>
           )
         ) : null}
 
@@ -140,12 +146,14 @@ function PhoneVerificationField(
         ) : null}
       </div>
 
-      <PhoneOtpModal
-        open={modalOpen}
-        phone={phone}
-        onClose={closeModal}
-        onVerified={markVerified}
-      />
+      {requireVerification ? (
+        <PhoneOtpModal
+          open={modalOpen}
+          phone={phone}
+          onClose={closeModal}
+          onVerified={markVerified}
+        />
+      ) : null}
     </>
   );
 }
@@ -156,14 +164,17 @@ const PhoneVerificationControlled = forwardRef<
 >(function PhoneVerificationControlled(props, ref) {
   const verification = usePhoneVerification(props.value, props.trustedPhone);
 
+  const requireVerification = props.requireVerification ?? true;
+
   useImperativeHandle(
     ref,
     () => ({
-      isVerified: verification.isVerified,
+      isVerified: requireVerification ? verification.isVerified : true,
       isSending: verification.isSending,
-      requestOtp: verification.sendOtp,
+      requestOtp: requireVerification ? verification.sendOtp : async () => true,
     }),
     [
+      requireVerification,
       verification.isVerified,
       verification.isSending,
       verification.sendOtp,
@@ -184,6 +195,8 @@ const PhoneVerificationControlled = forwardRef<
       error={props.error}
       onVerifiedChange={props.onVerifiedChange}
       showOtpHint={props.showOtpHint}
+      requireVerification={requireVerification}
+      otpHint={props.otpHint}
       verification={verification}
     />
   );

@@ -1,0 +1,413 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm, type FieldPath } from "react-hook-form";
+import { Loader2, Save } from "lucide-react";
+import { toast } from "react-toastify";
+import Input from "@/components/ui/Input";
+import Preloader from "@/components/layout/Preloader";
+import {
+  BusinessSettings,
+  DEFAULT_BUSINESS_SETTINGS,
+} from "@/types/business-settings";
+
+const errorClassName = "text-red-500 text-sm mt-1";
+
+const toggleClassName =
+  "relative h-7 w-[3.25rem] cursor-pointer appearance-none rounded-full border-2 border-transparent bg-default-200 transition-colors duration-200 ease-in-out before:inline-block before:h-6 before:w-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:transition before:duration-200 before:ease-in-out checked:border-transparent checked:bg-none checked:!bg-primary checked:before:translate-x-full focus:ring-0 focus:ring-transparent disabled:cursor-not-allowed disabled:opacity-60";
+
+type ApiResponse = {
+  success?: boolean;
+  message?: string;
+  errors?: Record<string, string>;
+  data?: { settings?: BusinessSettings };
+};
+
+type ToggleFieldProps = {
+  label: string;
+  description?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+};
+
+function SettingsSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-default-200 p-6">
+      <div className="mb-6">
+        <h4 className="text-xl font-medium text-default-900">{title}</h4>
+        {description ? (
+          <p className="mt-1 text-sm text-default-600">{description}</p>
+        ) : null}
+      </div>
+      <div className="grid gap-5 md:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+function FieldGroup({
+  label,
+  error,
+  children,
+  className = "",
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-2 block text-sm font-medium text-default-900">
+        {label}
+      </label>
+      {children}
+      {error ? <p className={errorClassName}>{error}</p> : null}
+    </div>
+  );
+}
+
+function ToggleField({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: ToggleFieldProps) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-default-200 p-4 md:col-span-2">
+      <div>
+        <p className="text-sm font-medium text-default-900">{label}</p>
+        {description ? (
+          <p className="mt-1 text-sm text-default-600">{description}</p>
+        ) : null}
+      </div>
+      <input
+        type="checkbox"
+        className={toggleClassName}
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </div>
+  );
+}
+
+export default function BusinessSettingsForm() {
+  const [loading, setLoading] = useState(true);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<BusinessSettings>({
+    defaultValues: DEFAULT_BUSINESS_SETTINGS,
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    const loadSettings = async () => {
+      setLoading(true);
+
+      try {
+        const response = await fetch("/api/admin/business-settings", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = (await response.json().catch(() => ({}))) as ApiResponse;
+
+        if (!active) return;
+
+        if (!response.ok || !data.success || !data.data?.settings) {
+          toast.error(data.message ?? "Failed to load business settings.");
+          return;
+        }
+
+        reset(data.data.settings);
+      } catch (error) {
+        if (!active || controller.signal.aborted) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load business settings.",
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadSettings();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      const response = await fetch("/api/admin/business-settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = (await response.json().catch(() => ({}))) as ApiResponse;
+
+      if (!response.ok || !data.success) {
+        if (data.errors) {
+          for (const [field, message] of Object.entries(data.errors)) {
+            setError(field as FieldPath<BusinessSettings>, {
+              type: "server",
+              message,
+            });
+          }
+        }
+        toast.error(data.message ?? "Failed to save business settings.");
+        return;
+      }
+
+      if (data.data?.settings) {
+        reset(data.data.settings);
+      }
+
+      toast.success(data.message ?? "Business settings saved successfully.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save business settings.",
+      );
+    }
+  });
+
+  if (loading) {
+    return <Preloader />;
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate className="space-y-6">
+      <SettingsSection
+        title="General"
+        description="Basic site information shown across the storefront."
+      >
+        <FieldGroup label="Site name" error={errors.general?.site_name?.message}>
+          <Input
+            {...register("general.site_name", { required: "Site name is required." })}
+            disabled={isSubmitting}
+            placeholder="Yum"
+          />
+        </FieldGroup>
+
+        <FieldGroup label="Site URL" error={errors.general?.site_url?.message}>
+          <Input
+            {...register("general.site_url", { required: "Site URL is required." })}
+            disabled={isSubmitting}
+            placeholder="https://yum.com"
+          />
+        </FieldGroup>
+
+        <FieldGroup label="Currency code" error={errors.general?.currency?.message}>
+          <Input
+            {...register("general.currency", { required: "Currency code is required." })}
+            disabled={isSubmitting}
+            placeholder="INR"
+          />
+        </FieldGroup>
+
+        <FieldGroup
+          label="Currency symbol"
+          error={errors.general?.currency_symbol?.message}
+        >
+          <Input
+            {...register("general.currency_symbol", {
+              required: "Currency symbol is required.",
+            })}
+            disabled={isSubmitting}
+            placeholder="₹"
+          />
+        </FieldGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Orders"
+        description="Control checkout rules and delivery pricing."
+      >
+        <ToggleField
+          label="Cash on delivery"
+          description="Allow customers to pay with cash on delivery."
+          checked={watch("order.cod_enabled")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("order.cod_enabled", checked)}
+        />
+
+        <ToggleField
+          label="Online payment"
+          description="Allow customers to pay online at checkout."
+          checked={watch("order.online_payment_enabled")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("order.online_payment_enabled", checked)}
+        />
+
+        <FieldGroup
+          label="Minimum order amount"
+          error={errors.order?.min_order_amount?.message}
+        >
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            {...register("order.min_order_amount", {
+              valueAsNumber: true,
+              min: { value: 0, message: "Minimum order amount must be 0 or greater." },
+            })}
+            disabled={isSubmitting}
+          />
+        </FieldGroup>
+
+        <FieldGroup
+          label="Delivery charge"
+          error={errors.order?.delivery_charge?.message}
+        >
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            {...register("order.delivery_charge", {
+              valueAsNumber: true,
+              min: { value: 0, message: "Delivery charge must be 0 or greater." },
+            })}
+            disabled={isSubmitting}
+          />
+        </FieldGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Phone verification"
+        description="Configure OTP mode and when verification is required."
+      >
+        <FieldGroup
+          label="OTP mode"
+          error={errors.phone_verification?.mode?.message}
+          className="md:col-span-2"
+        >
+          <Input
+            as="select"
+            {...register("phone_verification.mode", {
+              required: "OTP mode is required.",
+            })}
+            disabled={isSubmitting}
+          >
+            <option value="off">Off</option>
+            <option value="test_local">Test (local)</option>
+            <option value="test">Test (Supabase test numbers)</option>
+            <option value="production">Production (real SMS)</option>
+          </Input>
+          <p className="mt-2 text-xs text-default-500">
+            Test (local) accepts OTP 000000 for any valid phone number — no SMS is sent.
+            Test (Supabase) uses fixed OTP numbers from Supabase Dashboard → Auth → Phone.
+            Production sends real SMS through your Supabase phone provider.
+          </p>
+        </FieldGroup>
+
+        <ToggleField
+          label="Required for registration"
+          description="Require phone verification when creating an account."
+          checked={watch("phone_verification.required_for.registration")}
+          disabled={isSubmitting || watch("phone_verification.mode") === "off"}
+          onChange={(checked) =>
+            setValue("phone_verification.required_for.registration", checked)
+          }
+        />
+
+        <ToggleField
+          label="Required for checkout"
+          description="Require phone verification before placing an order."
+          checked={watch("phone_verification.required_for.checkout")}
+          disabled={isSubmitting || watch("phone_verification.mode") === "off"}
+          onChange={(checked) =>
+            setValue("phone_verification.required_for.checkout", checked)
+          }
+        />
+
+        <ToggleField
+          label="Required for profile update"
+          description="Require phone verification when changing profile phone number."
+          checked={watch("phone_verification.required_for.profile_update")}
+          disabled={isSubmitting || watch("phone_verification.mode") === "off"}
+          onChange={(checked) =>
+            setValue("phone_verification.required_for.profile_update", checked)
+          }
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        title="Payment"
+        description="Toggle payment providers. API keys remain in environment variables."
+      >
+        <ToggleField
+          label="Razorpay enabled"
+          description="Allow Razorpay checkout when online payment is enabled."
+          checked={watch("payment.razorpay_enabled")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("payment.razorpay_enabled", checked)}
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        title="Support"
+        description="Contact details shown to customers."
+      >
+        <FieldGroup label="Support email" error={errors.support?.email?.message}>
+          <Input
+            type="email"
+            {...register("support.email", { required: "Support email is required." })}
+            disabled={isSubmitting}
+            placeholder="support@yum.com"
+          />
+        </FieldGroup>
+
+        <FieldGroup label="Support phone" error={errors.support?.phone?.message}>
+          <Input
+            {...register("support.phone", { required: "Support phone is required." })}
+            disabled={isSubmitting}
+            placeholder="9876543210"
+          />
+        </FieldGroup>
+      </SettingsSection>
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-8 py-3 text-sm font-semibold text-white transition-all duration-200 hover:border-primary-700 hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Save className="h-4 w-4" aria-hidden />
+          )}
+          Save settings
+        </button>
+      </div>
+    </form>
+  );
+}

@@ -1,26 +1,22 @@
 import type { NextRequest } from "next/server";
+import { getConfiguredSiteUrl } from "@/lib/business-settings/site-url";
 
 /** Base URL for Supabase auth redirects (must be allow-listed in Supabase dashboard). */
-export function getSiteUrl(request?: NextRequest): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (fromEnv) {
-    return fromEnv.replace(/\/$/, "");
-  }
-
-  if (request) {
-    return new URL(request.url).origin;
-  }
-
-  return "http://localhost:3000";
+export async function getSiteUrl(request?: NextRequest): Promise<string> {
+  return getConfiguredSiteUrl(request);
 }
 
-export function getPasswordResetCallbackUrl(request?: NextRequest): string {
-  const siteUrl = getSiteUrl(request);
+export async function getPasswordResetCallbackUrl(
+  request?: NextRequest,
+): Promise<string> {
+  const siteUrl = await getSiteUrl(request);
   return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/reset-password")}`;
 }
 
 /** Used by signUp; confirmation emails use token_hash templates (Supabase Dashboard → Email Templates). */
-export function getEmailConfirmRedirectUrl(request?: NextRequest): string {
-  const siteUrl = getSiteUrl(request);
+export async function getEmailConfirmRedirectUrl(
+  request?: NextRequest,
+): Promise<string> {
+  const siteUrl = await getSiteUrl(request);
   return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/home")}`;
 }

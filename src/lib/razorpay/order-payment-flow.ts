@@ -39,7 +39,6 @@ export async function runRetryOrderPayment(
     return {
       status: "success",
       orderId: input.orderId,
-      loggedIn: true,
       redirectTo: "/user/orders",
     };
   } catch (error) {

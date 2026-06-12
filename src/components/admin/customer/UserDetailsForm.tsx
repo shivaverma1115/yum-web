@@ -19,7 +19,13 @@ import {
   profileEmailNeedsVerification,
   profilePhoneNeedsVerification,
 } from "@/lib/profile/contact-verification";
-import { phonesMatch, validateOptionalPhoneValue } from "@/lib/phone-otp/phone";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
+import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import {
+  isValidPhoneNumber,
+  phonesMatch,
+  validateOptionalPhoneValue,
+} from "@/lib/phone-otp/phone";
 import { isRichTextEmpty } from "@/lib/rich-text";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 
@@ -74,7 +80,10 @@ export default function UserDetailsForm({
   const isSelfMode = mode === "self";
   const isCreateMode = !isEditMode && !isSelfMode;
   const { user: sessionUser, verification, setUser, refresh } = useContextApi();
+  const { settings: businessSettings } = useBusinessSettings();
   const profileUser = isSelfMode ? (sessionUser ?? user) : user;
+  const phoneOtpRequired =
+    isSelfMode && isOtpRequiredFor(businessSettings, "profile_update");
 
   const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -111,7 +120,7 @@ export default function UserDetailsForm({
     );
 
   const phoneOk =
-    !isSelfMode ||
+    !phoneOtpRequired ||
     !profilePhoneNeedsVerification(
       phone,
       profileUser?.phone,
@@ -163,6 +172,18 @@ export default function UserDetailsForm({
   };
 
   const onSubmit = handleSubmit(async (values) => {
+    if (isCreateMode) {
+      const hasEmail =
+        Boolean(values.email?.trim()) &&
+        isValidEmail(normalizeEmail(values.email));
+      const hasPhone = isValidPhoneNumber(values.phone);
+
+      if (!hasEmail && !hasPhone) {
+        toast.error("Email or phone number is required.");
+        return;
+      }
+    }
+
     try {
       const url = isSelfMode
         ? "/api/account/customers"
@@ -289,12 +310,7 @@ export default function UserDetailsForm({
               className="flex items-center gap-1 text-sm font-medium text-default-900 mb-2"
               htmlFor="email"
             >
-              <span>
-                Email
-                {isCreateMode ? (
-                  <span className="text-required"> *</span>
-                ) : null}
-              </span>
+              <span>Email</span>
               {isEditMode && !isSelfMode ? (
                 <span className="relative inline-flex group">
                   <button
@@ -322,19 +338,13 @@ export default function UserDetailsForm({
               disabled={isSubmitting}
               className={inputClassName}
               aria-describedby={isEditMode && !isSelfMode ? "email-help" : undefined}
-              {...register(
-                "email",
-                isCreateMode
-                  ? {
-                      required: "Email is required.",
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Enter a valid email address.",
-                      },
-                    }
-                  : optionalEmailPattern(),
-              )}
+              {...register("email", optionalEmailPattern())}
             />
+            {isCreateMode ? (
+              <p className="mt-1 text-xs text-default-500">
+                Provide an email or phone number (at least one).
+              </p>
+            ) : null}
             {isEditMode && !isSelfMode ? (
               <p id="email-help" className="sr-only">
                 Email cannot be edited after account creation.
@@ -361,14 +371,7 @@ export default function UserDetailsForm({
               control={control}
               name="phone"
               id="phone"
-              label={
-                <>
-                  Phone number
-                  {isCreateMode ? (
-                    <span className="text-required"> *</span>
-                  ) : null}
-                </>
-              }
+              label="Phone number"
               rules={
                 isCreateMode
                   ? undefined
@@ -377,11 +380,13 @@ export default function UserDetailsForm({
               placeholder="Enter your phone number"
               variant="pill"
               disabled={isSubmitting}
-              showOtpHint={isSelfMode}
+              showOtpHint={phoneOtpRequired}
+              requireVerification={phoneOtpRequired}
+              otpHint="Verify your phone with OTP before saving."
               trustedPhone={trustedPhone}
               onVerifiedChange={setPhoneVerified}
             />
-            {isSelfMode && phone?.trim() ? (
+            {phoneOtpRequired && phone?.trim() ? (
               <div className="mt-2">
                 <VerificationBadge verified={phoneOk} label="Phone" />
               </div>
@@ -535,7 +540,7 @@ export default function UserDetailsForm({
                   {isSendingEmailOtp ? "Sending..." : "Send OTP to email"}
                 </button>
               ) : null}
-              {!phoneOk ? (
+              {phoneOtpRequired && !phoneOk ? (
                 <button
                   type="button"
                   onClick={() => void handleSendPhoneOtp()}

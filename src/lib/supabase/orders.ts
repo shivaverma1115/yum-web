@@ -8,7 +8,7 @@ import type {
   IOrderWithItems,
   OrderStatus,
 } from "@/types/order";
-import { CheckoutPayload } from "@/components/storefront/Checkout";
+import type { CheckoutPayload } from "@/types/checkout";
 import { getProfileByUserId } from "@/lib/supabase/account/profile";
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -100,9 +100,6 @@ export async function createOrderWithSupabase(
     razorpay_payment_id: payload.payment_method === "online" && !isOnlinePending ? payload.razorpay_payment_id?.trim() ?? null : null,
     subtotal,
     total: subtotal,
-    customer_first_name: profile?.first_name?.trim() || "Guest",
-    customer_last_name: profile?.last_name?.trim() || "-",
-    customer_email: payload.email?.trim() || profile?.email?.trim() || null,
     customer_phone:
       checkoutPhone && checkoutPhone !== "-"
         ? checkoutPhone
@@ -479,13 +476,11 @@ export async function listCustomerOrdersWithSupabase(
   userId: string,
   options?: {
     filter?: CustomerOrdersFilter;
-    customerEmail?: string;
     page?: number;
     limit?: number;
   },
 ): Promise<ListCustomerOrdersResult> {
   const filter = options?.filter ?? "all";
-  const email = options?.customerEmail?.trim().toLowerCase();
   const shouldPaginate =
     options?.page !== undefined || options?.limit !== undefined;
   const page = Math.max(1, options?.page ?? 1);
@@ -497,9 +492,7 @@ export async function listCustomerOrdersWithSupabase(
     .select("*, order_items(*)", shouldPaginate ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false });
 
-  if (userId && email) {
-    query = query.or(`user_id.eq.${userId},customer_email.ilike.${email}`);
-  } else if (userId) {
+  if (userId) {
     query = query.eq("user_id", userId);
   } else {
     return shouldPaginate

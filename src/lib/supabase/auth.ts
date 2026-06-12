@@ -162,6 +162,7 @@ async function getProfileByUserIdAdmin(
 
 export type RegisterPayload = Pick<IUser, "email"> & {
   password: string;
+  phone?: string;
 };
 
 export type RegisterOptions = {
@@ -230,6 +231,8 @@ export async function registerWithSupabase(
     };
   }
 
+  const phone = input.phone?.trim() ?? "";
+
   const profileError = await upsertProfileWithAdmin(
     options.adminClient,
     data.user.id,
@@ -245,6 +248,22 @@ export async function registerWithSupabase(
       status: 400,
       errors: {},
     };
+  }
+
+  if (phone) {
+    const { error: phoneUpdateError } = await options.adminClient
+      .from("profiles")
+      .update({ phone })
+      .eq("id", data.user.id);
+
+    if (phoneUpdateError) {
+      return {
+        success: false,
+        message: phoneUpdateError.message,
+        status: 400,
+        errors: { phone: phoneUpdateError.message },
+      };
+    }
   }
 
   const needsEmailConfirmation = !data.session;

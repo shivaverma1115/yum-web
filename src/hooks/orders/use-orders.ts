@@ -28,7 +28,7 @@ function buildOrdersUrl(
     params.set("filter", filter);
   }
 
-  if (userRole === UserRole.ADMIN && page != null && limit != null) {
+  if (page != null && limit != null) {
     params.set("page", String(page));
     params.set("limit", String(limit));
   }
@@ -48,8 +48,6 @@ export function useOrders(
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isAdmin = userRole === UserRole.ADMIN;
-
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -59,12 +57,7 @@ export function useOrders(
       setError(null);
 
       try {
-        const url = buildOrdersUrl(
-          userRole,
-          filter,
-          isAdmin ? page : undefined,
-          isAdmin ? limit : undefined,
-        );
+        const url = buildOrdersUrl(userRole, filter, page, limit);
 
         const response = await fetch(url, { signal: controller.signal });
         const data = (await response.json().catch(
@@ -82,8 +75,8 @@ export function useOrders(
         }
 
         setOrders(data.data?.orders ?? []);
-        setTotal(isAdmin ? (data.data?.total ?? 0) : (data.data?.orders?.length ?? 0));
-        setTotalPages(isAdmin ? (data.data?.totalPages ?? 1) : 1);
+        setTotal(data.data?.total ?? 0);
+        setTotalPages(data.data?.totalPages ?? 1);
       } catch (err) {
         if (!active || controller.signal.aborted) return;
         setError(
@@ -105,7 +98,7 @@ export function useOrders(
       active = false;
       controller.abort();
     };
-  }, [filter, userRole, page, limit, isAdmin]);
+  }, [filter, userRole, page, limit]);
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders((current) =>
@@ -132,24 +125,19 @@ export function useOrders(
     setLoading(true);
     setError(null);
 
-    const url = buildOrdersUrl(
-      userRole,
-      filter,
-      isAdmin ? page : undefined,
-      isAdmin ? limit : undefined,
-    );
+    const url = buildOrdersUrl(userRole, filter, page, limit);
 
     void fetch(url)
       .then((response) => response.json().catch(() => ({})))
       .then((data: OrdersResponse) => {
         if (data.success) {
           setOrders(data.data?.orders ?? []);
-          setTotal(isAdmin ? (data.data?.total ?? 0) : (data.data?.orders?.length ?? 0));
-          setTotalPages(isAdmin ? (data.data?.totalPages ?? 1) : 1);
+          setTotal(data.data?.total ?? 0);
+          setTotalPages(data.data?.totalPages ?? 1);
         }
       })
       .finally(() => setLoading(false));
-  }, [userRole, filter, page, limit, isAdmin]);
+  }, [userRole, filter, page, limit]);
 
   return {
     orders,

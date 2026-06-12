@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import {
+  getOtpDisabledMessage,
+  getOtpProductionBlockedInDevMessage,
+  getOtpSendSuccessMessage,
+  isLocalTestOtpMode,
+  isOtpEnabled,
+  isProductionOtpBlockedInDev,
+} from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { getLocalTestOtpExpiresInSeconds } from "@/lib/phone-otp/local-test";
 import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
 import { sendSupabasePhoneOtp } from "@/lib/phone-otp/supabase-auth";
 import { logError } from "@/lib/utils/logError";
@@ -20,6 +30,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const settings = await getCachedBusinessSettings();
+    const mode = settings.phone_verification.mode;
+
+    if (!isOtpEnabled(settings)) {
+      return NextResponse.json(
+        { success: false, message: getOtpDisabledMessage() },
+        { status: 403 },
+      );
+    }
+
+    if (isProductionOtpBlockedInDev(mode)) {
+      return NextResponse.json(
+        { success: false, message: getOtpProductionBlockedInDevMessage() },
+        { status: 403 },
+      );
+    }
+
+    if (isLocalTestOtpMode(mode)) {
+      return NextResponse.json({
+        success: true,
+        message: getOtpSendSuccessMessage(mode),
+        data: {
+          phone,
+          expiresInSeconds: getLocalTestOtpExpiresInSeconds(),
+        },
+      });
+    }
+
     const result = await sendSupabasePhoneOtp(phone);
 
     if (!result.success) {
@@ -29,14 +67,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const devHint =
-      process.env.NODE_ENV === "development"
-        ? " Use the test OTP configured in Supabase Dashboard → Auth → Phone."
-        : "";
-
     return NextResponse.json({
       success: true,
-      message: `OTP sent to your phone.${devHint}`,
+      message: getOtpSendSuccessMessage(mode),
       data: {
         phone: result.phone,
         expiresInSeconds: result.expiresInSeconds,

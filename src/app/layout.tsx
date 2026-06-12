@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import AppProviders from "@/components/providers/app-providers";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import { buildSiteMetadata } from "@/lib/business-settings/metadata";
 
 // Vendor CSS — import via JS so Turbopack resolves node_modules correctly
 import "swiper/swiper-bundle.css";
@@ -20,13 +22,10 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Yum - Food Delivery",
-    template: "%s | Yum",
-  },
-  description: "Yum - Multipurpose Food Tailwind CSS Template",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getCachedBusinessSettings();
+  return buildSiteMetadata(settings);
+}
 
 export default function RootLayout({
   children,

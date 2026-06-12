@@ -3,19 +3,21 @@ import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { isEmailVerifiedOnRequest } from "@/lib/email-otp/request";
-import { emailsMatch, isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
+import { isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
 import {
   profileEmailNeedsVerification,
   profilePhoneNeedsVerification,
 } from "@/lib/profile/contact-verification";
 import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
-import { isValidPhoneNumber, phonesMatch } from "@/lib/phone-otp/phone";
+import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncProfileAuthContact } from "@/lib/profile/sync-contact";
 import {
   getProfileByUserId,
-  syncAuthContactWithAdmin,
   updateOwnProfileWithSupabase,
   type UpdateOwnProfileInput,
 } from "@/lib/supabase/account/profile";
@@ -90,7 +92,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const settings = await getCachedBusinessSettings();
+
     if (
+      isOtpRequiredFor(settings, "profile_update") &&
       profilePhoneNeedsVerification(
         nextPhone,
         profile?.phone,
@@ -143,41 +148,26 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const authSyncInput: { email?: string; phone?: string } = {};
+    const syncResult = await syncProfileAuthContact(admin, auth.user.id, {
+      mode: "self",
+      previousProfile: profile,
+      verification,
+      nextEmail,
+      nextPhone: nextPhone ? normalizePhoneE164(nextPhone) : "",
+      emailVerifiedOnRequest,
+      phoneVerifiedOnRequest,
+      requirePhoneOtpForUpdate: isOtpRequiredFor(settings, "profile_update"),
+    });
 
-    if (
-      nextEmail &&
-      emailVerifiedOnRequest &&
-      (!emailsMatch(nextEmail, profile?.email) || !verification.email_verified)
-    ) {
-      authSyncInput.email = nextEmail;
-    }
-
-    if (
-      nextPhone &&
-      phoneVerifiedOnRequest &&
-      (!phonesMatch(nextPhone, profile?.phone) || !verification.phone_verified)
-    ) {
-      authSyncInput.phone = nextPhone;
-    }
-
-    if (Object.keys(authSyncInput).length > 0) {
-      const syncResult = await syncAuthContactWithAdmin(
-        admin,
-        auth.user.id,
-        authSyncInput,
+    if (!syncResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: syncResult.message,
+          errors: syncResult.errors ?? {},
+        },
+        { status: syncResult.status },
       );
-
-      if (!syncResult.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: syncResult.message,
-            errors: syncResult.errors ?? {},
-          },
-          { status: syncResult.status },
-        );
-      }
     }
 
     return NextResponse.json({

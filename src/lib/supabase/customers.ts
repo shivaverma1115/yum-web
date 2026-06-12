@@ -1,8 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { normalizeEmail } from "@/lib/email-otp/email";
+import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
 import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-errors";
 import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
+import {
+  normalizeProfileContactPatch,
+  syncProfileAuthContact,
+} from "@/lib/profile/sync-contact";
 import { UserRole, type IUser, type IUserWithVerification } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { deleteProductWithSupabase } from "@/lib/supabase/product/products";
@@ -273,10 +278,7 @@ export async function deleteCustomerWithSupabase(
 async function collectCustomerOrderIds(
   supabase: SupabaseClient,
   userId: string,
-  email?: string,
 ): Promise<{ orderIds: string[] } | { error: string }> {
-  const orderIdSet = new Set<string>();
-
   const { data: ordersByUser, error: ordersByUserError } = await supabase
     .from("orders")
     .select("id")
@@ -286,27 +288,11 @@ async function collectCustomerOrderIds(
     return { error: ordersByUserError.message };
   }
 
-  for (const row of ordersByUser ?? []) {
-    if (row.id) orderIdSet.add(row.id);
-  }
-
-  const trimmedEmail = email?.trim();
-  if (trimmedEmail) {
-    const { data: ordersByEmail, error: ordersByEmailError } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("customer_email", trimmedEmail);
-
-    if (ordersByEmailError) {
-      return { error: ordersByEmailError.message };
-    }
-
-    for (const row of ordersByEmail ?? []) {
-      if (row.id) orderIdSet.add(row.id);
-    }
-  }
-
-  return { orderIds: Array.from(orderIdSet) };
+  return {
+    orderIds: (ordersByUser ?? [])
+      .map((row) => row.id)
+      .filter((id): id is string => Boolean(id)),
+  };
 }
 
 export async function forceDeleteCustomerWithSupabase(
@@ -353,11 +339,7 @@ export async function forceDeleteCustomerWithSupabase(
     }
   }
 
-  const orderIdsResult = await collectCustomerOrderIds(
-    supabase,
-    userId,
-    customerResult.user.email ?? undefined,
-  );
+  const orderIdsResult = await collectCustomerOrderIds(supabase, userId);
 
   if ("error" in orderIdsResult) {
     return {
@@ -408,21 +390,27 @@ export async function createCustomerWithSupabase(
   supabase: SupabaseClient,
   input: IUser,
 ): Promise<CustomerMutationResult> {
-  const email = input.email?.trim() ?? "";
-  if (!email) {
+  const email = input.email?.trim() ? normalizeEmail(input.email) : "";
+  const phone = input.phone?.trim() ? normalizePhoneE164(input.phone) : "";
+
+  if (!email && !isValidPhoneNumber(phone)) {
     return {
       success: false,
-      message: "Email is required.",
+      message: "Email or phone number is required.",
       status: 400,
-      errors: { email: "Email is required." },
+      errors: {
+        email: "Provide an email or phone number.",
+        phone: "Provide an email or phone number.",
+      },
     };
   }
+
   const first_name = input.first_name.trim();
   const last_name = input.last_name.trim();
 
   const contactConflict = await assertContactAvailable(supabase, {
-    email,
-    phone: input.phone,
+    email: email || undefined,
+    phone: phone || undefined,
   });
 
   if (!contactConflict.ok) {
@@ -434,14 +422,25 @@ export async function createCustomerWithSupabase(
     };
   }
 
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: {
-      first_name,
-      last_name,
-    },
-  });
+  const { data, error } = email
+    ? await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        phone: phone || undefined,
+        phone_confirm: phone ? true : undefined,
+        user_metadata: {
+          first_name,
+          last_name,
+        },
+      })
+    : await supabase.auth.admin.createUser({
+        phone,
+        phone_confirm: true,
+        user_metadata: {
+          first_name,
+          last_name,
+        },
+      });
 
   if (error) {
     const duplicate = mapAuthContactDuplicateError(error.message, {
@@ -474,9 +473,15 @@ export async function createCustomerWithSupabase(
     };
   }
 
+  const profilePatch = {
+    ...input,
+    email: email || null,
+    phone: phone || input.phone?.trim() || "",
+  };
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .update(input)
+    .update(profilePatch)
     .eq("id", data.user.id)
     .select("*")
     .single();
@@ -519,9 +524,23 @@ export async function updateCustomerWithSupabase(
     };
   }
 
+  const { data: previousProfile } = await supabase
+    .from("profiles")
+    .select(PROFILE_COLUMNS)
+    .eq("id", userId)
+    .maybeSingle();
+
+  const profilePatch = {
+    ...input,
+    ...normalizeProfileContactPatch({
+      email: input.email,
+      phone: input.phone,
+    }),
+  };
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .update(input)
+    .update(profilePatch)
     .eq("id", userId)
     .select("*")
     .single();
@@ -560,33 +579,20 @@ export async function updateCustomerWithSupabase(
     }
   }
 
-  const nextEmail = normalizeEmail(input.email);
-  if (nextEmail && nextEmail !== normalizeEmail(profile.email)) {
-    const { error: emailError } = await supabase.auth.admin.updateUserById(
-      userId,
-      { email: nextEmail },
-    );
+  const syncResult = await syncProfileAuthContact(supabase, userId, {
+    mode: "admin",
+    previousProfile: (previousProfile as IUser | null) ?? null,
+    nextEmail: normalizeEmail(profilePatch.email),
+    nextPhone: profilePatch.phone?.trim() ?? "",
+  });
 
-    if (emailError) {
-      const duplicate = mapAuthContactDuplicateError(emailError.message, {
-        email: nextEmail,
-      });
-      if (duplicate) {
-        return {
-          success: false,
-          message: duplicate.message,
-          status: duplicate.status,
-          errors: duplicate.errors,
-        };
-      }
-
-      return {
-        success: false,
-        message: emailError.message,
-        status: emailError.status ?? 400,
-        errors: {},
-      };
-    }
+  if (!syncResult.success) {
+    return {
+      success: false,
+      message: syncResult.message,
+      status: syncResult.status,
+      errors: syncResult.errors ?? {},
+    };
   }
 
   return {

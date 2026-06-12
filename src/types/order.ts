@@ -44,9 +44,6 @@ export type IOrder = {
   razorpay_payment_id?: string | null;
   subtotal: number;
   total: number;
-  customer_first_name: string;
-  customer_last_name: string;
-  customer_email: string | null;
   customer_phone: string;
   delivery_address?: string | null;
   pickup_time?: string | null;

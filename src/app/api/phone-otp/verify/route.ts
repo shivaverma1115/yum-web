@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import {
+  getOtpDisabledMessage,
+  getOtpProductionBlockedInDevMessage,
+  isLocalTestOtpMode,
+  isOtpEnabled,
+  isProductionOtpBlockedInDev,
+} from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import {
   PHONE_OTP_LENGTH,
   PHONE_OTP_PENDING_COOKIE,
 } from "@/lib/phone-otp/constants";
+import { LOCAL_TEST_OTP, matchesLocalTestOtp } from "@/lib/phone-otp/local-test";
 import {
   isValidPhoneNumber,
   normalizePhoneE164,
@@ -42,6 +51,61 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 },
       );
+    }
+
+    const settings = await getCachedBusinessSettings();
+    const mode = settings.phone_verification.mode;
+
+    if (!isOtpEnabled(settings)) {
+      return NextResponse.json(
+        { success: false, message: getOtpDisabledMessage() },
+        { status: 403 },
+      );
+    }
+
+    if (isProductionOtpBlockedInDev(mode)) {
+      return NextResponse.json(
+        { success: false, message: getOtpProductionBlockedInDevMessage() },
+        { status: 403 },
+      );
+    }
+
+    if (isLocalTestOtpMode(mode)) {
+      if (!matchesLocalTestOtp(otp)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Invalid OTP. Use ${LOCAL_TEST_OTP} in local test mode.`,
+            errors: { otp: `Use OTP ${LOCAL_TEST_OTP} in local test mode.` },
+          },
+          { status: 400 },
+        );
+      }
+
+      const verified = createVerifiedPhoneToken(phone);
+      const response = NextResponse.json({
+        success: true,
+        message: "Phone number verified.",
+        data: { phone },
+      });
+
+      response.cookies.set(verified.cookieName, verified.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: verified.maxAge,
+      });
+
+      response.cookies.set(PHONE_OTP_PENDING_COOKIE, "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+      });
+
+      return response;
     }
 
     const result = await verifySupabasePhoneOtp(phone, otp);

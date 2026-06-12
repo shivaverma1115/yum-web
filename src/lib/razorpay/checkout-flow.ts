@@ -15,7 +15,6 @@ import type {
 
 export type CreatePendingOrderResult = {
   orderId: string;
-  loggedIn: boolean;
   redirectTo?: string;
 };
 
@@ -49,7 +48,6 @@ export async function runCheckoutOnlinePayment(
     return {
       status: "success",
       orderId: pending.orderId,
-      loggedIn: pending.loggedIn,
       redirectTo: pending.redirectTo,
     };
   } catch (error) {
@@ -58,9 +56,7 @@ export async function runCheckoutOnlinePayment(
     if (outcome.status === "cancelled" || outcome.status === "failed") {
       return {
         ...outcome,
-        loggedIn: pending.loggedIn,
-        redirectTo:
-          pending.redirectTo ?? (pending.loggedIn ? "/user/orders" : "/home"),
+        redirectTo: pending.redirectTo ?? "/user/orders",
       };
     }
 

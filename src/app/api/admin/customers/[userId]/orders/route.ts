@@ -60,7 +60,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const result = await listCustomerOrdersWithSupabase(adminClient, userId, {
       filter,
-      customerEmail: customerResult.user.email ?? undefined,
       page,
       limit,
     });

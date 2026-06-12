@@ -43,7 +43,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
   const endItem = Math.min(page * DEFAULT_LIMIT, total);
 
   const stats = useMemo(() => {
-    const totalOrders = isAdmin ? total : orders.length;
+    const totalOrders = total;
     const paidRevenue = orders
       .filter((order) => order.payment_status === "paid")
       .reduce((sum, order) => sum + order.total, 0);
@@ -52,7 +52,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     ).length;
 
     return { totalOrders, paidRevenue, pendingCount };
-  }, [orders, isAdmin, total]);
+  }, [orders, total]);
 
   return (
     <div className="space-y-6">
@@ -163,7 +163,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                     Order ID
                   </th>
                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                    Customer
+                    Customer Phone Number
                   </th>
                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w">
                     Items
@@ -201,7 +201,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
           )}
         </div>
 
-        {isAdmin && !loading && !error && total > 0 ? (
+        {!loading && !error && total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-default-200 px-6 py-4">
             <p className="text-sm text-default-500">
               Showing {startItem}–{endItem} of {total} orders

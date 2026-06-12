@@ -1,93 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { toast } from "react-toastify";
-import { useContextApi } from "@/context-api/use-context";
-import { getSafeRedirect } from "@/lib/auth/redirect";
-import { UserRole, type IUser } from "@/types/user";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useState } from "react";
-
-type RegisterFormValues = Pick<IUser, "email"> & {
-  password: string;
-  confirmPassword: string;
-};
+import { useSearchParams } from "next/navigation";
+import AuthForm from "@/components/auth/AuthForm";
 
 export default function Register() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { setUser } = useContextApi();
-  const [showPassword, setShowPassword] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormValues>({
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
-  const password = watch("password");
-
-  const onSubmit = handleSubmit(async ({ email, password }) => {
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data.success) {
-        const fieldErrors = data.errors as Record<string, string> | undefined;
-        const detail =
-          fieldErrors && Object.keys(fieldErrors).length > 0
-            ? Object.values(fieldErrors).join(" ")
-            : null;
-        toast.error(detail ? `${data.message} ${detail}` : data.message);
-        return;
-      }
-
-      toast.success(data.message);
-
-      if (data.data?.needsEmailConfirmation) {
-        router.push("/login");
-        return;
-      }
-
-      const user = data.data?.user as IUser | undefined;
-      if (user) {
-        setUser(user);
-      }
-
-      router.push(
-        getSafeRedirect(
-          searchParams.get("redirectTo"),
-          user?.role ?? UserRole.USER,
-        ),
-      );
-      router.refresh();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Something went wrong.";
-      toast.error(message);
-    }
-  });
+  const redirectTo = searchParams.get("redirectTo");
 
   return (
     <div>
       <div className="relative md:h-screen sm:py-16 py-36 flex items-center bg-gradient-to-b from-primary/5 via-primary/5 to-primary/10">
         <div className="container">
           <div className="flex justify-center items-center lg:max-w-lg">
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full w-full">
               <div className="shrink">
                 <div className="pb-10">
                   <Link href="/home" className="flex items-center">
@@ -104,160 +30,7 @@ export default function Register() {
                   </Link>
                 </div>
 
-                <div>
-                  <h1 className="text-3xl font-semibold text-default-800 mb-2">
-                    Register
-                  </h1>
-                  <p className="text-sm text-default-500 max-w-md">
-                    Create your account with your email and password.
-                  </p>
-                </div>
-
-                <form onSubmit={onSubmit} noValidate className="pt-16">
-                  <div className="mb-6">
-                    <label
-                      className="block text-sm font-medium text-default-900 mb-2"
-                      htmlFor="LoggingEmailAddress"
-                    >
-                      Email
-                    </label>
-                    <input
-                      id="LoggingEmailAddress"
-                      type="email"
-                      placeholder="Enter your email"
-                      autoComplete="email"
-                      disabled={isSubmitting}
-                      className="block w-full rounded-full py-2.5 px-4 bg-white border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60"
-                      {...register("email", {
-                        required: "Email is required.",
-                        pattern: {
-                          value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                          message: "Enter a valid email address.",
-                        },
-                      })}
-                    />
-                    {errors.email?.message ? (
-                      <span className="text-red-500 text-sm">
-                        {errors.email.message}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mb-6">
-                    <label
-                      className="block text-sm font-medium text-default-900 mb-2"
-                      htmlFor="form-password"
-                    >
-                      Password
-                    </label>
-                    <div className="flex" data-x-password>
-                      <input
-                        id="form-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        autoComplete="new-password"
-                        disabled={isSubmitting}
-                        className="form-password block w-full rounded-s-full py-2.5 px-4 bg-white border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60"
-                        {...register("password", {
-                          required: "Password is required.",
-                          minLength: {
-                            value: 6,
-                            message: "Password must be at least 6 characters.",
-                          },
-                        })}
-                      />
-                      <button
-                        type="button"
-                        id="password-addon"
-                        className="password-toggle inline-flex items-center justify-center py-2.5 px-4 border rounded-e-full bg-white -ms-px border-default-200 dark:bg-default-50"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {
-                          showPassword ? <EyeIcon className="h-5 w-5 text-default-600" /> : <EyeOffIcon className="h-5 w-5 text-default-600" />
-                        }
-                      </button>
-                    </div>
-                    {errors.password?.message ? (
-                      <span className="text-red-500 text-sm">
-                        {errors.password.message}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mb-6">
-                    <label
-                      className="block text-sm font-medium text-default-900 mb-2"
-                      htmlFor="form-confirm-password"
-                    >
-                      Confirm Password
-                    </label>
-                    <input
-                      id="form-confirm-password"
-                      type="password"
-                      placeholder="Confirm your password"
-                      autoComplete="new-password"
-                      disabled={isSubmitting}
-                      className="block w-full rounded-full py-2.5 px-4 bg-white border border-default-200 focus:ring-transparent focus:border-default-200 dark:bg-default-50 disabled:opacity-60"
-                      {...register("confirmPassword", {
-                        required: "Please confirm your password.",
-                        validate: (value) =>
-                          value === password || "Passwords do not match.",
-                      })}
-                    />
-                    {errors.confirmPassword?.message ? (
-                      <span className="text-red-500 text-sm">
-                        {errors.confirmPassword.message}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="flex justify-center mb-6">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="relative inline-flex items-center justify-center px-6 py-3 rounded-full text-base bg-primary text-white capitalize transition-all hover:bg-primary-500 w-full disabled:opacity-60"
-                    >
-                      {isSubmitting ? "Creating account..." : "Register"}
-                    </button>
-                  </div>
-
-                  <div className="mb-6">
-                    <div className="flex items-center justify-center gap-4">
-                      <button
-                        type="button"
-                        className=""
-                        aria-label="Sign up with Google"
-                      >
-                        <img
-                          src="/images/icons/google.svg"
-                          alt=""
-                          className="h-8 w-8"
-                        />
-                      </button>
-
-                      <button
-                        type="button"
-                        className=""
-                        aria-label="Sign up with Facebook"
-                      >
-                        <img
-                          src="/images/icons/facebook.svg"
-                          alt=""
-                          className="h-8 w-8"
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-
-              <div className="grow flex items-end justify-center mt-16">
-                <p className="text-default-700 text-center mt-auto">
-                  Already have an account?{" "}
-                  <Link href="/login" className="text-primary ms-1">
-                    <b>Login</b>
-                  </Link>
-                </p>
+                <AuthForm mode="register" redirectTo={redirectTo} variant="page" />
               </div>
             </div>
           </div>
