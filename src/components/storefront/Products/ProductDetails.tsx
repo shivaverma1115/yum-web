@@ -24,6 +24,7 @@ import {
 } from "@/lib/products/attributes";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import type { IProduct } from "@/types/product";
+import { ProductDetailsSkeleton } from "@/components/skeleton";
 import { HeartIcon } from "lucide-react";
 
 interface ProductDetailsProps {
@@ -115,11 +116,7 @@ export default function ProductDetails({
     const activeImage = images[activeImageIndex] ?? images[0];
 
     if (isLoading) {
-        return (
-            <div className="py-20 text-center text-sm text-default-500">
-                Loading product...
-            </div>
-        );
+        return <ProductDetailsSkeleton />;
     }
 
     if (error || !product) {

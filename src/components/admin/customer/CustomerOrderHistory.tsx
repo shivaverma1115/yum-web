@@ -15,6 +15,7 @@ import {
   PAYMENT_STATUS_COLORS,
   StatusBadge,
 } from "@/components/admin/orders/order-details-shared";
+import { SkeletonList } from "@/components/skeleton";
 
 const DEFAULT_LIMIT = 10;
 
@@ -167,7 +168,9 @@ export default function CustomerOrderHistory({
 
       <div className="overflow-x-auto">
         {loading ? (
-          <p className="px-6 py-8 text-sm text-default-500">Loading orders…</p>
+          <div className="p-4">
+            <SkeletonList rows={DEFAULT_LIMIT} showTrailing />
+          </div>
         ) : error ? (
           <p className="px-6 py-8 text-sm text-red-500">{error}</p>
         ) : orders.length === 0 ? (

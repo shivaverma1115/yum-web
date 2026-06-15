@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Banknote, ChevronDown, ShoppingBag, Wallet } from "lucide-react";
 import OrderExpandableTableRow from "@/components/admin/orders/OrderExpandableTableRow";
+import { StatsCardsSkeleton, TableSkeleton } from "@/components/skeleton";
 import { formatCurrency } from "@/lib/constants";
 import { type CustomerOrdersFilter } from "@/lib/supabase/orders";
 import { UserRole } from "@/types/user";
@@ -56,6 +57,9 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
 
   return (
     <div className="space-y-6">
+      {loading ? (
+        <StatsCardsSkeleton />
+      ) : (
       <div className="grid lg:grid-cols-3 sm:grid-cols-2 gap-6">
         <div className="border rounded-lg p-6 overflow-hidden border-default-200">
           <div className="flex items-center gap-4">
@@ -67,7 +71,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                 Total Orders
               </p>
               <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {loading ? "—" : stats.totalOrders}
+                {stats.totalOrders}
               </h4>
             </div>
           </div>
@@ -83,7 +87,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                 Paid Revenue
               </p>
               <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {loading ? "—" : formatCurrency(stats.paidRevenue)}
+                {formatCurrency(stats.paidRevenue)}
               </h4>
             </div>
           </div>
@@ -99,12 +103,13 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                 Pending Payment
               </p>
               <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {loading ? "—" : stats.pendingCount}
+                {stats.pendingCount}
               </h4>
             </div>
           </div>
         </div>
       </div>
+      )}
 
       <div className="border rounded-lg border-default-200">
         <div className="p-6 overflow-hidden">
@@ -147,7 +152,11 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
 
         <div className="relative overflow-x-auto">
           {loading ? (
-            <p className="px-6 py-8 text-sm text-default-500">Loading orders…</p>
+            <TableSkeleton
+              columns={isAdmin ? 8 : 7}
+              rows={DEFAULT_LIMIT}
+              className="px-2"
+            />
           ) : error ? (
             <p className="px-6 py-8 text-sm text-red-500">{error}</p>
           ) : orders.length === 0 ? (

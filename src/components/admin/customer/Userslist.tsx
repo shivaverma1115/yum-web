@@ -7,6 +7,7 @@ import { UserRole, type IUserWithVerification } from "@/types/user";
 import { formatCustomerSince } from "@/lib/constants";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
+import { TableSkeleton } from "@/components/skeleton";
 import { Eye, Pencil, Trash, TriangleAlert } from "lucide-react";
 import HtmlContent from "@/components/common/HtmlContent";
 
@@ -183,6 +184,9 @@ export default function Userslist() {
       </div>
 
       <div className="relative overflow-x-auto border-t border-default-200">
+        {loading ? (
+          <TableSkeleton columns={12} rows={DEFAULT_LIMIT} className="p-2" />
+        ) : (
         <div className="min-w-full inline-block align-middle">
           <div className="overflow-hidden">
             <table className="min-w-full divide-y divide-default-200">
@@ -264,16 +268,7 @@ export default function Userslist() {
               </thead>
 
               <tbody className="divide-y divide-default-200">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={12}
-                      className="px-6 py-10 text-center text-sm text-default-500"
-                    >
-                      Loading customers...
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
+                {users.length === 0 ? (
                   <tr>
                     <td
                       colSpan={12}
@@ -374,8 +369,10 @@ export default function Userslist() {
             </table>
           </div>
         </div>
+        )}
       </div>
 
+      {!loading ? (
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-default-200 px-6 py-4">
         <p className="text-sm text-default-500">
           Showing {startItem}–{endItem} of {total} customers
@@ -403,6 +400,7 @@ export default function Userslist() {
           </button>
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

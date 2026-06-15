@@ -5,7 +5,7 @@ import { useForm, type FieldPath } from "react-hook-form";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "react-toastify";
 import Input from "@/components/ui/Input";
-import Preloader from "@/components/layout/Preloader";
+import { SettingsFormSkeleton } from "@/components/skeleton";
 import {
   BusinessSettings,
   DEFAULT_BUSINESS_SETTINGS,
@@ -203,7 +203,7 @@ export default function BusinessSettingsForm() {
   });
 
   if (loading) {
-    return <Preloader />;
+    return <SettingsFormSkeleton sections={6} />;
   }
 
   return (

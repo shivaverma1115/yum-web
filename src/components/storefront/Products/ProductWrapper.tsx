@@ -12,6 +12,7 @@ import { Settings2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { CategoryFilterSkeleton } from "@/components/skeleton";
 
 const DEFAULT_LIMIT = 10;
 
@@ -215,7 +216,7 @@ export default function ProductWrapper() {
                                             </div>
 
                                             {categoriesLoading ? (
-                                                <p className="text-sm text-default-500">Loading categories...</p>
+                                                <CategoryFilterSkeleton rows={6} />
                                             ) : categories.length === 0 ? (
                                                 <p className="text-sm text-default-500">No categories available.</p>
                                             ) : (
@@ -531,9 +532,9 @@ export default function ProductWrapper() {
                                 </button>
 
                                 <h6 className="lg:flex hidden text-default-950 text-base">
-                                    {isLoading
-                                        ? "Loading products..."
-                                        : `Showing ${startItem}–${endItem} of ${total} results`}
+                                    {!isLoading
+                                        ? `Showing ${startItem}–${endItem} of ${total} results`
+                                        : null}
                                 </h6>
 
                                 <ProductViewModeToggle

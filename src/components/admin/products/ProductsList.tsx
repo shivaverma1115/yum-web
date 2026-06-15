@@ -8,6 +8,7 @@ import { productPath } from "@/lib/products/slug";
 import { fetchProductsPage } from "@/lib/products/products";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
 import OrderTypeBadges from "@/components/common/OrderTypeBadges";
+import { TableSkeleton } from "@/components/skeleton";
 import { Eye, Pencil, Trash } from "lucide-react";
 import HtmlContent from "@/components/common/HtmlContent";
 
@@ -124,9 +125,7 @@ export default function ProductsList() {
 
                 <div className="relative overflow-x-auto">
                     {isLoading ? (
-                        <div className="px-6 py-10 text-center text-sm text-default-500">
-                            Loading products...
-                        </div>
+                        <TableSkeleton columns={17} rows={DEFAULT_LIMIT} className="p-2" />
                     ) : (
                         <div className="min-w-full inline-block align-middle">
                             <div className="overflow-hidden">

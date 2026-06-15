@@ -1,6 +1,7 @@
 import ProductCard from "@/components/storefront/Products/ProductCard";
 import ProductListRow from "@/components/storefront/Products/ProductListRow";
 import type { ProductViewMode } from "@/components/storefront/Products/ProductViewModeToggle";
+import { ProductGridSkeleton } from "@/components/skeleton";
 import type { IProduct } from "@/types/product";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -28,11 +29,7 @@ export default function ProductCatalogResults({
   onPageChange,
 }: ProductCatalogResultsProps) {
   if (isLoading) {
-    return (
-      <div className="py-16 text-center text-sm text-default-500">
-        Loading products...
-      </div>
-    );
+    return <ProductGridSkeleton count={6} viewMode={viewMode} />;
   }
 
   if (total === 0) {

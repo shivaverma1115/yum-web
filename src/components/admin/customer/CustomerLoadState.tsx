@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { IUserWithVerification } from "@/types/user";
+import { FormSectionSkeleton } from "@/components/skeleton";
 
 type CustomerLoadStateProps = {
   user: IUserWithVerification | null;
@@ -18,11 +19,7 @@ export default function CustomerLoadState({
   children,
 }: CustomerLoadStateProps) {
   if (loading) {
-    return (
-      <p className="text-sm text-default-500 py-8 text-center">
-        Loading customer...
-      </p>
-    );
+    return <FormSectionSkeleton fields={8} />;
   }
 
   if (error || !user) {

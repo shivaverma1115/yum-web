@@ -6,7 +6,7 @@ import ImageUploadField, { type ImageUploadValue } from '@/components/common/ima
 import ChangePasswordForm from '@/components/auth/ChangePasswordForm';
 import UserDetailsForm from '../customer/UserDetailsForm';
 import UserAddressForm from '@/components/admin/settings/UserAddressForm';
-import Preloader from '@/components/layout/Preloader';
+import { AddressCardsSkeleton, FormSectionSkeleton } from '@/components/skeleton';
 import type { UserAddressesByType } from '@/types/user-address';
 import { toast } from 'react-toastify';
 
@@ -90,7 +90,11 @@ export default function ProfileSetting() {
                         />
                     </div>
 
-                    {loading && !user ? <Preloader /> : <UserDetailsForm user={user ?? undefined} mode="self" />}
+                    {loading && !user ? (
+                        <FormSectionSkeleton fields={6} />
+                    ) : (
+                        <UserDetailsForm user={user ?? undefined} mode="self" />
+                    )}
                 </div>
             </div>
 
@@ -100,9 +104,7 @@ export default function ProfileSetting() {
             </div>
 
             {addressesLoading ? (
-                <div className="mb-6">
-                    <Preloader />
-                </div>
+                <AddressCardsSkeleton />
             ) : (
                 <div className="grid lg:grid-cols-2 gap-6">
                     <UserAddressForm

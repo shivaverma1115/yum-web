@@ -1,6 +1,7 @@
 import { IProduct } from '@/types/product';
 import Link from 'next/link';
 import React, { ReactNode } from 'react'
+import { FormSectionSkeleton } from '@/components/skeleton';
 
 type ProductLoadStateProps = {
     product: IProduct | null;
@@ -16,11 +17,7 @@ export default function ProductLoadState({
     children,
 }: ProductLoadStateProps) {
     if (loading) {
-        return (
-            <p className="text-sm text-default-500 py-8 text-center">
-                Loading product...
-            </p>
-        );
+        return <FormSectionSkeleton fields={10} />;
     }
 
     if (error || !product) {
