@@ -1,12 +1,10 @@
-import {
-  confirmOrderPayment,
-  retryOrderPaymentSession,
-} from "@/lib/razorpay/api-client";
+import { retryOrderPaymentSession } from "@/lib/razorpay/api-client";
 import { openRazorpayCheckout } from "@/lib/razorpay/checkout-browser";
 import {
   RAZORPAY_CHECKOUT_DESCRIPTION,
   RAZORPAY_CHECKOUT_NAME,
 } from "@/lib/razorpay/constants";
+import { buildPaymentProcessingUrl } from "@/lib/razorpay/processing-url";
 import { resolveRazorpayCheckoutError } from "@/lib/razorpay/payment-outcome";
 import type {
   OnlinePaymentFlowResult,
@@ -24,7 +22,7 @@ export async function runRetryOrderPayment(
   const razorpayOrder = await retryOrderPaymentSession(input.orderId);
 
   try {
-    const payment = await openRazorpayCheckout({
+    await openRazorpayCheckout({
       keyId: razorpayOrder.keyId,
       orderId: razorpayOrder.orderId,
       amount: razorpayOrder.amount,
@@ -34,14 +32,17 @@ export async function runRetryOrderPayment(
       prefill: input.prefill,
     });
 
-    await confirmOrderPayment(input.orderId, payment);
-
     return {
-      status: "success",
+      status: "processing",
       orderId: input.orderId,
-      redirectTo: "/user/orders",
+      redirectTo: buildPaymentProcessingUrl(input.orderId),
     };
   } catch (error) {
-    return resolveRazorpayCheckoutError(input.orderId, error);
+    const outcome = await resolveRazorpayCheckoutError(input.orderId, error);
+    if (outcome) {
+      return outcome;
+    }
+
+    throw error;
   }
 }

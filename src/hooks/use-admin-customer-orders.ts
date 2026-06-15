@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
 import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
-import type { IOrderWithItems } from "@/types/order";
+import type { IOrder, IOrderWithItems } from "@/types/order";
 
 type OrdersResponse = {
   success: boolean;
@@ -27,6 +28,22 @@ export function useAdminCustomerOrders(
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const applyRealtimeOrder = useCallback((updated: IOrder) => {
+    if (!updated.id) return;
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === updated.id ? { ...order, ...updated } : order,
+      ),
+    );
+  }, []);
+
+  useOrdersRealtime({
+    scope: userId ? { mode: "user", userId } : null,
+    enabled: Boolean(userId),
+    onOrderUpdated: applyRealtimeOrder,
+  });
 
   useEffect(() => {
     if (!userId) {

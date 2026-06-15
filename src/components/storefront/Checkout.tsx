@@ -68,9 +68,9 @@ export default function Checkout() {
 
     useEffect(() => {
         if (orderCompleted) return;
-        if (items.length === 0 && !isSubmitting) {
-            router.replace("/cart");
-        }
+        // if (items.length === 0 && !isSubmitting) {
+        //     router.replace("/cart");
+        // }
     }, [items.length, isSubmitting, orderCompleted, router]);
 
     useEffect(() => {
@@ -168,11 +168,9 @@ export default function Checkout() {
                 const paymentResult = await runCheckoutOnlinePayment({
                     subtotal,
                     prefill: {
-                        name: getUserDisplayName(
-                            user ?? { first_name: "", last_name: "", email: null },
-                        ),
-                        email: user?.email ?? undefined,
-                        contact: values.phone ?? user?.phone ?? "",
+                        name: getUserDisplayName(user as IUser | null),
+                        email: user?.email ?? "",
+                        contact: values.phone ?? user?.phone,
                     },
                     createPendingOrder: async (razorpayOrderId) => {
                         const pendingResponse = await fetch("/api/orders", {
@@ -199,30 +197,13 @@ export default function Checkout() {
                             throw new Error("Order id missing from server response.");
                         }
 
-                        return {
-                            orderId,
-                            redirectTo: pendingData.data?.redirectTo as string | undefined,
-                        };
+                        return { orderId };
                     },
                 });
 
-                if (paymentResult.status === "success") {
-                    await finishOrderSuccess(paymentResult.redirectTo);
-                    return;
-                }
-
-                const ordersPath = `/${user?.role ?? "user"}/orders`;
-
-                if (paymentResult.status === "cancelled") {
-                    toast.info(
-                        "Payment cancelled. Your order is saved — you can pay anytime from My Orders.",
-                    );
-                    router.replace(paymentResult.redirectTo ?? ordersPath);
-                    return;
-                }
-
-                toast.error(paymentResult.message);
-                router.replace(paymentResult.redirectTo ?? ordersPath);
+                setOrderCompleted(true);
+                clearCart();
+                router.replace(paymentResult.redirectTo);
                 return;
             }
 

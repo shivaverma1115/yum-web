@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useContextApi } from "@/context-api/use-context";
+import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
 import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
-import type { IOrderWithItems, OrderStatus } from "@/types/order";
+import type { IOrder, IOrderWithItems, OrderStatus } from "@/types/order";
 import { UserRole } from "@/types/user";
 
 type OrdersResponse = {
@@ -48,6 +50,36 @@ export function useOrders(
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useContextApi();
+
+  const applyRealtimeOrder = useCallback((updated: IOrder) => {
+    if (!updated.id) return;
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === updated.id ? { ...order, ...updated } : order,
+      ),
+    );
+  }, []);
+
+  const realtimeScope = useMemo(() => {
+    if (userRole === UserRole.ADMIN) {
+      return { mode: "all" as const };
+    }
+
+    if (user?.id) {
+      return { mode: "user" as const, userId: user.id };
+    }
+
+    return null;
+  }, [userRole, user?.id]);
+
+  useOrdersRealtime({
+    scope: realtimeScope,
+    enabled: Boolean(realtimeScope),
+    onOrderUpdated: applyRealtimeOrder,
+  });
+
   useEffect(() => {
     const controller = new AbortController();
     let active = true;

@@ -1,12 +1,10 @@
-import {
-  confirmOrderPayment,
-  createRazorpayPaymentOrder,
-} from "@/lib/razorpay/api-client";
+import { createRazorpayPaymentOrder } from "@/lib/razorpay/api-client";
 import { openRazorpayCheckout } from "@/lib/razorpay/checkout-browser";
 import {
   RAZORPAY_CHECKOUT_DESCRIPTION,
   RAZORPAY_CHECKOUT_NAME,
 } from "@/lib/razorpay/constants";
+import { buildPaymentProcessingUrl } from "@/lib/razorpay/processing-url";
 import { resolveRazorpayCheckoutError } from "@/lib/razorpay/payment-outcome";
 import type {
   OnlinePaymentFlowResult,
@@ -26,6 +24,14 @@ export type RunCheckoutOnlinePaymentInput = {
   ) => Promise<CreatePendingOrderResult>;
 };
 
+function toProcessingResult(orderId: string): OnlinePaymentFlowResult {
+  return {
+    status: "processing",
+    orderId,
+    redirectTo: buildPaymentProcessingUrl(orderId),
+  };
+}
+
 export async function runCheckoutOnlinePayment(
   input: RunCheckoutOnlinePaymentInput,
 ): Promise<OnlinePaymentFlowResult> {
@@ -33,7 +39,7 @@ export async function runCheckoutOnlinePayment(
   const pending = await input.createPendingOrder(razorpayOrder.orderId);
 
   try {
-    const payment = await openRazorpayCheckout({
+    await openRazorpayCheckout({
       keyId: razorpayOrder.keyId,
       orderId: razorpayOrder.orderId,
       amount: razorpayOrder.amount,
@@ -43,23 +49,13 @@ export async function runCheckoutOnlinePayment(
       prefill: input.prefill,
     });
 
-    await confirmOrderPayment(pending.orderId, payment);
-
-    return {
-      status: "success",
-      orderId: pending.orderId,
-      redirectTo: pending.redirectTo,
-    };
+    return toProcessingResult(pending.orderId);
   } catch (error) {
     const outcome = await resolveRazorpayCheckoutError(pending.orderId, error);
-
-    if (outcome.status === "cancelled" || outcome.status === "failed") {
-      return {
-        ...outcome,
-        redirectTo: pending.redirectTo ?? "/user/orders",
-      };
+    if (outcome) {
+      return outcome;
     }
 
-    return outcome;
+    throw error;
   }
 }

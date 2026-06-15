@@ -1,4 +1,4 @@
-import { markOrderPaymentFailed } from "@/lib/razorpay/api-client";
+import { buildPaymentProcessingUrl } from "@/lib/razorpay/processing-url";
 import {
   isRazorpayPaymentCancelledError,
   isRazorpayPaymentFailedError,
@@ -8,19 +8,17 @@ import type { OnlinePaymentFlowResult } from "@/lib/razorpay/types";
 export async function resolveRazorpayCheckoutError(
   orderId: string,
   error: unknown,
-): Promise<OnlinePaymentFlowResult> {
-  if (isRazorpayPaymentCancelledError(error)) {
-    return { status: "cancelled", orderId };
-  }
-
-  if (isRazorpayPaymentFailedError(error)) {
-    await markOrderPaymentFailed(orderId, error.razorpayPaymentId);
+): Promise<OnlinePaymentFlowResult | null> {
+  if (
+    isRazorpayPaymentCancelledError(error) ||
+    isRazorpayPaymentFailedError(error)
+  ) {
     return {
-      status: "failed",
+      status: "processing",
       orderId,
-      message: error.message,
+      redirectTo: buildPaymentProcessingUrl(orderId),
     };
   }
 
-  throw error;
+  return null;
 }

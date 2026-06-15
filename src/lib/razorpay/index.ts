@@ -18,7 +18,12 @@ export {
 } from "@/lib/razorpay/errors";
 export { canRetryOnlinePayment } from "@/lib/razorpay/order-eligibility";
 export { runRetryOrderPayment } from "@/lib/razorpay/order-payment-flow";
-export { waitForOrderPaymentStatus } from "@/lib/razorpay/poll-payment";
+export { buildPaymentProcessingUrl } from "@/lib/razorpay/processing-url";
+export {
+  waitForOrderPaymentStatus,
+  watchOrderPaymentStatus,
+} from "@/lib/razorpay/poll-payment";
+export type { PaymentWatchResult } from "@/lib/razorpay/poll-payment";
 export type {
   OnlinePaymentFlowResult,
   OpenRazorpayCheckoutParams,

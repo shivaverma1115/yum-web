@@ -27,20 +27,8 @@ export type OpenRazorpayCheckoutParams = {
   prefill: RazorpayCheckoutPrefill;
 };
 
-export type OnlinePaymentFlowResult =
-  | {
-      status: "success";
-      orderId: string;
-      redirectTo?: string;
-    }
-  | {
-      status: "cancelled";
-      orderId: string;
-      redirectTo?: string;
-    }
-  | {
-      status: "failed";
-      orderId: string;
-      message: string;
-      redirectTo?: string;
-    };
+export type OnlinePaymentFlowResult = {
+  status: "processing";
+  orderId: string;
+  redirectTo: string;
+};

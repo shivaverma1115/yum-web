@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { useContextApi } from "@/context-api/use-context";
@@ -15,8 +16,8 @@ type PayOrderButtonProps = {
 
 export default function PayOrderButton({
   order,
-  onPaymentUpdated,
 }: PayOrderButtonProps) {
+  const router = useRouter();
   const { user } = useContextApi();
   const [paying, setPaying] = useState(false);
 
@@ -38,19 +39,7 @@ export default function PayOrderButton({
         },
       });
 
-      if (result.status === "success") {
-        toast.success("Payment successful.");
-        onPaymentUpdated?.();
-        return;
-      }
-
-      if (result.status === "cancelled") {
-        toast.info("Payment cancelled. You can try again anytime.");
-        return;
-      }
-
-      toast.error(result.message || "Payment failed. Please try again.");
-      onPaymentUpdated?.();
+      router.replace(result.redirectTo);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Payment failed.",
