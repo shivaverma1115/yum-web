@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
 import {
   failOrderPaymentWithSupabase,
   findOrderByRazorpayOrderId,
@@ -73,6 +74,12 @@ export async function handleRazorpayWebhook(
       };
     }
 
+    notifyOrderUpdateInBackground({
+      kind: "payment",
+      order: updated as IOrder,
+      previousPaymentStatus: order.payment_status,
+    });
+
     return { success: true, handled: true, order: updated as IOrder };
   }
 
@@ -114,6 +121,12 @@ export async function handleRazorpayWebhook(
         status: 400,
       };
     }
+
+    notifyOrderUpdateInBackground({
+      kind: "payment",
+      order: updated as IOrder,
+      previousPaymentStatus: order.payment_status,
+    });
 
     return { success: true, handled: true, order: updated as IOrder };
   }
