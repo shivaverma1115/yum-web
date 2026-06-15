@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function Wishlist() {
@@ -38,8 +39,8 @@ export default function Wishlist() {
 
                         <div className="md:w-auto w-full lg:mt-0 mt-4">
                             <div className="flex lg:flex-col justify-between gap-2">
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</a>
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</a>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</Link>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</Link>
                             </div>
                         </div>
                     </div>
@@ -77,8 +78,8 @@ export default function Wishlist() {
 
                         <div className="md:w-auto w-full lg:mt-0 mt-4">
                             <div className="flex lg:flex-col justify-between gap-2">
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</a>
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</a>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</Link>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</Link>
                             </div>
                         </div>
                     </div>
@@ -116,8 +117,8 @@ export default function Wishlist() {
 
                         <div className="md:w-auto w-full lg:mt-0 mt-4">
                             <div className="flex lg:flex-col justify-between gap-2">
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</a>
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</a>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</Link>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</Link>
                             </div>
                         </div>
                     </div>
@@ -155,8 +156,8 @@ export default function Wishlist() {
 
                         <div className="md:w-auto w-full lg:mt-0 mt-4">
                             <div className="flex lg:flex-col justify-between gap-2">
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</a>
-                                <a href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</a>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Add to Cart</Link>
+                                <Link href="javascript:void(0)" className="py-3 px-6 font-medium text-center lg:text-primary rounded-full lg:hover:bg-primary/20 lg:bg-transparent bg-primary text-white transition-all">Remove</Link>
                             </div>
                         </div>
                     </div>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function Contact() {
@@ -39,7 +40,7 @@ export default function Contact() {
                                     </div>
 
                                     <div>
-                                        <a href="javascript:void(0)" className="inline-flex items-center justify-center px-10 py-3 rounded-full text-base font-medium bg-primary text-white capitalize transition-all hover:bg-primary-500">Send Message</a>
+                                        <Link href="javascript:void(0)" className="inline-flex items-center justify-center px-10 py-3 rounded-full text-base font-medium bg-primary text-white capitalize transition-all hover:bg-primary-500">Send Message</Link>
                                     </div>
                                 </div>
                             </form>

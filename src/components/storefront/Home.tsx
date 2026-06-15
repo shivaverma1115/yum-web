@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function Home() {
@@ -21,13 +22,13 @@ export default function Home() {
 
                                     <p className="text-lg text-default-700 font-medium mb-8 md:max-w-md lg:mx-0 mx-auto">Imagine you don’t need a diet because we provide healthy and delicious food for you!.</p>
                                     <div className="flex flex-wrap items-center justify-center lg:justify-normal gap-5 mt-10">
-                                        <a href="javascript:void(0)" className="py-5 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Order Now</a>
-                                        <a href="javascript:void(0)" className="text-primary flex items-center">
+                                        <Link href="/" className="py-5 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Order Now</Link>
+                                        <Link href="/" className="text-primary flex items-center">
                                             <span className="h-14 w-14 rounded-full border-2 border-e-transparent border-yellow-400 flex items-center justify-center me-2">
                                                 <i data-lucide="play" className="h-6 w-6 fill-primary"></i>
                                             </span>
                                             <span className="font-semibold">How to Order</span>
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     <div className="mt-14">
@@ -151,7 +152,7 @@ export default function Home() {
                             </div>
 
                             <div className="flex flex-wrap items-center md:justify-start justify-center gap-4 mt-10">
-                                <a href="javascript:void(0)" className="py-3 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</a>
+                                <Link href="/" className="py-3 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</Link>
                                 <div className="flex items-center gap-2">
                                     <img src="/images/avatars/avatar3.png" className="h-12 w-12 rounded-full" />
                                     <div>
@@ -260,7 +261,7 @@ export default function Home() {
                                                                         <div className="p-6">
                                                                             <h5 className="text-xl font-medium text-white mb-2">Italian Pizza</h5>
                                                                             <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 8.75</h5>
-                                                                            <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                            <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -275,7 +276,7 @@ export default function Home() {
                                                                         <div className="p-6">
                                                                             <h5 className="text-xl font-medium text-white mb-2">Margarita Pizza</h5>
                                                                             <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 5.86</h5>
-                                                                            <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                            <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -290,7 +291,7 @@ export default function Home() {
                                                                         <div className="p-6">
                                                                             <h5 className="text-xl font-medium text-white mb-2">Vegetarian Pizza</h5>
                                                                             <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 9.56</h5>
-                                                                            <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                            <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -305,7 +306,7 @@ export default function Home() {
                                                                         <div className="p-6">
                                                                             <h5 className="text-xl font-medium text-white mb-2">Turkish pizza</h5>
                                                                             <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 8.75</h5>
-                                                                            <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                            <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -328,7 +329,7 @@ export default function Home() {
                                                                 <div className="p-6">
                                                                     <h5 className="text-xl font-medium text-white mb-2">Cheese Burger</h5>
                                                                     <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 5.99</h5>
-                                                                    <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                    <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -343,7 +344,7 @@ export default function Home() {
                                                                 <div className="p-6">
                                                                     <h5 className="text-xl font-medium text-white mb-2">Fried Egg Burger</h5>
                                                                     <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.75</h5>
-                                                                    <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                    <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -358,7 +359,7 @@ export default function Home() {
                                                                 <div className="p-6">
                                                                     <h5 className="text-xl font-medium text-white mb-2">Meat Burger</h5>
                                                                     <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 19.25</h5>
-                                                                    <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                    <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -373,7 +374,7 @@ export default function Home() {
                                                                 <div className="p-6">
                                                                     <h5 className="text-xl font-medium text-white mb-2">Gourmet cheeseburger</h5>
                                                                     <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 16.52</h5>
-                                                                    <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                    <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -396,7 +397,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Espresso Coffee</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 5.99</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -411,7 +412,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Cappuccino</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.45</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -426,7 +427,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Iced Cold Coffee</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 25.14</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -441,7 +442,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Flat white</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 8.75</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -464,7 +465,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Brownie Cake</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.99</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -479,7 +480,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Berry Cheesecake</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 18.25</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -494,7 +495,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Chocolate Donuts</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 35.46</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -509,7 +510,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Carrot Cake</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 19.62</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -532,7 +533,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Asian Noodles</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.78</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -547,7 +548,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Meat Noodles</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 31.00</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -562,7 +563,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Veg Noodles</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 22.99</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -577,7 +578,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Italian Noodles Pasta</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 18.82</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -600,7 +601,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Asian wraps</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.78</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -615,7 +616,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Meat wraps</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 31.00</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -630,7 +631,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Veg wraps</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 22.99</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -645,7 +646,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Buritto wraps Pasta</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 18.82</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -668,7 +669,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Veg Salad</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 12.78</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -683,7 +684,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Chicken Skewers </h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 31.00</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -698,7 +699,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Nachos Salsa Dip</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 22.99</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -713,7 +714,7 @@ export default function Home() {
                                                             <div className="p-6">
                                                                 <h5 className="text-xl font-medium text-white mb-2">Paneer tikka Skewers</h5>
                                                                 <h5 className="text-xl font-semibold text-white mb-2"><span className="text-base font-medium text-yellow-400">$</span> 18.82</h5>
-                                                                <a href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                                                                <Link href="products" className="inline-flex items-center text-white border-b border-dashed border-white">Order Now <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -944,7 +945,7 @@ export default function Home() {
                         <p className="text-base text-white/75 max-w-2xl mb-10">"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
 
                         <div className="inline-flex flex-wrap items-center justify-center gap-4">
-                            <a href="javascript:void(0)" className="py-4 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</a>
+                            <Link href="/" className="py-4 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</Link>
                             <h4 className="text-yellow-400 font-medium text-2xl">$23.47 <span className="text-lg line-through text-white/75">$44.99</span></h4>
                         </div>
 
@@ -984,7 +985,7 @@ export default function Home() {
                                 <span className="inline-flex py-2 px-4 text-sm text-primary rounded-full bg-primary/20 mb-6">Download App</span>
                                 <h2 className="text-3xl/relaxed font-semibold text-default-900 max-w-sm mb-6">Get Started With Us Today!</h2>
                                 <p className="text-default-900 text-base max-w-md mb-10">Discover food wherever and whenever and get your food delivered quickly.</p>
-                                <a href="javascript:void(0)" className="inline-flex py-4 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</a>
+                                <Link href="/" className="inline-flex py-4 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Get started</Link>
                             </div>
 
                             <div className="relative pt-20 px-20">

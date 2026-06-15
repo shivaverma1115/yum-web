@@ -7,11 +7,11 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import PhoneVerification from "@/components/common/phone-verification/PhoneVerification";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { useAuthActions } from "@/hooks/useAuthActions";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { isOtpEnabled, isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { PHONE_OTP_LENGTH } from "@/lib/phone-otp/constants";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
 import type { IUser } from "@/types/user";
+import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 export type AuthFormMode = "login" | "register";
 

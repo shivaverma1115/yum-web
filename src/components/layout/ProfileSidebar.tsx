@@ -26,6 +26,7 @@ import {
   USER_NAV_ITEMS,
 } from "@/lib/profile-navigation";
 import { useContextApi } from "@/context-api/use-context";
+import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -214,6 +215,7 @@ export default function ProfileSidebar({
   onMobileClose,
 }: ProfileSidebarProps) {
   const { user } = useContextApi();
+  const { settings: businessSettings } = useBusinessSettings();
   const isAdmin = user?.role === "admin";
   const pathname = usePathname();
   const handleLogout = useLogout();
@@ -248,17 +250,18 @@ export default function ProfileSidebar({
           }`}
       >
         <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
-          <Link href={`/${user?.role}/dashboard`} className="inline-flex shrink-0">
+          <Link href={`/${user?.role}/dashboard`} className="inline-flex shrink-0 items-center gap-2">
             <img
-              src="/images/logo-dark.png"
+              src="/images/logo-dark(1).png"
               alt="logo"
               className="h-10 flex dark:hidden"
             />
             <img
-              src="/images/logo-light.png"
+              src="/images/logo-light(1).png"
               alt="logo"
               className="h-10 hidden dark:flex"
             />
+            <span className="text-4xl font-bold">{businessSettings.general.site_name}</span>
           </Link>
           <button
             type="button"

@@ -49,12 +49,12 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
                 <div className="flex lg:hidden">
                     <Link href={dashboardHref}>
                         <img
-                            src="/images/logo-dark.png"
+                            src="/images/logo-dark(1).png"
                             alt="Yum logo"
                             className="flex h-10 w-full dark:hidden"
                         />
                         <img
-                            src="/images/logo-light.png"
+                            src="/images/logo-light(1).png"
                             alt="Yum logo"
                             className="hidden h-10 w-full dark:flex"
                         />

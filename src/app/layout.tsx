@@ -27,11 +27,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildSiteMetadata(settings);
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const businessSettings = await getCachedBusinessSettings();
+
   return (
     <html
       lang="en"
@@ -40,7 +42,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialBusinessSettings={businessSettings}>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

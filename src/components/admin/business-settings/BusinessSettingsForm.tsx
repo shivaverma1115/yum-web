@@ -10,6 +10,7 @@ import {
   BusinessSettings,
   DEFAULT_BUSINESS_SETTINGS,
 } from "@/types/business-settings";
+import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
@@ -103,6 +104,7 @@ function ToggleField({
 
 export default function BusinessSettingsForm() {
   const [loading, setLoading] = useState(true);
+  const { setSettings: setGlobalBusinessSettings } = useBusinessSettings();
 
   const {
     register,
@@ -187,6 +189,7 @@ export default function BusinessSettingsForm() {
 
       if (data.data?.settings) {
         reset(data.data.settings);
+        setGlobalBusinessSettings(data.data.settings);
       }
 
       toast.success(data.message ?? "Business settings saved successfully.");
@@ -390,6 +393,27 @@ export default function BusinessSettingsForm() {
             {...register("support.phone", { required: "Support phone is required." })}
             disabled={isSubmitting}
             placeholder="9876543210"
+          />
+        </FieldGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Social"
+        description="Social profile usernames shown in the footer."
+      >
+        <FieldGroup label="Instagram username" error={errors.social?.instagram?.message}>
+          <Input
+            {...register("social.instagram")}
+            disabled={isSubmitting}
+            placeholder="yumstore"
+          />
+        </FieldGroup>
+
+        <FieldGroup label="Twitter / X username" error={errors.social?.twitter?.message}>
+          <Input
+            {...register("social.twitter")}
+            disabled={isSubmitting}
+            placeholder="yumstore"
           />
         </FieldGroup>
       </SettingsSection>

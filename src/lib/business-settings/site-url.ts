@@ -68,7 +68,7 @@ export function resolvePublicSiteOrigin(
     return normalizeSiteUrl(defaultUrl);
   }
 
-  return "http://localhost:3000";
+  return "";
 }
 
 export function resolveSiteUrl(

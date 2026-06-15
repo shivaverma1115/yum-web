@@ -18,12 +18,12 @@ export default function Login() {
                 <div className="pb-10">
                   <Link href="/home" className="flex items-center">
                     <img
-                      src="/images/logo-dark.png"
+                      src="/images/logo-dark(1).png"
                       alt="logo"
                       className="h-12 flex dark:hidden"
                     />
                     <img
-                      src="/images/logo-light.png"
+                      src="/images/logo-light(1).png"
                       alt="logo"
                       className="h-12 hidden dark:flex"
                     />

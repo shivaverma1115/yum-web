@@ -10,10 +10,10 @@ export default function MarketingUI() {
                     <div className="container">
                         <nav className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
-                                <a href="/">
-                                    <img src="/images/logo-dark.png" alt="logo" className="h-10 flex dark:hidden" />
-                                    <img src="/images/logo-light.png" alt="logo" className="h-10 hidden dark:flex" />
-                                </a>
+                                <Link href="/">
+                                    <img src="/images/logo-dark(1).png" alt="logo" className="h-10 flex dark:hidden" />
+                                    <img src="/images/logo-light(1).png" alt="logo" className="h-10 hidden dark:flex" />
+                                </Link>
                             </div>
 
                             <div className="flex-grow hidden lg:block mx-auto relative">
@@ -21,28 +21,28 @@ export default function MarketingUI() {
 
                                     <li className="menu-item">
                                         <div className="flex items-center">
-                                            <a className="inline-flex items-center text-sm lg:text-base font-medium text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#home">Home</a>
+                                            <Link className="inline-flex items-center text-sm lg:text-base font-medium text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#home">Home</Link>
                                         </div>
                                     </li>
 
                                     <li className="menu-item">
                                         <div className="flex items-center">
-                                            <a className="inline-flex items-center text-sm lg:text-base font-medium  text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#demo">Demos</a>
+                                            <Link className="inline-flex items-center text-sm lg:text-base font-medium  text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#demo">Demos</Link>
                                         </div>
                                     </li>
 
                                     <li className="menu-item">
                                         <div className="flex items-center">
-                                            <a className="inline-flex items-center text-sm lg:text-base font-medium  text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#features">Features</a>
+                                            <Link className="inline-flex items-center text-sm lg:text-base font-medium  text-primary-500/75 py-2 px-4 rounded-full hover:text-primary-600" href="#features">Features</Link>
                                         </div>
                                     </li>
                                 </ul>
                             </div>
 
                             <div>
-                                <a href="#demo" className="inline-flex items-center gap-2.5 text-white focus:outline-none font-semibold rounded text-sm px-4 py-2 text-center md:me-0  shadow-lg shadow-transparent transition-all duration-500 ease-in-out hover:-translate-y-[2px] bg-primary">
+                                <Link href="#demo" className="inline-flex items-center gap-2.5 text-white focus:outline-none font-semibold rounded text-sm px-4 py-2 text-center md:me-0  shadow-lg shadow-transparent transition-all duration-500 ease-in-out hover:-translate-y-[2px] bg-primary">
                                     <i className="h-5 w-5" data-lucide="shopping-cart"></i> Order Now
-                                </a>
+                                </Link>
                             </div>
                         </nav>
                     </div>
@@ -133,7 +133,7 @@ export default function MarketingUI() {
                             </div>
                         </Link>
 
-                        <a href="admin/dashboard" target="_blank">
+                        <Link href="admin/dashboard" target="_blank">
                             <div className="relative group  rounded-lg text-center transition-all duration-500 shadow border border-default-100 bg-white hover:-translate-y-1 dark:bg-default-100">
                                 <div className="p-5">
                                     <div className="relative rounded-lg overflow-hidden ">
@@ -146,7 +146,7 @@ export default function MarketingUI() {
                                     <h5 className="mt-5 text-xl font-semibold text-primary text-center capitalize">Admin Panel</h5>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -861,7 +861,7 @@ export default function MarketingUI() {
                         <div className="text-center">
                             <div className=" mx-auto mb-12">
                                 <a className="flex items-center justify-center" href="#">
-                                    <img className="h-10" src="/images/logo-dark.png" />
+                                    <img className="h-10" src="/images/logo-dark(1).png" />
                                 </a>
                                 <h2 className="md:text-3xl text-xl font-semibold text-default-900 capitalize my-5">Get Food for yourself</h2>
                                 <p className="font-semibold text-default-800">Start working with <span className="text-primary">Food</span>

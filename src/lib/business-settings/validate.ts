@@ -1,4 +1,5 @@
 import type { BusinessSettings, PhoneOtpMode } from "@/types/business-settings";
+import { isValidEmail } from "../email-otp/email";
 
 const PHONE_OTP_MODES: PhoneOtpMode[] = [
   "off",
@@ -52,8 +53,14 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+function isValidSocialHandle(value: string): boolean {
+  const handle = value.trim().replace(/^@/, "");
+  if (!handle) return true;
+  return /^[A-Za-z0-9._]{1,30}$/.test(handle);
+}
+
+function normalizeSocialHandle(value: string): string {
+  return value.trim().replace(/^@/, "");
 }
 
 function parseNonNegativeNumber(
@@ -241,6 +248,32 @@ export function validateBusinessSettingsPatch(
     }
   }
 
+  if (patch.social) {
+    const social: Partial<BusinessSettings["social"]> = {};
+
+    if (patch.social.instagram !== undefined) {
+      const instagram = normalizeSocialHandle(patch.social.instagram);
+      if (!isValidSocialHandle(instagram)) {
+        errors["social.instagram"] = "Enter a valid Instagram username.";
+      } else {
+        social.instagram = instagram;
+      }
+    }
+
+    if (patch.social.twitter !== undefined) {
+      const twitter = normalizeSocialHandle(patch.social.twitter);
+      if (!isValidSocialHandle(twitter)) {
+        errors["social.twitter"] = "Enter a valid Twitter/X username.";
+      } else {
+        social.twitter = twitter;
+      }
+    }
+
+    if (Object.keys(social).length) {
+      value.social = social as BusinessSettings["social"];
+    }
+  }
+
   if (Object.keys(errors).length) {
     return { valid: false, errors };
   }
@@ -271,6 +304,7 @@ export function validateFullBusinessSettings(
     "phone_verification",
     "payment",
     "support",
+    "social",
   ];
 
   for (const section of requiredSections) {

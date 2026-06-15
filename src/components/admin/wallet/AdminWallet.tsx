@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function AdminWallet() {
@@ -419,7 +420,7 @@ export default function AdminWallet() {
                                     <span className="grow text-start">
                                         <span className="block text-lg font-medium text-default-900">Madelyn Torff</span>
                                         <span className="block text-xs font-medium text-default-600 mb-0.5">Just sent you $500</span>
-                                        <a href="#"> <span className="inline-block text-xs font-medium text-primary border-b border-primary">Click for more detail</span></a>
+                                        <Link href="#"> <span className="inline-block text-xs font-medium text-primary border-b border-primary">Click for more detail</span></Link>
                                     </span>
                                     <span className="text-sm text-default-800 font-medium shrink">Just now</span>
                                 </div>
@@ -442,8 +443,8 @@ export default function AdminWallet() {
                             </div>
 
                             <div className="flex justify-end gap-2">
-                                <a href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-6 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Pay now</a>
-                                <a href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary px-6 py-2.5 text-center text-xs font-semibold text-primary shadow-sm transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white">Later</a>
+                                <Link href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-6 py-2.5 text-center text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Pay now</Link>
+                                <Link href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary px-6 py-2.5 text-center text-xs font-semibold text-primary shadow-sm transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white">Later</Link>
                             </div>
                         </div>
                     </div>

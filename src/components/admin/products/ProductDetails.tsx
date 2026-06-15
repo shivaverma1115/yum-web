@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react'
 
 interface ProductDetailsProps {
@@ -105,9 +106,9 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                         <button type="button" className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-9 w-9 text-sm inline-flex items-center justify-center">+</button>
                     </div>
 
-                    <a href="cart" className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500">
+                    <Link href="/cart" className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500">
                         Buy Now
-                    </a>
+                    </Link>
 
                     <i data-lucide="heart" className="h-8 w-8 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600 focus:fill-red-600 focus:text-red-600"></i>
                 </div>

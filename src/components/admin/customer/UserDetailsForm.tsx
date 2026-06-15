@@ -19,7 +19,6 @@ import {
   profileEmailNeedsVerification,
   profilePhoneNeedsVerification,
 } from "@/lib/profile/contact-verification";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import {
   isValidPhoneNumber,
@@ -28,6 +27,7 @@ import {
 } from "@/lib/phone-otp/phone";
 import { isRichTextEmpty } from "@/lib/rich-text";
 import RichTextEditor from "@/components/ui/RichTextEditor";
+import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 export interface UserDetailsFormProps {
   user?: IUser;

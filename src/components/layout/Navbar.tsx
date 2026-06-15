@@ -19,6 +19,7 @@ import {
     Utensils,
     X,
 } from "lucide-react";
+import { useBusinessSettings } from '@/context-api/business-settings-context';
 
 function isActivePath(pathname: string, href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -28,6 +29,7 @@ export default function Navbar() {
     const pathname = usePathname();
     const handleLogout = useLogout();
     const { user, isAuthenticated } = useContextApi();
+    const { settings: businessSettings } = useBusinessSettings();
     const { itemCount } = useCart();
     const isAdmin = user?.role === UserRole.ADMIN;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -118,9 +120,10 @@ export default function Navbar() {
                                     <Menu className="w-7 h-7 text-default-600 me-4 hover:text-primary" aria-hidden />
                                 </button>
 
-                                <Link href="/home">
-                                    <img src="/images/logo-dark.png" alt="logo" className="h-10 flex dark:hidden" />
-                                    <img src="/images/logo-light.png" alt="logo" className="h-10 hidden dark:flex" />
+                                <Link href="/home" className="flex items-center gap-2">
+                                    <img src="/images/logo-dark(1).png" alt="logo" className="h-10 flex dark:hidden" />
+                                    <img src="/images/logo-light(1).png" alt="logo" className="h-10 hidden dark:flex" />
+                                    <span className="text-4xl font-bold">{businessSettings.general.site_name}</span>
                                 </Link>
                             </div>
 
@@ -281,8 +284,8 @@ export default function Navbar() {
             >
                 <div className="flex justify-between items-center border-b border-dashed border-default-200 h-16 px-4 transition-all duration-300">
                     <Link href="/home" onClick={closeMobileMenu}>
-                        <img src="/images/logo-dark.png" alt="logo" className="h-10 flex dark:hidden" />
-                        <img src="/images/logo-light.png" alt="logo" className="h-10 hidden dark:flex" />
+                        <img src="/images/logo-dark(1).png" alt="logo" className="h-10 flex dark:hidden" />
+                        <img src="/images/logo-light(1).png" alt="logo" className="h-10 hidden dark:flex" />
                     </Link>
                     <button
                         type="button"

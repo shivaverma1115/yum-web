@@ -1,8 +1,9 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function ResturantsList() {
-  return (
-    <div>
+    return (
+        <div>
             <div className="grid 2xl:grid-cols-4 md:grid-cols-2 gap-6 mb-6">
                 <div className="relative p-6 rounded-lg border border-default-200">
                     <img src="/images/restaurants/1.png" className="h-14 w-14 mx-auto mb-4" />
@@ -46,7 +47,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -93,7 +94,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -139,7 +140,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -184,7 +185,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -229,7 +230,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -275,7 +276,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -320,7 +321,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
 
                 <div className="relative p-6 rounded-lg border border-default-200">
@@ -366,7 +367,7 @@ export default function ResturantsList() {
                         </div>
                     </div>
 
-                    <a href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</a>
+                    <Link href="admin-restaurants-details.html" className="px-8 py-3 inline-flex rounded-full font-medium text-white bg-primary transition-all hover:bg-primary-500">View Details</Link>
                 </div>
             </div>
 
@@ -374,28 +375,28 @@ export default function ResturantsList() {
                 <nav>
                     <ul className="inline-flex items-center space-x-2 rounded-md text-sm">
                         <li>
-                            <a aria-current="page" className="inline-flex items-center justify-center h-9 w-9 border border-primary rounded-full text-white bg-primary" href="javascript:void(0)">1 </a>
+                            <Link aria-current="page" className="inline-flex items-center justify-center h-9 w-9 border border-primary rounded-full text-white bg-primary" href="javascript:void(0)">1 </Link>
                         </li>
 
                         <li>
-                            <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">2 </a>
+                            <Link className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">2 </Link>
                         </li>
 
                         <li>
-                            <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">...</a>
+                            <Link className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">...</Link>
                         </li>
 
                         <li>
-                            <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">9 </a>
+                            <Link className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">9 </Link>
                         </li>
 
                         <li>
-                            <a className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">10 </a>
+                            <Link className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:border-primary hover:text-white" href="javascript:void(0)">10 </Link>
                         </li>
                     </ul>
                 </nav>
             </div>
         </div>
-  )
+    )
 }
 

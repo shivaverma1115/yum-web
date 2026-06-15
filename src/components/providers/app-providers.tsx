@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { ToastContainer } from "react-toastify";
+import { BusinessSettingsProvider } from "@/context-api/business-settings-context";
 import { CartProvider } from "@/context-api/cart-context";
 import { ContextApiProvider } from "@/context-api/use-context";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -10,21 +11,32 @@ import AuthCallbackAlerts from "@/components/auth/AuthCallbackAlerts";
 import AuthCodeExchange from "@/components/auth/AuthCodeExchange";
 import ThemeInit from "@/components/layout/ThemeInit";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import type { BusinessSettings } from "@/types/business-settings";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function AppProviders({ children }: { children: ReactNode }) {
+type AppProvidersProps = {
+  children: ReactNode;
+  initialBusinessSettings?: BusinessSettings;
+};
+
+export default function AppProviders({
+  children,
+  initialBusinessSettings,
+}: AppProvidersProps) {
   return (
     <ThemeProvider>
-      <ContextApiProvider>
-        <CartProvider>
+      <BusinessSettingsProvider initialSettings={initialBusinessSettings}>
+        <ContextApiProvider>
+          <CartProvider>
           <Suspense fallback={null}>
             <AuthCodeExchange />
             <AuthCallbackAlerts />
           </Suspense>
           <ThemeInit />
           {children}
-        </CartProvider>
-      </ContextApiProvider>
+          </CartProvider>
+        </ContextApiProvider>
+      </BusinessSettingsProvider>
       <ThemeToggle />
       <ToastContainer
         position="top-right"

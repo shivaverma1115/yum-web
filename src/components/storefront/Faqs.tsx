@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function Faqs() {
@@ -167,7 +168,7 @@ export default function Faqs() {
                                     </div>
 
                                     <div>
-                                        <a href="javascript:void(0)" className="py-2.5 px-10 flex justify-center w-full text-center font-medium text-white bg-primary rounded-lg hover:bg-primary-500 transition-all">Contact us</a>
+                                        <Link href="/contact" className="py-2.5 px-10 flex justify-center w-full text-center font-medium text-white bg-primary rounded-lg hover:bg-primary-500 transition-all">Contact us</Link>
                                     </div>
                                 </div>
                             </div>

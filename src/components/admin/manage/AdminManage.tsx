@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function AdminManage() {
@@ -127,7 +128,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-6">
@@ -141,7 +142,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/non-veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-6">
@@ -155,7 +156,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-6">
@@ -169,7 +170,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/non-veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-6">
@@ -183,7 +184,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/non-veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
                                 <div className="flex items-center justify-between gap-6">
                                     <h5 className="text-lg text-default-900 font-semibold">Barbeque Chicken</h5>
@@ -196,7 +197,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
                                 <div className="flex items-center justify-between gap-6">
                                     <h5 className="text-lg text-default-900 font-semibold">Chocolate</h5>
@@ -209,7 +210,7 @@ export default function AdminManage() {
                                     <div className="h-6 w-6">
                                         <img src="/images/icons/veg.svg" />
                                     </div>
-                                    <a href="javascript:void(0)" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</a>
+                                    <Link href="/products" className="inline-flex items-center justify-center group gap-2 border border-primary text-primary text-sm font-medium rounded-full py-1.5 px-3 transition-all duration-300 hover:bg-primary hover:text-white"><i data-lucide="pencil" className="h-4 w-4 text-primary fill-primary group-hover:text-white group-hover:fill-white"></i> Edit</Link>
                                 </div>
                                 <div className="flex items-center justify-between gap-6">
                                     <h5 className="text-lg text-default-900 font-semibold">Noodles Bowl</h5>
@@ -218,7 +219,7 @@ export default function AdminManage() {
                             </div>
 
                             <div className="text-end">
-                                <a href="javascript:void(0)" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Add Menu items</a>
+                                <Link href="/products" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Add Menu items</Link>
                             </div>
                         </div>
                     </div>
@@ -267,7 +268,7 @@ export default function AdminManage() {
                                 <img src="/images/icons/combo.svg" className="max-w-full h-full" />
                             </div>
                             <h4 className="text-xl text-default-950 font-semibold mb-6">Find best food in <br /> your town</h4>
-                            <a href="javascript:void(0)" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Add Location</a>
+                            <Link href="/products" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Add Location</Link>
                         </div>
                     </div>
 
@@ -288,7 +289,7 @@ export default function AdminManage() {
                             <div className="flex items-center justify-center mb-6">
                                 <img src="/images/other/filter-offer-dish-2.png" className="w-60 h-full rounded-lg" />
                             </div>
-                            <a href="javascript:void(0)" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-3 text-center text-base font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Order Now</a>
+                            <Link href="/products" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-3 text-center text-base font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Order Now</Link>
                         </div>
                     </div>
                 </div>

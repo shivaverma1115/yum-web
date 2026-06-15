@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function SellersList() {
@@ -7,10 +8,10 @@ export default function SellersList() {
                 <div className="flex flex-wrap justify-between items-center gap-6">
                     <h4 className="text-xl font-medium text-default-900">Sellers</h4>
 
-                    <a href="admin/sellers/add" className="px-6 py-2.5 inline-flex text-white text-sm rounded-md bg-primary ">
+                    <Link href="admin/sellers/add" className="px-6 py-2.5 inline-flex text-white text-sm rounded-md bg-primary ">
                         <i data-lucide="plus" className="w-5 h-5 inline-flex align-middle me-2"></i>
                         Add a New Sellers
-                    </a>
+                    </Link>
                 </div>
             </div>
 
@@ -32,10 +33,10 @@ export default function SellersList() {
 
                             <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5 dark:bg-default-50">
                                 <ul className="flex flex-col gap-1">
-                                    <li><a className="flex items-center gap-3 font-normal py-2 px-3 transition-all text-default-700 bg-default-100 rounded" href="javascript:void(0)">All</a></li>
-                                    <li><a className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Refund</a></li>
-                                    <li><a className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Paid</a></li>
-                                    <li><a className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Cancel</a></li>
+                                    <li><Link className="flex items-center gap-3 font-normal py-2 px-3 transition-all text-default-700 bg-default-100 rounded" href="javascript:void(0)">All</Link></li>
+                                    <li><Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Refund</Link></li>
+                                    <li><Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Paid</Link></li>
+                                    <li><Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Cancel</Link></li>
                                 </ul>
                             </div>
                         </div>
@@ -53,9 +54,9 @@ export default function SellersList() {
 
                             <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5 dark:bg-default-50">
                                 <ul className="flex flex-col gap-1">
-                                    <li><a className="flex items-center gap-3 font-normal py-2 px-3 transition-all text-default-700 bg-default-100 rounded" href="javascript:void(0)">All</a></li>
-                                    <li><a className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Active</a></li>
-                                    <li><a className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Block</a></li>
+                                    <li><Link className="flex items-center gap-3 font-normal py-2 px-3 transition-all text-default-700 bg-default-100 rounded" href="javascript:void(0)">All</Link></li>
+                                    <li><Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Active</Link></li>
+                                    <li><Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="javascript:void(0)">Block</Link></li>
                                 </ul>
                             </div>
                         </div>

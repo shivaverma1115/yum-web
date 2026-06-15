@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import React from 'react'
 
 export default function AdminDashboard() {
@@ -11,9 +12,9 @@ export default function AdminDashboard() {
                             <h5 className="text-2xl text-white uppercase mb-2">Up to</h5>
                             <h4 className="text-2xl text-primary font-semibold mb-4">50% OFF</h4>
                             <p className="text-base text-white mb-6 lg:max-w-lg">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt. </p>
-                            <a href="javascript:void(0)" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">
+                            <Link href="/products" className="inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">
                                 Order Now
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -53,61 +54,61 @@ export default function AdminDashboard() {
                 <div className="pb-10">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
                         <h3 className="text-xl font-semibold text-default-950">Category</h3>
-                        <a href="products" className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:text-primary-500">View all <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                        <Link href="/products" className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:text-primary-500">View all <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                     </div>
 
                     <div className="grid lg:grid-cols-6 grid-cols-3 gap-6">
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/bubble-tea.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Beverage</h5>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/bakery.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Bakery</h5>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/pizza.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Pizza</h5>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/burger.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Burger</h5>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/seafood.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Seafood</h5>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="text-center space-y-4">
+                        <Link href="/products" className="text-center space-y-4">
                             <div className="">
                                 <img src="/images/icons/category/gelato.svg" className="mx-auto max-w-full h-full" />
                             </div>
                             <h5 className="text-lg text-default-600">Desserts</h5>
-                        </a>
+                        </Link>
                     </div>
                 </div>
 
                 <div className="pb-10">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
                         <h3 className="text-xl font-semibold text-default-950">Best Selling Products</h3>
-                        <a href="products" className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:text-primary-500">View all <i data-lucide="chevron-right" className="h-5 w-5"></i></a>
+                        <Link href="/products" className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:text-primary-500">View all <i data-lucide="chevron-right" className="h-5 w-5"></i></Link>
                     </div>
                     <div className="grid lg:grid-cols-4 grid-cols-2 gap-6">
-                        <a href="products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
+                        <Link href="/products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
                             <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
                                 <div className="mb-4 mx-auto">
                                     <img src="/images/dishes/veg-rice.png" className="w-full h-full" />
@@ -118,9 +119,9 @@ export default function AdminDashboard() {
                                     <h6 className="font-semibold text-lg text-default-500">$25.14</h6>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
+                        <Link href="/products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
                             <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
                                 <div className="mb-4 mx-auto">
                                     <img src="/images/dishes/noodles.png" className="w-full h-full" />
@@ -131,9 +132,9 @@ export default function AdminDashboard() {
                                     <h6 className="font-semibold text-lg text-default-500">$15.24</h6>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
+                        <Link href="/products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
                             <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
                                 <div className="mb-4 mx-auto">
                                     <img src="/images/dishes/red-velvet-pastry.png" className="w-full h-full" />
@@ -144,9 +145,9 @@ export default function AdminDashboard() {
                                     <h6 className="font-semibold text-lg text-default-500">$25.14</h6>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
 
-                        <a href="products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
+                        <Link href="/products" className="border border-default-200 rounded-lg p-4 overflow-hidden hover:border-primary transition-all duration-300">
                             <div className="relative rounded-lg overflow-hidden divide-y divide-default-200">
                                 <div className="mb-4 mx-auto">
                                     <img src="/images/dishes/garlic-herb-bread.png" className="w-full h-full" />
@@ -157,7 +158,7 @@ export default function AdminDashboard() {
                                     <h6 className="font-semibold text-lg text-default-500">$25.14</h6>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -223,7 +224,7 @@ export default function AdminDashboard() {
                                         <div className="flex items-center gap-4">
                                             <img src="/images/dishes/small/pizza-2.png" className="h-16 w-16" />
                                             <div className="">
-                                                <a href="products" className="text-base font-medium text-default-800">Pepperoni Pizza</a>
+                                                <Link href="/products" className="text-base font-medium text-default-800">Pepperoni Pizza</Link>
                                                 <p className="text-sm font-medium text-default-800">x1</p>
                                             </div>
                                         </div>
@@ -234,7 +235,7 @@ export default function AdminDashboard() {
                                         <div className="flex items-center gap-4">
                                             <img src="/images/dishes/small/burger.png" className="h-16 w-16" />
                                             <div className="">
-                                                <a href="products" className="text-base font-medium text-default-800">Cheese Burger</a>
+                                                <Link href="/products" className="text-base font-medium text-default-800">Cheese Burger</Link>
                                                 <p className="text-sm font-medium text-default-800">x2</p>
                                             </div>
                                         </div>
@@ -245,7 +246,7 @@ export default function AdminDashboard() {
                                         <div className="flex items-center gap-4">
                                             <img src="/images/dishes/small/pizza-2.png" className="h-16 w-16" />
                                             <div className="">
-                                                <a href="products" className="text-base font-medium text-default-800">Vegan Pizza</a>
+                                                <Link href="/products" className="text-base font-medium text-default-800">Vegan Pizza</Link>
                                                 <p className="text-sm font-medium text-default-800">x1</p>
                                             </div>
                                         </div>
@@ -267,8 +268,8 @@ export default function AdminDashboard() {
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <a href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Checkout</a>
-                                <a href="javascript:void(0)" className="flex items-center justify-center gap-2 rounded-full border border-primary px-10 py-4 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white">Have a coupon code?</a>
+                                <Link href="/products" className="flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-10 py-4 text-center text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500">Checkout</Link>
+                                <Link href="/products" className="flex items-center justify-center gap-2 rounded-full border border-primary px-10 py-4 text-center text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:border-primary hover:bg-primary hover:text-white">Have a coupon code?</Link>
                             </div>
                         </div>
                     </div>

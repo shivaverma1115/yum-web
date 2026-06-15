@@ -10,7 +10,6 @@ import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { formatCurrency } from "@/lib/constants";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
@@ -18,6 +17,7 @@ import { getUserDisplayName } from "@/lib/user/display-name";
 import type { CheckoutFormValues } from "@/types/checkout";
 import { FulfillmentType, OnlinePaymentPhase } from "@/types/order";
 import type { IUser } from "@/types/user";
+import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200";
 

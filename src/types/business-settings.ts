@@ -34,18 +34,24 @@ export type BusinessSettingsSupport = {
   phone: string;
 };
 
+export type BusinessSettingsSocial = {
+  instagram: string;
+  twitter: string;
+};
+
 export type BusinessSettings = {
   general: BusinessSettingsGeneral;
   order: BusinessSettingsOrder;
   phone_verification: BusinessSettingsPhoneVerification;
   payment: BusinessSettingsPayment;
   support: BusinessSettingsSupport;
+  social: BusinessSettingsSocial;
 };
 
 export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   general: {
     site_name: "Yum",
-    site_url: "https://yum.com",
+    site_url: "https://yum-web.vercel.app",
     currency: "INR",
     currency_symbol: "₹",
   },
@@ -69,5 +75,9 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   support: {
     email: "support@yum.com",
     phone: "9876543210",
+  },
+  social: {
+    instagram: "",
+    twitter: "",
   },
 };
