@@ -9,7 +9,6 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Webhook received");
     const rawBody = await request.text();
 
     const signature = request.headers.get("x-razorpay-signature")?.trim() ?? "";

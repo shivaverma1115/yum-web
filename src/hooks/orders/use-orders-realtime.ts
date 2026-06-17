@@ -66,9 +66,6 @@ export function useOrdersRealtime({
       if (cancelled || generation !== subscribeGeneration) return;
 
       if (!session) {
-        console.log("[orders realtime] skipped subscribe — no auth session", {
-          scope: scopeKey,
-        });
         teardownChannel();
         return;
       }
@@ -80,24 +77,17 @@ export function useOrdersRealtime({
         .on("postgres_changes", ORDERS_UPDATE_CONFIG, (payload) => {
           const updated = payload.new as IOrder;
 
-          console.log("[orders realtime] trigger status: UPDATE received", {
-            scope: scopeKey,
-            orderId: updated?.id,
-            status: updated?.status,
-            eventType: payload.eventType,
-          });
-
           if (updated?.id) {
             onOrderUpdatedRef.current(updated);
           }
         })
-        .subscribe((status, err) => {
-          console.log("[orders realtime] subscription status:", status, {
-            scope: scopeKey,
-            channel: channelName,
-            error: err?.message ?? null,
-          });
-        });
+        // .subscribe((status, err) => {
+        //   console.log("[orders realtime] subscription status:", status, {
+        //     scope: scopeKey,
+        //     channel: channelName,
+        //     error: err?.message ?? null,
+        //   });
+        // });
     };
 
     void subscribe();
@@ -106,11 +96,6 @@ export function useOrdersRealtime({
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-
-      console.log("[orders realtime] auth state changed:", event, {
-        scope: scopeKey,
-        hasSession: Boolean(session),
-      });
 
       void subscribe();
     });

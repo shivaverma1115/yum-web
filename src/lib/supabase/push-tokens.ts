@@ -1,48 +1,103 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const PUSH_PLATFORMS = ["web", "ios", "android"] as const;
+export type PushPlatform = (typeof PUSH_PLATFORMS)[number];
+
 export type UserPushToken = {
   id: string;
   user_id: string;
   token: string;
-  platform: string;
+  platform: PushPlatform;
   enabled: boolean;
   created_at: string;
   updated_at: string;
 };
 
-export async function listEnabledPushTokensForUser(
+export type PushTokenRecord = {
+  token: string;
+  platform: PushPlatform;
+};
+
+export function normalizePushPlatform(
+  value?: string | null,
+): PushPlatform | null {
+  const normalized = value?.trim().toLowerCase();
+  if (
+    normalized === "web" ||
+    normalized === "ios" ||
+    normalized === "android"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+export async function listEnabledPushTokenRecordsForUser(
   supabase: SupabaseClient,
   userId: string,
-): Promise<string[]> {
-  const { data, error } = await supabase
+  platform?: PushPlatform,
+): Promise<PushTokenRecord[]> {
+  let query = supabase
     .from("user_push_tokens")
-    .select("token")
+    .select("token, platform")
     .eq("user_id", userId)
     .eq("enabled", true);
+
+  if (platform) {
+    query = query.eq("platform", platform);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [];
 
   return data
-    .map((row) => row.token?.trim())
-    .filter((token): token is string => Boolean(token));
+    .map((row) => {
+      const token = row.token?.trim();
+      const normalizedPlatform = normalizePushPlatform(row.platform);
+      if (!token || !normalizedPlatform) return null;
+      return { token, platform: normalizedPlatform };
+    })
+    .filter((record): record is PushTokenRecord => record !== null);
+}
+
+export async function listEnabledPushTokensForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  platform?: PushPlatform,
+): Promise<string[]> {
+  const records = await listEnabledPushTokenRecordsForUser(
+    supabase,
+    userId,
+    platform,
+  );
+  return records.map((record) => record.token);
 }
 
 export async function upsertPushTokenForUser(
   supabase: SupabaseClient,
   userId: string,
   token: string,
-  platform = "web",
+  platform: PushPlatform = "web",
 ): Promise<{ success: true } | { success: false; message: string }> {
   const trimmed = token.trim();
   if (!trimmed) {
     return { success: false, message: "Push token is required." };
   }
 
+  const normalizedPlatform = normalizePushPlatform(platform);
+  if (!normalizedPlatform) {
+    return {
+      success: false,
+      message: "Platform must be one of: web, ios, android.",
+    };
+  }
+
   const { error } = await supabase.from("user_push_tokens").upsert(
     {
       user_id: userId,
       token: trimmed,
-      platform,
+      platform: normalizedPlatform,
       enabled: true,
     },
     { onConflict: "user_id,token" },

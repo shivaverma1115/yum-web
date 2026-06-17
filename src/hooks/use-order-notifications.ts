@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import {
   deleteFcmToken,
+  getWebPushTokenIfGranted,
   isBrowserPushSupported,
   requestFcmToken,
+  subscribeForegroundMessages,
 } from "@/lib/firebase/client";
 import { isFirebaseClientConfigured } from "@/lib/firebase/config";
 
@@ -42,6 +44,26 @@ export function useOrderNotifications() {
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
     "default",
   );
+  const syncedTokenRef = useRef<string | null>(null);
+
+  const registerTokenWithServer = useCallback(async (token: string) => {
+    const response = await fetch("/api/account/push-tokens", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, platform: "web" }),
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      message?: string;
+    };
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message ?? "Failed to register push token.");
+    }
+
+    return data;
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -78,6 +100,58 @@ export function useOrderNotifications() {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (
+      loading ||
+      !isBrowserPushSupported() ||
+      !isFirebaseClientConfigured() ||
+      permission !== "granted" ||
+      !state.enabled
+    ) {
+      return;
+    }
+
+    void (async () => {
+      const tokenResult = await getWebPushTokenIfGranted();
+      if (!tokenResult.ok) return;
+
+      if (syncedTokenRef.current === tokenResult.token) return;
+
+      try {
+        await registerTokenWithServer(tokenResult.token);
+        syncedTokenRef.current = tokenResult.token;
+        setCurrentToken(tokenResult.token);
+      } catch (error) {
+        console.warn("[fcm] token re-sync failed", error);
+      }
+    })();
+  }, [loading, permission, registerTokenWithServer, state.enabled]);
+
+  useEffect(() => {
+    if (
+      !isBrowserPushSupported() ||
+      !isFirebaseClientConfigured() ||
+      permission !== "granted"
+    ) {
+      return;
+    }
+
+    let unsubscribe: () => void = () => {};
+
+    void subscribeForegroundMessages((payload) => {
+      const text = payload.body
+        ? `${payload.title}: ${payload.body}`
+        : payload.title;
+      toast.info(text, { autoClose: 8000 });
+    }).then((cleanup) => {
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [permission]);
+
   const enable = useCallback(async () => {
     if (!isBrowserPushSupported()) {
       toast.error("This browser does not support push notifications.");
@@ -107,25 +181,11 @@ export function useOrderNotifications() {
       }
 
       const token = tokenResult.token;
+      await registerTokenWithServer(token);
 
-      const response = await fetch("/api/account/push-tokens", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, platform: "web" }),
-      });
-      const data = (await response.json().catch(() => ({}))) as {
-        success?: boolean;
-        message?: string;
-      };
-
-      if (!response.ok || !data.success) {
-        toast.error(data.message ?? "Failed to enable notifications.");
-        return;
-      }
-
+      syncedTokenRef.current = token;
       setCurrentToken(token);
-      toast.success(data.message ?? "Order notifications enabled.");
+      toast.success("Order notifications enabled.");
       await refresh();
     } catch (error) {
       toast.error(
@@ -136,7 +196,7 @@ export function useOrderNotifications() {
     } finally {
       setBusy(false);
     }
-  }, [refresh]);
+  }, [refresh, registerTokenWithServer]);
 
   const disable = useCallback(async () => {
     if (!currentToken && !state.enabled) {
@@ -160,6 +220,7 @@ export function useOrderNotifications() {
         });
 
         await deleteFcmToken();
+        syncedTokenRef.current = null;
         setCurrentToken(null);
       }
 
@@ -206,7 +267,7 @@ export function useOrderNotifications() {
 
       toast.success(
         data.message ??
-          "Test notification sent. Minimize this tab and check your OS tray.",
+          "Test notification sent. Check this page or your OS notification tray.",
       );
     } catch (error) {
       toast.error(

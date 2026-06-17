@@ -10,6 +10,7 @@ import { getFirebasePushDiagnostics } from "@/lib/notifications/send-push";
 import {
   countEnabledPushTokensForUser,
   disablePushTokenForUser,
+  normalizePushPlatform,
   upsertPushTokenForUser,
 } from "@/lib/supabase/push-tokens";
 import { logError } from "@/lib/utils/logError";
@@ -98,11 +99,26 @@ export async function POST(request: NextRequest) {
       platform?: string;
     };
 
+    const requestedPlatform = body.platform?.trim();
+    const platform = requestedPlatform
+      ? normalizePushPlatform(requestedPlatform)
+      : "web";
+
+    if (requestedPlatform && !platform) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Platform must be one of: web, ios, android.",
+        },
+        { status: 400 },
+      );
+    }
+
     const result = await upsertPushTokenForUser(
       auth.supabase,
       auth.user.id,
       body.token ?? "",
-      body.platform?.trim() || "web",
+      platform ?? "web",
     );
 
     if (!result.success) {

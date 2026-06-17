@@ -2,9 +2,8 @@ import {
   formatOrderIdShort,
   getOrderStatusLabel,
 } from "@/components/admin/orders/order-details-shared";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { listEnabledPushTokensForUser } from "@/lib/supabase/push-tokens";
-import { sendPushToTokens } from "@/lib/notifications/send-push";
+import { sendPushToUser } from "@/lib/notifications/send-push";
+import { logError } from "@/lib/utils/logError";
 import type { IOrder, PaymentStatus } from "@/types/order";
 
 export type OrderNotificationKind = "status" | "payment";
@@ -62,11 +61,7 @@ export async function sendOrderUpdateNotification(
   const message = buildOrderNotificationMessage(payload);
   if (!message) return;
 
-  const admin = createAdminClient();
-  const tokens = await listEnabledPushTokensForUser(admin, userId);
-  if (tokens.length === 0) return;
-
-  await sendPushToTokens(tokens, {
+  const result = await sendPushToUser(userId, {
     title: message.title,
     body: message.body,
     link: "/user/orders",
@@ -78,10 +73,42 @@ export async function sendOrderUpdateNotification(
       url: "/user/orders",
     },
   });
+
+  if (!result.success && result.skippedReason) {
+    console.info("[fcm] order-update skipped", {
+      userId,
+      orderId: payload.order.id,
+      kind: payload.kind,
+      reason: result.skippedReason,
+    });
+    return;
+  }
+
+  if (result.failureCount > 0) {
+    logError(new Error("Order push notification partially failed"), {
+      context: "Order push notification",
+      userId,
+      meta: {
+        orderId: payload.order.id,
+        kind: payload.kind,
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        errors: result.errors,
+      },
+    });
+  }
 }
 
 export function notifyOrderUpdateInBackground(
   payload: OrderNotificationPayload,
 ): void {
-  void sendOrderUpdateNotification(payload);
+  void sendOrderUpdateNotification(payload).catch((error) => {
+    logError(error, {
+      context: "Order push notification background",
+      meta: {
+        orderId: payload.order.id,
+        kind: payload.kind,
+      },
+    });
+  });
 }
