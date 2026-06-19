@@ -25,10 +25,14 @@ const STOREFRONT_ROUTES = [
 
 const LOGIN_PATH = "/login";
 
+/** Crawlers must read these without a session (WhatsApp/Meta, Google, etc.). */
+const CRAWLER_PUBLIC_PATHS = ["/robots.txt", "/sitemap.xml"] as const;
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
+    isCrawlerPublicPath(pathname) ||
     isApiRoute(pathname) ||
     pathname.startsWith("/auth/callback") ||
     pathname.startsWith("/auth/confirm")
@@ -104,6 +108,10 @@ function isPublicRoute(pathname: string) {
 
 function isApiRoute(pathname: string) {
   return pathname.startsWith("/api/");
+}
+
+function isCrawlerPublicPath(pathname: string): boolean {
+  return (CRAWLER_PUBLIC_PATHS as readonly string[]).includes(pathname);
 }
 
 function redirectWithCookies(

@@ -276,7 +276,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                         key={product?.id ?? "new-product"}
                         variant="gallery"
                         multiple
-                        aspect={1}
+                        aspect={4 / 3}
                         required
                         disabled={isSubmitting}
                         initialExistingUrls={initialProductImages}

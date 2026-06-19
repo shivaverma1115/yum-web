@@ -12,6 +12,7 @@ import AuthCallbackAlerts from "@/components/auth/AuthCallbackAlerts";
 import AuthCodeExchange from "@/components/auth/AuthCodeExchange";
 import ThemeInit from "@/components/layout/ThemeInit";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import FloatingWhatsAppWidget from "@/components/layout/FloatingWhatsAppWidget";
 import type { BusinessSettings } from "@/types/business-settings";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -39,6 +40,7 @@ export default function AppProviders({
           </CartProvider>
           </OtpModalProvider>
         </ContextApiProvider>
+        <FloatingWhatsAppWidget />
       </BusinessSettingsProvider>
       <ThemeToggle />
       <ToastContainer

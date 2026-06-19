@@ -47,12 +47,14 @@ export function buildPageMetadata(input: BuildPageMetadataInput): Metadata {
       type: "website",
       siteName,
       url: canonicalUrl,
+      locale: "en_IN",
       images: [
         {
           url: ogImageUrl,
           width: PRODUCT_OG_SIZE.width,
           height: PRODUCT_OG_SIZE.height,
           alt: imageAlt,
+          type: "image/png",
         },
       ],
     },
@@ -62,7 +64,12 @@ export function buildPageMetadata(input: BuildPageMetadataInput): Metadata {
         ? input.title
         : `${input.title} | ${siteName}`,
       description: input.description,
-      images: [ogImageUrl],
+      images: [
+        {
+          url: ogImageUrl,
+          alt: imageAlt,
+        },
+      ],
     },
   };
 }

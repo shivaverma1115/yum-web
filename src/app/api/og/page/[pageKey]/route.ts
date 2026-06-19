@@ -1,4 +1,5 @@
 import { createPageOgImageResponse } from "@/lib/seo/create-page-og-image";
+import { withOgImageCacheHeaders } from "@/lib/seo/og-image-response";
 import {
   STOREFRONT_SEO_PAGES,
   type StorefrontSeoPageKey,
@@ -25,7 +26,8 @@ export async function GET(_request: Request, { params }: OgPageRouteProps) {
   }
 
   try {
-    return await createPageOgImageResponse(pageKey);
+    const image = await createPageOgImageResponse(pageKey);
+    return withOgImageCacheHeaders(image);
   } catch (error) {
     console.error(`[og/page/${pageKey}]`, error);
     return NextResponse.json(

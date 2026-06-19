@@ -1,4 +1,5 @@
 import { createProductOgImageResponse } from "@/lib/seo/create-product-og-image";
+import { withOgImageCacheHeaders } from "@/lib/seo/og-image-response";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -13,7 +14,8 @@ export async function GET(_request: Request, { params }: OgProductRouteProps) {
   const { slug } = await params;
 
   try {
-    return await createProductOgImageResponse(slug);
+    const image = await createProductOgImageResponse(slug);
+    return withOgImageCacheHeaders(image);
   } catch (error) {
     console.error(`[og/product/${slug}]`, error);
     return NextResponse.json(
