@@ -14,7 +14,6 @@ import {
   type RegisterOptions,
 } from "react-hook-form";
 import PhoneInput, { type PhoneInputVariant } from "@/components/ui/PhoneInput";
-import PhoneOtpModal from "@/components/common/phone-verification/PhoneOtpModal";
 import { usePhoneVerification } from "@/components/common/phone-verification/usePhoneVerification";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
 
@@ -96,12 +95,7 @@ function PhoneVerificationField(
     verification: ReturnType<typeof usePhoneVerification>;
   },
 ) {
-  const {
-    isVerified,
-    modalOpen,
-    closeModal,
-    markVerified,
-  } = verification;
+  const { isVerified } = verification;
 
   useEffect(() => {
     onVerifiedChange?.(requireVerification ? isVerified : true);
@@ -145,15 +139,6 @@ function PhoneVerificationField(
           <span className="block text-sm text-red-500">{errorMessage}</span>
         ) : null}
       </div>
-
-      {requireVerification ? (
-        <PhoneOtpModal
-          open={modalOpen}
-          phone={phone}
-          onClose={closeModal}
-          onVerified={markVerified}
-        />
-      ) : null}
     </>
   );
 }

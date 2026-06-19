@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import {
+  assertPaymentStatusTransition,
+  normalizePaymentStatus,
+} from "@/lib/orders/payment-transitions";
 import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
 import {
   failOrderPaymentWithSupabase,
@@ -50,10 +54,20 @@ export async function handleRazorpayWebhook(
 
   const paymentEntity = body.payload?.payment?.entity;
   const razorpayPaymentId = paymentEntity?.id?.trim();
+  const currentStatus = normalizePaymentStatus(order.payment_status);
 
   if (event === "payment.captured" || event === "order.paid") {
-    if (order.payment_status === "paid") {
+    if (currentStatus === "paid") {
       return { success: true, handled: true, order };
+    }
+
+    const transition = assertPaymentStatusTransition(
+      "webhook",
+      currentStatus,
+      "paid",
+    );
+    if (!transition.ok) {
+      return { success: false, message: transition.message, status: 400 };
     }
 
     const { data: updated, error } = await supabase
@@ -84,9 +98,12 @@ export async function handleRazorpayWebhook(
   }
 
   if (event === "payment.failed") {
-    const result = await failOrderPaymentWithSupabase(supabase, order.id, {
-      razorpay_payment_id: razorpayPaymentId,
-    });
+    const result = await failOrderPaymentWithSupabase(
+      supabase,
+      order.id,
+      { razorpay_payment_id: razorpayPaymentId },
+      "webhook",
+    );
 
     if (!result.success) {
       return {
@@ -100,7 +117,16 @@ export async function handleRazorpayWebhook(
   }
 
   if (event === "payment.pending" || event === "payment.authorized") {
-    if (order.payment_status === "paid") {
+    if (currentStatus === "paid") {
+      return { success: true, handled: true, order };
+    }
+
+    const transition = assertPaymentStatusTransition(
+      "webhook",
+      currentStatus,
+      "pending",
+    );
+    if (!transition.ok) {
       return { success: true, handled: true, order };
     }
 

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { useOtpModal } from "@/context-api/otp-modal-context";
+import { createPhoneOtpModalSession } from "@/lib/otp/modal-options";
 import { sendPhoneOtp } from "@/lib/phone-otp/client";
 import { phonesMatch } from "@/lib/phone-otp/phone";
 
@@ -9,10 +11,10 @@ export function usePhoneVerification(
   phone: string,
   trustedPhone?: string | null,
 ) {
+  const { openOtpModal } = useOtpModal();
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(() =>
     trustedPhone && phonesMatch(trustedPhone, phone) ? trustedPhone : null,
   );
-  const [modalOpen, setModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   const isVerified = Boolean(
@@ -29,9 +31,6 @@ export function usePhoneVerification(
       setVerifiedPhone(null);
     }
   }, [phone, trustedPhone, verifiedPhone]);
-
-  const openModal = useCallback(() => setModalOpen(true), []);
-  const closeModal = useCallback(() => setModalOpen(false), []);
 
   const markVerified = useCallback((nextPhone: string) => {
     setVerifiedPhone(nextPhone);
@@ -50,24 +49,27 @@ export function usePhoneVerification(
         toast.error(result.message);
         return false;
       }
+
       toast.success(result.message, { autoClose: 8000 });
-      setModalOpen(true);
-      return true;
+      const verified = await openOtpModal(createPhoneOtpModalSession(phone));
+      if (verified) {
+        markVerified(phone);
+        return true;
+      }
+
+      return false;
     } catch {
       toast.error("Could not send OTP. Please try again.");
       return false;
     } finally {
       setIsSending(false);
     }
-  }, [phone]);
+  }, [markVerified, openOtpModal, phone]);
 
   return {
     isVerified,
     verifiedPhone,
-    modalOpen,
     isSending,
-    openModal,
-    closeModal,
     sendOtp,
     markVerified,
   };

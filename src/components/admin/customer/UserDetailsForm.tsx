@@ -8,13 +8,14 @@ import { UserRole, type IUser } from "@/types/user";
 import { Info, Save, X } from "lucide-react";
 import { useContextApi } from "@/context-api/use-context";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
-import EmailOtpModal from "@/components/common/email-verification/EmailOtpModal";
 import {
   PhoneVerification,
   type PhoneVerificationHandle,
 } from "@/components/common/phone-verification";
+import { useOtpModal } from "@/context-api/otp-modal-context";
 import { sendEmailOtp } from "@/lib/email-otp/client";
 import { isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
+import { createEmailOtpModalSession } from "@/lib/otp/modal-options";
 import {
   profileEmailNeedsVerification,
   profilePhoneNeedsVerification,
@@ -86,9 +87,9 @@ export default function UserDetailsForm({
     isSelfMode && isOtpRequiredFor(businessSettings, "profile_update");
 
   const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
+  const { openOtpModal } = useOtpModal();
   const [emailVerified, setEmailVerified] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
   const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false);
 
@@ -154,7 +155,10 @@ export default function UserDetailsForm({
       if (result.data.debugOtp) {
         toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
       }
-      setEmailModalOpen(true);
+      const verified = await openOtpModal(createEmailOtpModalSession(value));
+      if (verified) {
+        setEmailVerified(true);
+      }
     } catch {
       toast.error("Could not send OTP. Please try again.");
     } finally {
@@ -392,15 +396,6 @@ export default function UserDetailsForm({
               </div>
             ) : null}
           </div>
-
-          {isSelfMode ? (
-            <EmailOtpModal
-              open={emailModalOpen}
-              email={normalizeEmail(email)}
-              onClose={() => setEmailModalOpen(false)}
-              onVerified={() => setEmailVerified(true)}
-            />
-          ) : null}
 
           {!isSelfMode ? (
             <div>

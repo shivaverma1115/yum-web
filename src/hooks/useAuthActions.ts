@@ -9,6 +9,7 @@ import {
   loginWithEmailClient,
   registerWithEmailClient,
   sendAuthPhoneOtpClient,
+  signInWithGoogleClient,
   verifyAuthPhoneOtpClient,
 } from "@/lib/auth/client";
 import type { IUser } from "@/types/user";
@@ -117,11 +118,24 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
     [finishAuth],
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    const nextPath = options.redirectTo ?? "/home";
+    const result = await signInWithGoogleClient(nextPath);
+
+    if (!result.success) {
+      toast.error(result.message);
+      return false;
+    }
+
+    return true;
+  }, [options.redirectTo]);
+
   return {
     loginWithEmail,
     registerWithEmail,
     sendAuthPhoneOtp,
     verifyAuthPhoneOtp,
+    signInWithGoogle,
     finishAuth,
   };
 }

@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BadgeColor } from "@/lib/badge-colors";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import {
+  assertPaymentStatusTransition,
+  normalizePaymentStatus,
+  type PaymentTransitionActor,
+} from "@/lib/orders/payment-transitions";
 import { verifyRazorpayPaymentSignature } from "@/lib/razorpay/server";
 import type {
   IOrder,
@@ -169,6 +174,7 @@ export async function completeOrderPaymentWithSupabase(
   supabase: SupabaseClient,
   orderId: string,
   payload: CompleteOrderPaymentPayload,
+  actor: PaymentTransitionActor = "client",
 ): Promise<CreateOrderResult> {
   const { data: order, error: fetchError } = await supabase
     .from("orders")
@@ -186,6 +192,12 @@ export async function completeOrderPaymentWithSupabase(
 
   if (order.payment_status === "paid") {
     return { success: true, order: order as IOrder, items: [] };
+  }
+
+  const currentStatus = normalizePaymentStatus(order.payment_status);
+  const transition = assertPaymentStatusTransition(actor, currentStatus, "paid");
+  if (!transition.ok) {
+    return { success: false, message: transition.message, status: 400 };
   }
 
   const razorpayOrderId =
@@ -246,6 +258,7 @@ export async function failOrderPaymentWithSupabase(
   supabase: SupabaseClient,
   orderId: string,
   payload?: FailOrderPaymentPayload,
+  actor: PaymentTransitionActor = "client",
 ): Promise<CreateOrderResult> {
   const { data: order, error: fetchError } = await supabase
     .from("orders")
@@ -257,8 +270,18 @@ export async function failOrderPaymentWithSupabase(
     return { success: false, message: "Order not found.", status: 404 };
   }
 
-  if (order.payment_method !== "online" || order.payment_status === "paid") {
+  if (order.payment_method !== "online") {
     return { success: true, order: order as IOrder, items: [] };
+  }
+
+  const currentStatus = normalizePaymentStatus(order.payment_status);
+  if (currentStatus === "paid") {
+    return { success: true, order: order as IOrder, items: [] };
+  }
+
+  const transition = assertPaymentStatusTransition(actor, currentStatus, "failed");
+  if (!transition.ok) {
+    return { success: false, message: transition.message, status: 400 };
   }
 
   const paymentId = payload?.razorpay_payment_id?.trim();
@@ -327,6 +350,12 @@ export async function prepareOrderPaymentRetryWithSupabase(
       message: "This order is already paid.",
       status: 400,
     };
+  }
+
+  const currentStatus = normalizePaymentStatus(order.payment_status);
+  const transition = assertPaymentStatusTransition("client", currentStatus, "pending");
+  if (!transition.ok) {
+    return { success: false, message: transition.message, status: 400 };
   }
 
   const { data: updated, error: updateError } = await supabase

@@ -6,6 +6,7 @@ import { ToastContainer } from "react-toastify";
 import { BusinessSettingsProvider } from "@/context-api/business-settings-context";
 import { CartProvider } from "@/context-api/cart-context";
 import { ContextApiProvider } from "@/context-api/use-context";
+import { OtpModalProvider } from "@/context-api/otp-modal-context";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import AuthCallbackAlerts from "@/components/auth/AuthCallbackAlerts";
 import AuthCodeExchange from "@/components/auth/AuthCodeExchange";
@@ -27,6 +28,7 @@ export default function AppProviders({
     <ThemeProvider>
       <BusinessSettingsProvider initialSettings={initialBusinessSettings}>
         <ContextApiProvider>
+          <OtpModalProvider>
           <CartProvider>
           <Suspense fallback={null}>
             <AuthCodeExchange />
@@ -35,6 +37,7 @@ export default function AppProviders({
           <ThemeInit />
           {children}
           </CartProvider>
+          </OtpModalProvider>
         </ContextApiProvider>
       </BusinessSettingsProvider>
       <ThemeToggle />

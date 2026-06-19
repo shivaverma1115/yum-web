@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { assertOrderAccess } from "@/lib/auth/order-access";
+import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,6 +27,15 @@ function jsonNoCache(
 
 export async function GET(_: Request, context: RouteContext) {
   try {
+    const auth = await requireAuth();
+
+    if (!auth.authorized) {
+      return jsonNoCache(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
+
     const { orderId } = await context.params;
     const adminClient = createAdminClient();
     const result = await getOrderByIdWithSupabase(adminClient, orderId);
@@ -33,6 +44,14 @@ export async function GET(_: Request, context: RouteContext) {
       return jsonNoCache(
         { success: false, message: result.message },
         { status: result.status },
+      );
+    }
+
+    const access = assertOrderAccess(auth, result.order.user_id);
+    if (!access.allowed) {
+      return jsonNoCache(
+        { success: false, message: access.message },
+        { status: access.status },
       );
     }
 

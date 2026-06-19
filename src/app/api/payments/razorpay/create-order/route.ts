@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import {
@@ -10,6 +11,15 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth();
+
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        { status: auth.status },
+      );
+    }
+
     const body = (await request.json().catch(() => ({}))) as { amount?: number };
     const amount = Number(body.amount);
 

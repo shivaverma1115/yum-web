@@ -1,4 +1,5 @@
 import type { IUser } from "@/types/user";
+import { createClient } from "@/lib/supabase/client";
 
 type ApiSuccess<T> = {
   success: true;
@@ -90,4 +91,29 @@ export async function verifyAuthPhoneOtpClient(
   });
 
   return parseApiResponse<{ user: IUser; isNewUser: boolean }>(response);
+}
+
+export async function signInWithGoogleClient(
+  nextPath = "/home",
+): Promise<{ success: true } | { success: false; message: string }> {
+  const supabase = createClient();
+  const redirectUrl = new URL("/api/auth/callback", window.location.origin);
+  redirectUrl.searchParams.set("next", nextPath);
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectUrl.toString(),
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error) {
+    return { success: false, message: error.message };
+  }
+
+  return { success: true };
 }

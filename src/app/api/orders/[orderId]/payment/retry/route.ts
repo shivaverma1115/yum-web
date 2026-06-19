@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertOrderOwner } from "@/lib/auth/order-access";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
@@ -38,10 +39,11 @@ export async function POST(_: Request, context: RouteContext) {
       );
     }
 
-    if (orderResult.order.user_id !== auth.user.id) {
+    const access = assertOrderOwner(auth, orderResult.order.user_id);
+    if (!access.allowed) {
       return NextResponse.json(
-        { success: false, message: "You do not have access to this order." },
-        { status: 403 },
+        { success: false, message: access.message },
+        { status: access.status },
       );
     }
 
