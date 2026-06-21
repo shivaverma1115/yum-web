@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, type FieldPath } from "react-hook-form";
+import { useForm, Controller, type FieldPath } from "react-hook-form";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "react-toastify";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { SettingsFormSkeleton } from "@/components/skeleton";
 import {
   BusinessSettings,
   DEFAULT_BUSINESS_SETTINGS,
 } from "@/types/business-settings";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
+import { getPhoneDigits, validatePhoneValue } from "@/lib/phone-otp/phone";
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
@@ -113,6 +115,7 @@ export default function BusinessSettingsForm() {
     watch,
     setValue,
     setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<BusinessSettings>({
     defaultValues: DEFAULT_BUSINESS_SETTINGS,
@@ -165,12 +168,20 @@ export default function BusinessSettingsForm() {
   }, [reset]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const payload: BusinessSettings = {
+      ...values,
+      support: {
+        ...values.support,
+        phone: getPhoneDigits(values.support.phone),
+      },
+    };
+
     try {
       const response = await fetch("/api/admin/business-settings", {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
       const data = (await response.json().catch(() => ({}))) as ApiResponse;
 
@@ -389,10 +400,21 @@ export default function BusinessSettingsForm() {
         </FieldGroup>
 
         <FieldGroup label="Support phone" error={errors.support?.phone?.message}>
-          <Input
-            {...register("support.phone", { required: "Support phone is required." })}
-            disabled={isSubmitting}
-            placeholder="9876543210"
+          <Controller
+            control={control}
+            name="support.phone"
+            rules={{ validate: validatePhoneValue }}
+            render={({ field, fieldState }) => (
+              <PhoneInput
+                id="support-phone"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                disabled={isSubmitting}
+                placeholder="Enter support phone number"
+                error={Boolean(fieldState.error)}
+              />
+            )}
           />
         </FieldGroup>
       </SettingsSection>

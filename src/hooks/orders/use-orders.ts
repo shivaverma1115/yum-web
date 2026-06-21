@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useContextApi } from "@/context-api/use-context";
+import {
+  handleRealtimeOrderInsert,
+  handleRealtimeOrderUpdate,
+} from "@/hooks/orders/order-realtime-helpers";
 import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
 import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
-import type { IOrder, IOrderWithItems, OrderStatus } from "@/types/order";
+import type { IOrderWithItems, OrderStatus } from "@/types/order";
 import { UserRole } from "@/types/user";
 
 type OrdersResponse = {
@@ -39,6 +43,8 @@ function buildOrdersUrl(
   return `/api/${userRole === UserRole.ADMIN ? "admin" : "account"}/orders${query ? `?${query}` : ""}`;
 }
 
+const REALTIME_ORDER_HIGHLIGHT_MS = 10_000;
+
 export function useOrders(
   filter: CustomerOrdersFilter = "all",
   userRole: UserRole,
@@ -50,17 +56,74 @@ export function useOrders(
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentRealtimeOrderIds, setRecentRealtimeOrderIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const highlightTimersRef = useRef<Map<string, number>>(new Map());
   const { user } = useContextApi();
 
-  const applyRealtimeOrder = useCallback((updated: IOrder) => {
-    if (!updated.id) return;
+  const markRealtimeOrder = useCallback((orderId: string) => {
+    setRecentRealtimeOrderIds((current) => new Set(current).add(orderId));
 
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === updated.id ? { ...order, ...updated } : order,
-      ),
-    );
+    const existingTimer = highlightTimersRef.current.get(orderId);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
+    const timer = window.setTimeout(() => {
+      setRecentRealtimeOrderIds((current) => {
+        const next = new Set(current);
+        next.delete(orderId);
+        return next;
+      });
+      highlightTimersRef.current.delete(orderId);
+    }, REALTIME_ORDER_HIGHLIGHT_MS);
+
+    highlightTimersRef.current.set(orderId, timer);
   }, []);
+
+  useEffect(
+    () => () => {
+      for (const timer of highlightTimersRef.current.values()) {
+        window.clearTimeout(timer);
+      }
+      highlightTimersRef.current.clear();
+    },
+    [],
+  );
+
+  const realtimeContext = useMemo(
+    () => ({ filter, page, limit }),
+    [filter, page, limit],
+  );
+
+  const applyRealtimeInsert = useCallback(
+    (inserted: Parameters<typeof handleRealtimeOrderInsert>[0]) => {
+      void handleRealtimeOrderInsert(
+        inserted,
+        realtimeContext,
+        setOrders,
+        setTotal,
+        setTotalPages,
+        markRealtimeOrder,
+      );
+    },
+    [realtimeContext, markRealtimeOrder],
+  );
+
+  const applyRealtimeOrder = useCallback(
+    (updated: Parameters<typeof handleRealtimeOrderUpdate>[0]) => {
+      handleRealtimeOrderUpdate(
+        updated,
+        realtimeContext,
+        setOrders,
+        setTotal,
+        setTotalPages,
+        markRealtimeOrder,
+      );
+    },
+    [realtimeContext, markRealtimeOrder],
+  );
 
   const realtimeScope = useMemo(() => {
     if (userRole === UserRole.ADMIN) {
@@ -77,6 +140,7 @@ export function useOrders(
   useOrdersRealtime({
     scope: realtimeScope,
     enabled: Boolean(realtimeScope),
+    onOrderInserted: applyRealtimeInsert,
     onOrderUpdated: applyRealtimeOrder,
   });
 
@@ -182,5 +246,6 @@ export function useOrders(
     updateOrderStatus,
     updateOrderPaymentStatus,
     refreshOrders,
+    recentRealtimeOrderIds,
   };
 }

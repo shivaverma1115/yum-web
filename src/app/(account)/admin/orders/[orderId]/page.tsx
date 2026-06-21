@@ -1,4 +1,3 @@
-import OrderDetails from "@/components/admin/orders/OrderDetails";
 import Preloader from "@/components/layout/Preloader";
 import { Suspense } from "react";
 import { Metadata } from 'next';
@@ -7,6 +6,9 @@ interface AdminOrderDetailsPageProps {
     orderId: string;
   }>;
 }
+import dynamic from "next/dynamic";
+const OrderDetails = dynamic(() => import("@/components/admin/orders/OrderDetails"));
+
 export const metadata: Metadata = {
   title: "Order Details",
   description: "Order Details",

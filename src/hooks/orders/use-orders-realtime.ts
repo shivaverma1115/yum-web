@@ -12,6 +12,7 @@ export type OrdersRealtimeScope =
 type UseOrdersRealtimeOptions = {
   scope: OrdersRealtimeScope | null;
   enabled?: boolean;
+  onOrderInserted?: (order: IOrder) => void;
   onOrderUpdated: (order: IOrder) => void;
 };
 
@@ -22,6 +23,12 @@ function getScopeKey(scope: OrdersRealtimeScope | null): string | null {
 }
 
 /** RLS on `orders` scopes events; no column filter needed. */
+const ORDERS_INSERT_CONFIG = {
+  event: "INSERT" as const,
+  schema: "public" as const,
+  table: "orders" as const,
+};
+
 const ORDERS_UPDATE_CONFIG = {
   event: "UPDATE" as const,
   schema: "public" as const,
@@ -31,8 +38,12 @@ const ORDERS_UPDATE_CONFIG = {
 export function useOrdersRealtime({
   scope,
   enabled = true,
+  onOrderInserted,
   onOrderUpdated,
 }: UseOrdersRealtimeOptions) {
+  const onOrderInsertedRef = useRef(onOrderInserted);
+  onOrderInsertedRef.current = onOrderInserted;
+
   const onOrderUpdatedRef = useRef(onOrderUpdated);
   onOrderUpdatedRef.current = onOrderUpdated;
 
@@ -74,6 +85,13 @@ export function useOrdersRealtime({
 
       channel = supabase
         .channel(channelName)
+        .on("postgres_changes", ORDERS_INSERT_CONFIG, (payload) => {
+          const inserted = payload.new as IOrder;
+
+          if (inserted?.id) {
+            onOrderInsertedRef.current?.(inserted);
+          }
+        })
         .on("postgres_changes", ORDERS_UPDATE_CONFIG, (payload) => {
           const updated = payload.new as IOrder;
 
@@ -81,20 +99,14 @@ export function useOrdersRealtime({
             onOrderUpdatedRef.current(updated);
           }
         })
-        // .subscribe((status, err) => {
-        //   console.log("[orders realtime] subscription status:", status, {
-        //     scope: scopeKey,
-        //     channel: channelName,
-        //     error: err?.message ?? null,
-        //   });
-        // });
+        .subscribe();
     };
 
     void subscribe();
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(() => {
       if (cancelled) return;
 
       void subscribe();

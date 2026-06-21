@@ -32,6 +32,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     totalPages,
     updateOrderStatus,
     refreshOrders,
+    recentRealtimeOrderIds,
   } = useOrders(filter, userRole, page, DEFAULT_LIMIT);
 
   useEffect(() => {
@@ -216,6 +217,9 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                     order={order}
                     columnCount={TABLE_COLUMN_COUNT}
                     userRole={userRole}
+                    isRealtimeNew={
+                      order.id ? recentRealtimeOrderIds.has(order.id) : false
+                    }
                     onStatusUpdated={updateOrderStatus}
                     onPaymentUpdated={refreshOrders}
                   />

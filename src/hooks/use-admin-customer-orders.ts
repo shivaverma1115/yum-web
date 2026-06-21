@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  handleRealtimeOrderInsert,
+  handleRealtimeOrderUpdate,
+} from "@/hooks/orders/order-realtime-helpers";
 import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
 import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
-import type { IOrder, IOrderWithItems } from "@/types/order";
+import type { IOrderWithItems } from "@/types/order";
 
 type OrdersResponse = {
   success: boolean;
@@ -29,19 +33,41 @@ export function useAdminCustomerOrders(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const applyRealtimeOrder = useCallback((updated: IOrder) => {
-    if (!updated.id) return;
+  const realtimeContext = useMemo(
+    () => ({ filter, page, limit }),
+    [filter, page, limit],
+  );
 
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === updated.id ? { ...order, ...updated } : order,
-      ),
-    );
-  }, []);
+  const applyRealtimeInsert = useCallback(
+    (inserted: Parameters<typeof handleRealtimeOrderInsert>[0]) => {
+      void handleRealtimeOrderInsert(
+        inserted,
+        realtimeContext,
+        setOrders,
+        setTotal,
+        setTotalPages,
+      );
+    },
+    [realtimeContext],
+  );
+
+  const applyRealtimeOrder = useCallback(
+    (updated: Parameters<typeof handleRealtimeOrderUpdate>[0]) => {
+      handleRealtimeOrderUpdate(
+        updated,
+        realtimeContext,
+        setOrders,
+        setTotal,
+        setTotalPages,
+      );
+    },
+    [realtimeContext],
+  );
 
   useOrdersRealtime({
     scope: userId ? { mode: "user", userId } : null,
     enabled: Boolean(userId),
+    onOrderInserted: applyRealtimeInsert,
     onOrderUpdated: applyRealtimeOrder,
   });
 
