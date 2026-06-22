@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendPhoneAuthOtp, sendPhoneAuthOtpLocal } from "@/lib/auth/phone-session";
+import {
+  getAuthMethodDisabledMessage,
+  isPhoneAuthEnabled,
+} from "@/lib/business-settings/auth-methods";
 import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import {
   getOtpDisabledMessage,
   getOtpProductionBlockedInDevMessage,
   getOtpSendSuccessMessage,
   isLocalTestOtpMode,
-  isOtpEnabled,
   isProductionOtpBlockedInDev,
 } from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
@@ -19,9 +22,14 @@ export async function POST(request: NextRequest) {
     const settings = await getCachedBusinessSettings();
     const mode = settings.phone_verification.mode;
 
-    if (!isOtpEnabled(settings)) {
+    if (!isPhoneAuthEnabled(settings)) {
       return NextResponse.json(
-        { success: false, message: getOtpDisabledMessage() },
+        {
+          success: false,
+          message: settings.auth.phone_login_register
+            ? getOtpDisabledMessage()
+            : getAuthMethodDisabledMessage("phone"),
+        },
         { status: 403 },
       );
     }

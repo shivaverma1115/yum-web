@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthMethodDisabledMessage, isEmailAuthEnabled } from "@/lib/business-settings/auth-methods";
 import { getEmailConfirmRedirectUrl } from "@/lib/auth/site-url";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
@@ -15,8 +16,19 @@ import { isValidPhoneNumber } from "@/lib/phone-otp/phone";
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json().catch(() => ({}))) as RegisterPayload;
     const settings = await getCachedBusinessSettings();
+
+    if (!isEmailAuthEnabled(settings)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: getAuthMethodDisabledMessage("email"),
+        },
+        { status: 403 },
+      );
+    }
+
+    const payload = (await request.json().catch(() => ({}))) as RegisterPayload;
     const phone = payload.phone?.trim() ?? "";
 
     if (isOtpRequiredFor(settings, "registration")) {

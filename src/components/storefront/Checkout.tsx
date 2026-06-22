@@ -12,6 +12,7 @@ import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { formatCurrency } from "@/lib/constants";
+import { loadTableQrContext } from "@/lib/table-qr/context";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import type { CheckoutFormValues } from "@/types/checkout";
@@ -63,7 +64,16 @@ export default function Checkout() {
 
     useEffect(() => {
         if (userLoading) return;
-        reset(buildCheckoutDefaults(user));
+
+        const defaults = buildCheckoutDefaults(user);
+        const tableContext = loadTableQrContext();
+
+        if (tableContext) {
+            defaults.fulfillment_type = "dine_in";
+            defaults.table_number = tableContext.table_number;
+        }
+
+        reset(defaults);
     }, [user, userLoading, reset]);
 
     useEffect(() => {

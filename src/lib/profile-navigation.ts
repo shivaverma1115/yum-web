@@ -32,6 +32,7 @@ export const ADMIN_NAV_ITEMS: ProfileNavItem[] = [
     children: [
       { href: "/admin/manage", label: "Overview" },
       { href: "/admin/manage/settings", label: "Business Settings" },
+      { href: "/admin/manage/table-qr", label: "Table QR Codes" },
     ],
   },
   {

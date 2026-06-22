@@ -42,7 +42,6 @@ export default function AppProviders({
         </ContextApiProvider>
         <FloatingWhatsAppWidget />
       </BusinessSettingsProvider>
-      <ThemeToggle />
       <ToastContainer
         position="top-right"
         autoClose={4000}

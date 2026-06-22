@@ -27,6 +27,7 @@ import {
 } from "@/lib/profile-navigation";
 import { useContextApi } from "@/context-api/use-context";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
+import ThemeToggle from "./ThemeToggle";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -245,8 +246,8 @@ export default function ProfileSidebar({
       <div
         id="application-sidebar"
         className={`fixed inset-y-0 start-0 z-[60] w-64 transform border-e border-default-200 bg-white transition-all duration-300 overflow-y-auto dark:bg-default-50 lg:bottom-0 lg:right-auto lg:block lg:translate-x-0 ${mobileOpen
-            ? "translate-x-0"
-            : "-translate-x-full pointer-events-none lg:pointer-events-auto"
+          ? "translate-x-0"
+          : "-translate-x-full pointer-events-none lg:pointer-events-auto"
           }`}
       >
         <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
@@ -284,7 +285,7 @@ export default function ProfileSidebar({
         </div>
 
         <ul className="admin-menu flex flex-col gap-2 px-4 pt-10">
-          <li className="menu-item">
+          {/* <li className="menu-item">
             <div
               className="flex flex-col items-center rounded-md bg-primary/5 bg-cover bg-no-repeat p-4 text-center text-sm text-default-700"
               style={{ backgroundImage: "url('/images/other/offer-bg.png')" }}
@@ -302,7 +303,7 @@ export default function ProfileSidebar({
                 Contact Support
               </button>
             </div>
-          </li>
+          </li> */}
 
           <NavLink href={isAdmin ? "/admin/settings" : "/user/settings"}>
             <NavIcon name="settings" />
@@ -318,6 +319,9 @@ export default function ProfileSidebar({
               <NavIcon name="log-out" />
               Logout
             </button>
+          </li>
+          <li className="menu-item">
+            <ThemeToggle />
           </li>
         </ul>
       </div>

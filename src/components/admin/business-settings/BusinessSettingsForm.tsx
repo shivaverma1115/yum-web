@@ -214,7 +214,7 @@ export default function BusinessSettingsForm() {
   });
 
   if (loading) {
-    return <SettingsFormSkeleton sections={6} />;
+    return <SettingsFormSkeleton sections={7} />
   }
 
   return (
@@ -312,6 +312,35 @@ export default function BusinessSettingsForm() {
             disabled={isSubmitting}
           />
         </FieldGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Authentication"
+        description="Choose which sign-in methods customers can use on login and register pages."
+      >
+        <ToggleField
+          label="Email login & register"
+          description="Allow customers to sign in or register with email and password."
+          checked={watch("auth.email_login_register")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("auth.email_login_register", checked)}
+        />
+
+        <ToggleField
+          label="Google login & register"
+          description="Allow customers to sign in or register with Google."
+          checked={watch("auth.google_login_register")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("auth.google_login_register", checked)}
+        />
+
+        <ToggleField
+          label="Phone login & register"
+          description="Allow customers to sign in or register with mobile OTP. Requires OTP mode to be enabled."
+          checked={watch("auth.phone_login_register")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("auth.phone_login_register", checked)}
+        />
       </SettingsSection>
 
       <SettingsSection

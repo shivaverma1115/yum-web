@@ -39,10 +39,17 @@ export type BusinessSettingsSocial = {
   twitter: string;
 };
 
+export type BusinessSettingsAuth = {
+  email_login_register: boolean;
+  google_login_register: boolean;
+  phone_login_register: boolean;
+};
+
 export type BusinessSettings = {
   general: BusinessSettingsGeneral;
   order: BusinessSettingsOrder;
   phone_verification: BusinessSettingsPhoneVerification;
+  auth: BusinessSettingsAuth;
   payment: BusinessSettingsPayment;
   support: BusinessSettingsSupport;
   social: BusinessSettingsSocial;
@@ -68,6 +75,11 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
       checkout: false,
       profile_update: false,
     },
+  },
+  auth: {
+    email_login_register: true,
+    google_login_register: true,
+    phone_login_register: true,
   },
   payment: {
     razorpay_enabled: true,

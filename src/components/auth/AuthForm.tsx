@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "react-toastify";
@@ -10,6 +10,12 @@ import PhoneInput from "@/components/ui/PhoneInput";
 import { useOtpModal } from "@/context-api/otp-modal-context";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { isOtpEnabled, isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import {
+  hasUsableAuthMethod,
+  isEmailAuthEnabled,
+  isGoogleAuthEnabled,
+  isPhoneAuthEnabled,
+} from "@/lib/business-settings/auth-methods";
 import { createAuthPhoneOtpModalSession } from "@/lib/otp/modal-options";
 import { verifyAuthPhoneOtpClient } from "@/lib/auth/client";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
@@ -46,10 +52,15 @@ export default function AuthForm({
   const isLogin = mode === "login";
   const { settings } = useBusinessSettings();
   const { openOtpModal } = useOtpModal();
-  const phoneAuthEnabled = isOtpEnabled(settings);
+  const emailAuthEnabled = isEmailAuthEnabled(settings);
+  const googleAuthEnabled = isGoogleAuthEnabled(settings);
+  const phoneAuthEnabled = isPhoneAuthEnabled(settings);
+  const canSignIn = hasUsableAuthMethod(settings);
   const registrationPhoneRequired = isOtpRequiredFor(settings, "registration");
 
-  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(
+    emailAuthEnabled ? "email" : "phone",
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [authPhone, setAuthPhone] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
@@ -81,6 +92,24 @@ export default function AuthForm({
 
   const password = watch("password");
   const isEmbedded = variant === "embedded";
+
+  useEffect(() => {
+    if (authMethod === "email" && !emailAuthEnabled && phoneAuthEnabled) {
+      setAuthMethod("phone");
+      return;
+    }
+
+    if (authMethod === "phone" && !phoneAuthEnabled && emailAuthEnabled) {
+      setAuthMethod("email");
+    }
+  }, [authMethod, emailAuthEnabled, phoneAuthEnabled]);
+
+  const showMethodTabs = emailAuthEnabled && phoneAuthEnabled;
+  const showEmailForm = emailAuthEnabled && authMethod === "email";
+  const showPhoneForm = phoneAuthEnabled && authMethod === "phone";
+  const showGoogleButton =
+    googleAuthEnabled && (showEmailForm || showPhoneForm || !emailAuthEnabled);
+  const showActiveForm = showEmailForm || showPhoneForm;
 
   const onEmailSubmit = handleSubmit(async ({ email, password, phone }) => {
     if (!isLogin && registrationPhoneRequired && !phoneVerified) {
@@ -158,8 +187,18 @@ export default function AuthForm({
 
   const title = isLogin ? "Sign in to continue" : "Create an account";
   const subtitle = isLogin
-    ? "Use your email and password or sign in with your mobile number."
-    : "Register with email and password or your mobile number.";
+    ? "Use an available sign-in method below."
+    : "Register using an available method below.";
+
+  if (!canSignIn) {
+    return (
+      <div className={isEmbedded ? "" : "w-full"}>
+        <p className="text-sm text-default-600 text-center py-8">
+          Sign-in is currently unavailable. Please contact support.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={isEmbedded ? "" : "w-full"}>
@@ -175,38 +214,38 @@ export default function AuthForm({
         </div>
       )}
 
-      <div className="mb-6 flex rounded-full border border-default-200 p-1 bg-white dark:bg-default-50">
-        <button
-          type="button"
-          className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${authMethod === "email"
-              ? "bg-primary text-white"
-              : "text-default-600 hover:text-default-800"
-            }`}
-          onClick={() => switchMethod("email")}
-        >
-          Email
-        </button>
-        <button
-          type="button"
-          disabled={!phoneAuthEnabled}
-          className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors disabled:opacity-50 ${authMethod === "phone"
-              ? "bg-primary text-white"
-              : "text-default-600 hover:text-default-800"
-            }`}
-          onClick={() => switchMethod("phone")}
-        >
-          Mobile
-        </button>
-      </div>
+      {showMethodTabs ? (
+        <div className="mb-6 flex rounded-full border border-default-200 p-1 bg-white dark:bg-default-50">
+          <button
+            type="button"
+            className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${authMethod === "email"
+                ? "bg-primary text-white"
+                : "text-default-600 hover:text-default-800"
+              }`}
+            onClick={() => switchMethod("email")}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded-full py-2 text-sm font-medium transition-colors ${authMethod === "phone"
+                ? "bg-primary text-white"
+                : "text-default-600 hover:text-default-800"
+              }`}
+            onClick={() => switchMethod("phone")}
+          >
+            Mobile
+          </button>
+        </div>
+      ) : null}
 
-      {!phoneAuthEnabled && authMethod === "phone" ? (
+      {!phoneAuthEnabled && settings.auth.phone_login_register && !isOtpEnabled(settings) ? (
         <p className="mb-4 text-sm text-default-500">
-          Phone sign-in is disabled. Ask your admin to enable phone verification
-          in Business Settings.
+          Phone sign-in is disabled because OTP mode is off in Business Settings.
         </p>
       ) : null}
 
-      {authMethod === "email" ? (
+      {showEmailForm ? (
         <form onSubmit={onEmailSubmit} noValidate className="space-y-5">
           <div>
             <label
@@ -344,37 +383,43 @@ export default function AuthForm({
                 : "Register"}
           </button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-default-200" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-default-500 dark:bg-default-50">
-                Or
-              </span>
-            </div>
-          </div>
+          {showGoogleButton && showEmailForm ? (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-default-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-default-500 dark:bg-default-50">
+                    Or
+                  </span>
+                </div>
+              </div>
 
-          <button
-            type="button"
-            disabled={googleBusy || isSubmitting}
-            onClick={() => void handleGoogleAuth()}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50"
-          >
-            <span
-              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
-              aria-hidden
-            >
-              G
-            </span>
-            {googleBusy
-              ? "Redirecting to Google..."
-              : isLogin
-                ? "Continue with Google"
-                : "Sign up with Google"}
-          </button>
+              <button
+                type="button"
+                disabled={googleBusy || isSubmitting}
+                onClick={() => void handleGoogleAuth()}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50"
+              >
+                <span
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
+                  aria-hidden
+                >
+                  G
+                </span>
+                {googleBusy
+                  ? "Redirecting to Google..."
+                  : isLogin
+                    ? "Continue with Google"
+                    : "Sign up with Google"}
+              </button>
+            </>
+          ) : null}
         </form>
-      ) : phoneAuthEnabled ? (
+      ) : null}
+
+      {showPhoneForm ? (
         <div className="space-y-5">
           <div>
             <label
@@ -405,6 +450,27 @@ export default function AuthForm({
             verification popup to continue.
           </p>
         </div>
+      ) : null}
+
+      {showGoogleButton && !showEmailForm ? (
+        <button
+          type="button"
+          disabled={googleBusy}
+          onClick={() => void handleGoogleAuth()}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50"
+        >
+          <span
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
+            aria-hidden
+          >
+            G
+          </span>
+          {googleBusy
+            ? "Redirecting to Google..."
+            : isLogin
+              ? "Continue with Google"
+              : "Sign up with Google"}
+        </button>
       ) : null}
 
       <p className="mt-6 text-center text-sm text-default-600">

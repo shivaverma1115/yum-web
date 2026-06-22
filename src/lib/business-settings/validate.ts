@@ -210,6 +210,26 @@ export function validateBusinessSettingsPatch(
     }
   }
 
+  if (patch.auth) {
+    const auth: Partial<BusinessSettings["auth"]> = {};
+
+    if (patch.auth.email_login_register !== undefined) {
+      auth.email_login_register = Boolean(patch.auth.email_login_register);
+    }
+
+    if (patch.auth.google_login_register !== undefined) {
+      auth.google_login_register = Boolean(patch.auth.google_login_register);
+    }
+
+    if (patch.auth.phone_login_register !== undefined) {
+      auth.phone_login_register = Boolean(patch.auth.phone_login_register);
+    }
+
+    if (Object.keys(auth).length) {
+      value.auth = auth as BusinessSettings["auth"];
+    }
+  }
+
   if (patch.payment) {
     const payment: Partial<BusinessSettings["payment"]> = {};
 
@@ -302,6 +322,7 @@ export function validateFullBusinessSettings(
     "general",
     "order",
     "phone_verification",
+    "auth",
     "payment",
     "support",
     "social",
@@ -314,6 +335,18 @@ export function validateFullBusinessSettings(
         errors: { settings: `Missing ${section} settings.` },
       };
     }
+  }
+
+  const auth = merged.auth as BusinessSettings["auth"];
+  if (
+    !auth.email_login_register &&
+    !auth.google_login_register &&
+    !auth.phone_login_register
+  ) {
+    return {
+      valid: false,
+      errors: { auth: "At least one sign-in method must be enabled." },
+    };
   }
 
   return { valid: true, value: merged as BusinessSettings };

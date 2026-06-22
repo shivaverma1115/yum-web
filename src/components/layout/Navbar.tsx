@@ -20,6 +20,7 @@ import {
     X,
 } from "lucide-react";
 import { useBusinessSettings } from '@/context-api/business-settings-context';
+import ThemeToggle from './ThemeToggle';
 
 function isActivePath(pathname: string, href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -241,8 +242,8 @@ export default function Navbar() {
                     <Link
                         href="/home"
                         className={`flex flex-col items-center justify-center gap-1 ${pathname === "/" || isActivePath(pathname, "/home")
-                                ? "text-primary"
-                                : "text-default-600"
+                            ? "text-primary"
+                            : "text-default-600"
                             }`}
                     >
                         <Home className="text-lg" aria-hidden />
@@ -313,8 +314,8 @@ export default function Navbar() {
                                 <button
                                     type="button"
                                     className={`flex w-full items-center gap-x-3.5 py-2 px-2.5 text-sm font-medium rounded-md hover:bg-default-100 ${isProductMenuOpen
-                                            ? "text-primary bg-default-100"
-                                            : "text-default-700"
+                                        ? "text-primary bg-default-100"
+                                        : "text-default-700"
                                         }`}
                                     onClick={() => setIsProductMenuOpen((open) => !open)}
                                 >

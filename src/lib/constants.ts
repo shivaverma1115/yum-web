@@ -23,6 +23,8 @@ export function formatCurrency(value: number) {
 }
 
 export const PRODUCT_IMAGE_BUCKET = "product-images";
+export const TABLE_QR_BUCKET = "table-qr";
+export const TABLE_QR_IMAGE_SIZE = 512;
 export const MAX_PRODUCT_IMAGE_SIZE_BYTES = 1024 * 1024;
 export const ALLOWED_PRODUCT_IMAGE_TYPES = [
     "image/jpeg",

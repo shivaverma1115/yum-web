@@ -21,6 +21,7 @@ const STOREFRONT_ROUTES = [
   "/faqs",
   "/wishlist",
   "/products",
+  "/t",
 ] as const;
 
 const LOGIN_PATH = "/login";

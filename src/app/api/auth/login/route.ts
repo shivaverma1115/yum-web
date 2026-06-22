@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthMethodDisabledMessage, isEmailAuthEnabled } from "@/lib/business-settings/auth-methods";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import {
@@ -9,6 +11,18 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
     try {
+        const settings = await getCachedBusinessSettings();
+
+        if (!isEmailAuthEnabled(settings)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: getAuthMethodDisabledMessage("email"),
+                },
+                { status: 403 },
+            );
+        }
+
         const payload = await request.json().catch(() => ({})) as LoginPayload;
 
         const supabase = await createClient();

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getAuthMethodDisabledMessage,
+  isGoogleAuthEnabled,
+} from "@/lib/business-settings/auth-methods";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
 
 function safeNextPath(value: string | null): string {
@@ -26,6 +31,11 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const next = safeNextPath(requestUrl.searchParams.get("next"));
   const origin = requestUrl.origin;
+
+  const settings = await getCachedBusinessSettings();
+  if (!isGoogleAuthEnabled(settings)) {
+    return loginWithError(origin, getAuthMethodDisabledMessage("google"));
+  }
 
   if (!code) {
     return loginWithError(origin, "Missing OAuth code.");
