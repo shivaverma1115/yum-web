@@ -15,7 +15,11 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 export type MeApiResponse =
   | {
     success: true;
-    data: { user: IUser; verification: UserVerificationStatus };
+    data: {
+      user: IUser;
+      verification: UserVerificationStatus;
+      is_anonymous?: boolean;
+    };
   }
   | {
     success: false;
@@ -25,6 +29,7 @@ export type MeApiResponse =
 type ContextApiValue = {
   user: IUser | null;
   verification: UserVerificationStatus | null;
+  isAnonymous: boolean;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -37,6 +42,7 @@ const ContextApi = createContext<ContextApiValue | null>(null);
 export function ContextApiProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<IUser | null>(null);
   const [verification, setVerification] = useState<UserVerificationStatus | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +61,7 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
       if (!response.ok || !data.success) {
         setUser(null);
         setVerification(null);
+        setIsAnonymous(false);
         if (response.status !== 401) {
           setError((data as { message: string })?.message ?? ERROR_MESSAGE_GENERIC);
         }
@@ -63,9 +70,11 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
 
       setUser(data.data.user ?? null);
       setVerification(data.data.verification ?? null);
+      setIsAnonymous(Boolean(data.data.is_anonymous));
     } catch (err) {
       setUser(null);
       setVerification(null);
+      setIsAnonymous(false);
       setError(
         err instanceof Error ? err.message : "Failed to load current user.",
       );
@@ -82,13 +91,14 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       verification,
+      isAnonymous,
       loading,
       error,
       isAuthenticated: Boolean(user),
       refresh,
       setUser,
     }),
-    [user, verification, loading, error, refresh],
+    [user, verification, isAnonymous, loading, error, refresh],
   );
 
   return (

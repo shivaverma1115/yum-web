@@ -1,23 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import PhoneVerification, { PhoneVerificationHandle } from "@/components/common/phone-verification/PhoneVerification";
+import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
+import { ensureCheckoutSession, type CheckoutSessionUser } from "@/lib/auth/ensure-checkout-session";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { formatCurrency } from "@/lib/constants";
 import { loadTableQrContext } from "@/lib/table-qr/context";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
-import { getUserDisplayName } from "@/lib/user/display-name";
 import type { CheckoutFormValues } from "@/types/checkout";
 import { FulfillmentType, OnlinePaymentPhase } from "@/types/order";
-import type { IUser } from "@/types/user";
+import { UserRole } from "@/types/user";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200";
@@ -120,18 +120,24 @@ export default function Checkout() {
         })),
     });
 
-    const finishOrderSuccess = async (redirectTo?: string) => {
+    const finishOrderSuccess = async (
+        redirectTo?: string,
+        role: UserRole = user?.role ?? UserRole.USER,
+    ) => {
         setOrderCompleted(true);
         toast.success("Order placed successfully.");
         await refreshUser();
 
-        const ordersPath = `/${user?.role ?? "user"}/orders`;
+        const ordersPath = `/${role}/orders`;
         router.replace(redirectTo ?? ordersPath);
         clearCart();
         router.refresh();
     };
 
-    const placeOrder = async (values: CheckoutFormValues) => {
+    const placeOrder = async (
+        values: CheckoutFormValues,
+        checkoutSession: CheckoutSessionUser,
+    ) => {
         const response = await fetch("/api/orders", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -146,7 +152,10 @@ export default function Checkout() {
             return false;
         }
 
-        await finishOrderSuccess(data.data?.redirectTo as string | undefined);
+        await finishOrderSuccess(
+            data.data?.redirectTo as string | undefined,
+            checkoutSession.role,
+        );
         return true;
     };
 
@@ -174,13 +183,16 @@ export default function Checkout() {
         }
 
         try {
+            const checkoutSession = await ensureCheckoutSession();
+            await refreshUser();
+
             if (values.payment_method === "online") {
                 const paymentResult = await runCheckoutOnlinePayment({
                     subtotal,
                     prefill: {
-                        name: getUserDisplayName(user as IUser | null),
-                        email: user?.email ?? "",
-                        contact: values.phone ?? user?.phone,
+                        name: checkoutSession.displayName,
+                        email: checkoutSession.email ?? "",
+                        contact: values.phone ?? checkoutSession.phone,
                     },
                     createPendingOrder: async (razorpayOrderId) => {
                         const pendingResponse = await fetch("/api/orders", {
@@ -217,7 +229,7 @@ export default function Checkout() {
                 return;
             }
 
-            await placeOrder(values);
+            await placeOrder(values, checkoutSession);
         } catch (error) {
             toast.error(
                 error instanceof Error ? error.message : "Failed to place order.",
@@ -237,37 +249,10 @@ export default function Checkout() {
         );
     }
 
-    if (!userLoading && !user) {
-        const checkoutRedirect = encodeURIComponent("/checkout");
-
-        return (
-            <section className="lg:py-10 py-6">
-                <div className="container max-w-2xl text-center py-16">
-                    <p className="text-default-600">
-                        To place an order, please{" "}
-                        <Link
-                            href={`/login?redirectTo=${checkoutRedirect}`}
-                            className="text-primary font-medium underline underline-offset-2"
-                        >
-                            log in
-                        </Link>{" "}
-                        or{" "}
-                        <Link
-                            href={`/register?redirectTo=${checkoutRedirect}`}
-                            className="text-primary font-medium underline underline-offset-2"
-                        >
-                            register
-                        </Link>
-                        .
-                    </p>
-                </div>
-            </section>
-        );
-    }
-
     return (
         <section className="lg:py-10 py-6">
             <div className="container">
+                <AnonymousUpgradeBanner className="mb-6" />
                 <form onSubmit={onSubmit} noValidate>
                     <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
                         <div className="lg:col-span-2 col-span-1 space-y-8">
@@ -531,7 +516,7 @@ export default function Checkout() {
                                 <button
                                     type={showSendOtp ? "button" : "submit"}
                                     onClick={showSendOtp ? () => void handleSendOtp() : undefined}
-                                    disabled={isSubmitting || isSendingOtp || userLoading}
+                                    disabled={isSubmitting || isSendingOtp}
                                     className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
                                 >
                                     {isSendingOtp
@@ -577,7 +562,9 @@ export const FULFILLMENT_OPTIONS: {
         },
     ];
 
-export function buildCheckoutDefaults(user: IUser | null): CheckoutFormValues {
+export function buildCheckoutDefaults(
+    user: { phone?: string } | null,
+): CheckoutFormValues {
     return {
         fulfillment_type: FULFILLMENT_OPTIONS[0].value,
         phone: user?.phone ?? "",

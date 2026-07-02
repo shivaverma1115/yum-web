@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAnonymousUser } from "@/lib/auth/anonymous-user";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
@@ -20,6 +21,7 @@ export async function GET() {
       data: {
         user: auth.profile,
         verification: getUserVerificationStatus(auth.user),
+        is_anonymous: isAnonymousUser(auth.user),
       },
     });
   } catch (error) {
