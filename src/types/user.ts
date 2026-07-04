@@ -19,6 +19,8 @@ export interface IUser {
   zip_code: string;
   description: string;
   role: UserRole;
+  /** Populated from auth user_metadata (e.g. Google); not stored in profiles. */
+  avatar_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }

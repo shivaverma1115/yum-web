@@ -12,7 +12,7 @@ import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
 import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
-import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
+import { isValidPhoneNumber, normalizeProfilePhone } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAuthContact } from "@/lib/profile/sync-contact";
@@ -153,7 +153,7 @@ export async function PATCH(request: NextRequest) {
       previousProfile: profile,
       verification,
       nextEmail,
-      nextPhone: nextPhone ? normalizePhoneE164(nextPhone) : "",
+      nextPhone: nextPhone ? normalizeProfilePhone(nextPhone) : "",
       emailVerifiedOnRequest,
       phoneVerifiedOnRequest,
       requirePhoneOtpForUpdate: isOtpRequiredFor(settings, "profile_update"),

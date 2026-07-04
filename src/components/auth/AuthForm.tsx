@@ -5,11 +5,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "react-toastify";
-import PhoneVerification from "@/components/common/phone-verification/PhoneVerification";
 import PhoneInput from "@/components/ui/PhoneInput";
 import { useOtpModal } from "@/context-api/otp-modal-context";
 import { useAuthActions } from "@/hooks/useAuthActions";
-import { isOtpEnabled, isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import { isOtpEnabled } from "@/lib/business-settings/phone-verification";
 import {
   hasUsableAuthMethod,
   isEmailAuthEnabled,
@@ -37,7 +36,6 @@ type EmailFormValues = {
   email: string;
   password: string;
   confirmPassword?: string;
-  phone?: string;
 };
 
 const inputClassName =
@@ -56,14 +54,12 @@ export default function AuthForm({
   const googleAuthEnabled = isGoogleAuthEnabled(settings);
   const phoneAuthEnabled = isPhoneAuthEnabled(settings);
   const canSignIn = hasUsableAuthMethod(settings);
-  const registrationPhoneRequired = isOtpRequiredFor(settings, "registration");
 
   const [authMethod, setAuthMethod] = useState<AuthMethod>(
     emailAuthEnabled ? "email" : "phone",
   );
   const [showPassword, setShowPassword] = useState(false);
   const [authPhone, setAuthPhone] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const [phoneBusy, setPhoneBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
 
@@ -77,16 +73,14 @@ export default function AuthForm({
 
   const {
     register,
-    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<EmailFormValues>({
     defaultValues: {
-      email: "shivavermadev6@gmail.com",
-      password: "000000",
+      email: "",
+      password: "",
       confirmPassword: "",
-      phone: "",
     },
   });
 
@@ -109,20 +103,13 @@ export default function AuthForm({
   const showPhoneForm = phoneAuthEnabled && authMethod === "phone";
   const showGoogleButton =
     googleAuthEnabled && (showEmailForm || showPhoneForm || !emailAuthEnabled);
-  const showActiveForm = showEmailForm || showPhoneForm;
-
-  const onEmailSubmit = handleSubmit(async ({ email, password, phone }) => {
-    if (!isLogin && registrationPhoneRequired && !phoneVerified) {
-      toast.error("Please verify your phone number with OTP before registering.");
-      return;
-    }
-
+  const onEmailSubmit = handleSubmit(async ({ email, password }) => {
     if (isLogin) {
       await loginWithEmail(email, password);
       return;
     }
 
-    await registerWithEmail(email, password, phone?.trim() || undefined);
+    await registerWithEmail(email, password);
   });
 
   const handleSendPhoneOtp = async () => {
@@ -156,9 +143,11 @@ export default function AuthForm({
 
             await finishAuth(
               result.data.user,
-              result.data.isNewUser
-                ? "Account created successfully."
-                : "Logged in successfully.",
+              result.data.mergeMessage
+                ? `${result.data.isNewUser ? "Account created successfully." : "Logged in successfully."} ${result.data.mergeMessage}`
+                : result.data.isNewUser
+                  ? "Account created successfully."
+                  : "Logged in successfully.",
             );
 
             return { success: true };
@@ -173,7 +162,6 @@ export default function AuthForm({
 
   const switchMethod = (method: AuthMethod) => {
     setAuthMethod(method);
-    setPhoneVerified(false);
   };
 
   const handleGoogleAuth = async () => {
@@ -252,7 +240,7 @@ export default function AuthForm({
               className="block text-sm font-medium text-default-900 mb-2"
               htmlFor={`${mode}-email`}
             >
-              Email
+              Email <span className="text-red-500">*</span>
             </label>
             <input
               id={`${mode}-email`}
@@ -274,29 +262,13 @@ export default function AuthForm({
             ) : null}
           </div>
 
-          {!isLogin && registrationPhoneRequired ? (
-            <PhoneVerification<EmailFormValues>
-              control={control}
-              name="phone"
-              id={`${mode}-register-phone`}
-              label="Phone number"
-              placeholder="Enter your phone number"
-              variant="pill"
-              disabled={isSubmitting}
-              requireVerification={registrationPhoneRequired}
-              showOtpHint={registrationPhoneRequired}
-              otpHint="Verify your phone with OTP before registering."
-              onVerifiedChange={setPhoneVerified}
-            />
-          ) : null}
-
           <div>
             <div className="flex items-center justify-between mb-2">
               <label
                 className="block text-sm font-medium text-default-900"
                 htmlFor={`${mode}-password`}
               >
-                Password
+                Password <span className="text-red-500">*</span>
               </label>
               {isLogin ? (
                 <Link href="/recover-password" className="text-xs text-default-700">
@@ -346,7 +318,7 @@ export default function AuthForm({
                 className="block text-sm font-medium text-default-900 mb-2"
                 htmlFor={`${mode}-confirm-password`}
               >
-                Confirm password
+                Confirm password <span className="text-red-500">*</span>
               </label>
               <input
                 id={`${mode}-confirm-password`}

@@ -3,7 +3,7 @@ import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-er
 import {
   getPhoneDigits,
   isValidPhoneNumber,
-  normalizePhoneE164,
+  normalizeProfilePhone,
   phonesMatch,
 } from "@/lib/phone-otp/phone";
 import type { IUser, UserVerificationStatus } from "@/types/user";
@@ -35,7 +35,7 @@ export function normalizeProfileContactPatch<
 
   if (patch.phone !== undefined) {
     normalized.phone = patch.phone?.trim()
-      ? normalizePhoneE164(patch.phone)
+      ? normalizeProfilePhone(patch.phone)
       : ("" as T["phone"]);
   }
 
@@ -69,7 +69,7 @@ export function buildAuthContactSyncPayload(
       isValidPhoneNumber(nextPhone) &&
       !phonesMatch(nextPhone, savedPhone)
     ) {
-      sync.phone = normalizePhoneE164(nextPhone);
+      sync.phone = normalizeProfilePhone(nextPhone);
     }
     return sync;
   }
@@ -93,7 +93,7 @@ export function buildAuthContactSyncPayload(
     isValidPhoneNumber(nextPhone) &&
     (!phonesMatch(nextPhone, savedPhone) || !verification.phone_verified)
   ) {
-    sync.phone = normalizePhoneE164(nextPhone);
+    sync.phone = normalizeProfilePhone(nextPhone);
   }
 
   return sync;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronDown, Eye } from "lucide-react";
+import { ChevronDown, Eye, Trash } from "lucide-react";
 import { formatCurrency, formatCustomerSince } from "@/lib/constants";
 import { getOrderPaymentStatus } from "@/lib/supabase/orders";
 import type { IOrderWithItems, OrderStatus } from "@/types/order";
@@ -26,6 +26,8 @@ type OrderExpandableTableRowProps = {
   isRealtimeNew?: boolean;
   onStatusUpdated?: (orderId: string, status: OrderStatus) => void;
   onPaymentUpdated?: () => void;
+  onDelete?: (order: IOrderWithItems) => void;
+  isDeleting?: boolean;
 };
 
 export default function OrderExpandableTableRow({
@@ -35,6 +37,8 @@ export default function OrderExpandableTableRow({
   isRealtimeNew = false,
   onStatusUpdated,
   onPaymentUpdated,
+  onDelete,
+  isDeleting = false,
 }: OrderExpandableTableRowProps) {
   const [expanded, setExpanded] = useState(false);
   const items = order.items ?? [];
@@ -145,15 +149,31 @@ export default function OrderExpandableTableRow({
         </td>
 
         {order.id && isAdmin ? (
-          <td className="px-6 py-4 text-end">
-            <Link
-              href={`/admin/orders/${order.id}`}
-              onClick={(event) => event.stopPropagation()}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-default-500 transition-colors hover:bg-primary/10 hover:text-primary"
-              aria-label={`View order ${formatOrderIdShort(order.id)}`}
-            >
-              <Eye className="h-4 w-4" aria-hidden />
-            </Link>
+          <td
+            className="px-6 py-4 text-end"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="inline-flex items-center justify-end gap-1">
+              <Link
+                href={`/admin/orders/${order.id}`}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-default-500 transition-colors hover:bg-primary/10 hover:text-primary"
+                aria-label={`View order ${formatOrderIdShort(order.id)}`}
+              >
+                <Eye className="h-4 w-4" aria-hidden />
+              </Link>
+              {onDelete ? (
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => onDelete(order)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-red-600 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                  aria-label={`Delete order ${formatOrderIdShort(order.id)}`}
+                >
+                  <Trash className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
+            </div>
           </td>
         ) : null}
       </tr>

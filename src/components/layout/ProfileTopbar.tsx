@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useContextApi } from "@/context-api/use-context";
 import { useLogout } from "@/lib/auth/useLogout";
+import UserAvatar from "@/components/common/UserAvatar";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import { UserRole } from "@/types/user";
 
@@ -144,10 +145,9 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
                                 className="hs-dropdown-toggle inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-xs font-medium text-default-700 transition-all"
                                 aria-label="Account menu"
                             >
-                                <img
-                                    className="inline-block h-10 w-10 rounded-full"
-                                    src="/images/avatars/avatar1.png"
-                                    alt=""
+                                <UserAvatar
+                                    user={user}
+                                    className="inline-block h-10 w-10 rounded-full object-cover"
                                 />
                                 <div className="hidden text-start lg:block">
                                     <p className="text-sm font-medium text-default-700">

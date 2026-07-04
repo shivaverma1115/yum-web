@@ -1,6 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAnonymousUser } from "@/lib/auth/anonymous-user";
+import {
+  getAnonymousUserId,
+  mergeAnonymousUserIntoAccount,
+  mergeSuccessMessage,
+} from "@/lib/auth/anonymous-upgrade";
+import { profileEmailFromAuth } from "@/lib/auth/verification";
 import { UserRole, type IUser } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "../constants";
+import { findProfileIdByEmail } from "./contact-lookup";
 import { getProfileByUserId } from "./account/profile";
 
 function normalizeHttpStatus(status: number | undefined, fallback = 400): number {
@@ -20,6 +28,7 @@ export type LoginResult =
   | {
     success: true;
     user: IUser;
+    mergeMessage?: string | null;
   }
   | {
     success: false;
@@ -30,9 +39,12 @@ export type LoginResult =
 
 export async function loginWithSupabase(
   supabase: SupabaseClient,
+  adminClient: SupabaseClient,
   email: string,
   password: string,
 ): Promise<LoginResult> {
+  const anonymousId = await getAnonymousUserId(supabase);
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
     password,
@@ -56,7 +68,7 @@ export async function loginWithSupabase(
     };
   }
 
-  const profile = await getProfileByUserId(supabase, data.user.id);
+  const profile: IUser | null = await getProfileByUserId(supabase, data.user.id);
 
   if (!profile) {
     return {
@@ -67,9 +79,20 @@ export async function loginWithSupabase(
     };
   }
 
+  let mergeMessage: string | null = null;
+  if (anonymousId && anonymousId !== data.user.id) {
+    const merge = await mergeAnonymousUserIntoAccount(
+      adminClient,
+      anonymousId,
+      data.user.id,
+    );
+    mergeMessage = mergeSuccessMessage(merge);
+  }
+
   return {
     success: true,
     user: profile,
+    mergeMessage,
   };
 }
 
@@ -191,6 +214,98 @@ export async function registerWithSupabase(
       message: "Please fix the errors below.",
       status: 400,
       errors,
+    };
+  }
+
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  if (currentUser && isAnonymousUser(currentUser)) {
+    const existingProfileId = await findProfileIdByEmail(
+      options.adminClient,
+      email,
+    );
+
+    if (existingProfileId && existingProfileId !== currentUser.id) {
+      return {
+        success: false,
+        message:
+          "This email is already registered. Sign in to link your guest orders to your account.",
+        status: 400,
+        errors: {
+          email: "Email already in use. Sign in instead.",
+        },
+      };
+    }
+
+    const { data, error } = await supabase.auth.updateUser({
+      email,
+      password,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: mapAuthErrorMessage(error.message),
+        status: normalizeHttpStatus(error.status),
+        errors: {},
+      };
+    }
+
+    if (!data.user?.id) {
+      return {
+        success: false,
+        message: ERROR_MESSAGE_GENERIC,
+        status: 400,
+        errors: {},
+      };
+    }
+
+    const profileError = await upsertProfileWithAdmin(
+      options.adminClient,
+      data.user.id,
+      profileEmailFromAuth(email) ?? email,
+      "",
+      "",
+    );
+
+    if (profileError) {
+      return {
+        success: false,
+        message: profileError,
+        status: 400,
+        errors: {},
+      };
+    }
+
+    const phone = input.phone?.trim() ?? "";
+    if (phone) {
+      const { error: phoneUpdateError } = await options.adminClient
+        .from("profiles")
+        .update({ phone })
+        .eq("id", data.user.id);
+
+      if (phoneUpdateError) {
+        return {
+          success: false,
+          message: phoneUpdateError.message,
+          status: 400,
+          errors: { phone: phoneUpdateError.message },
+        };
+      }
+    }
+
+    const needsEmailConfirmation = !data.user.email_confirmed_at;
+    const profile =
+      (await getProfileByUserId(supabase, data.user.id)) ??
+      (await getProfileByUserIdAdmin(options.adminClient, data.user.id)) ??
+      buildRegisterUserStub(data.user.id, email, "", "");
+
+    return {
+      success: true,
+      user: profile,
+      needsEmailConfirmation,
     };
   }
 

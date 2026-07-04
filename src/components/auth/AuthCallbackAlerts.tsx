@@ -15,20 +15,27 @@ export default function AuthCallbackAlerts() {
     const error = searchParams.get("error");
     const message = searchParams.get("message");
 
-    if (confirmed === "1") {
-      toast.success("Email confirmed. You are signed in.");
+    if (confirmed === "1" || searchParams.get("merged") === "1") {
+      if (searchParams.get("merged") === "1") {
+        toast.success("Your guest orders were linked to your account.");
+      } else {
+        toast.success("Signed in successfully.");
+      }
       void refresh();
     } else if (error === "auth_callback") {
       toast.error(
-        message ? decodeURIComponent(message) : "Confirmation link expired or invalid.",
+        message
+          ? decodeURIComponent(message.replace(/\+/g, " "))
+          : "Google sign-in failed. Please try again.",
       );
     } else if (error === "missing_code") {
       toast.error("Invalid confirmation link. Try signing up again or contact support.");
     }
 
-    if (confirmed || error) {
+    if (confirmed || error || searchParams.get("merged") === "1") {
       const url = new URL(window.location.href);
       url.searchParams.delete("confirmed");
+      url.searchParams.delete("merged");
       url.searchParams.delete("error");
       url.searchParams.delete("message");
       const qs = url.searchParams.toString();

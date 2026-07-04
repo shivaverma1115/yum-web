@@ -1,18 +1,14 @@
 "use client";
 
-import ProductCatalogResults from "@/components/storefront/Products/ProductCatalogResults";
-import ProductViewModeToggle, {
-    type ProductViewMode,
-} from "@/components/storefront/Products/ProductViewModeToggle";
 import { fetchProductCategories } from "@/lib/api/categories";
 import { fetchProductsPage } from "@/lib/products/products";
 import type { IProductCategory } from "@/types/product-category";
 import type { IProduct } from "@/types/product";
-import { Settings2, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, LayoutGrid, List, Settings2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { CategoryFilterSkeleton } from "@/components/skeleton";
+import { CategoryFilterSkeleton, ProductGridSkeleton } from "@/components/skeleton";
+import ProductCard from "./ProductCard";
 
 const DEFAULT_LIMIT = 10;
 
@@ -25,7 +21,7 @@ export default function ProductWrapper() {
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<ProductViewMode>("grid");
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
     const isAllCategoriesSelected = selectedCategorySlugs.length === 0;
@@ -156,6 +152,12 @@ export default function ProductWrapper() {
 
     const startItem = total === 0 ? 0 : (page - 1) * DEFAULT_LIMIT + 1;
     const endItem = Math.min(page * DEFAULT_LIMIT, total);
+
+    const buttonClass = (active: boolean) =>
+        `inline-flex items-center justify-center h-9 w-9 rounded-full transition-all duration-200 ${active
+            ? "bg-primary text-white"
+            : "bg-default-100 text-default-700 hover:bg-default-200"
+        }`;
     return (
         <section className="lg:py-8 py-6">
             <div className="container">
@@ -171,8 +173,8 @@ export default function ProductWrapper() {
 
                     <div
                         className={`max-w-xs lg:max-w-full lg:w-1/4 w-full fixed top-0 start-0 transition-all transform h-full z-60 lg:z-auto bg-white dark:bg-default-50 lg:translate-x-0 lg:block lg:static lg:start-auto ${isMobileFilterOpen
-                                ? "translate-x-0 block"
-                                : "-translate-x-full hidden lg:block"
+                            ? "translate-x-0 block"
+                            : "-translate-x-full hidden lg:block"
                             }`}
                         id="filter_Offcanvas"
                         tabIndex={-1}
@@ -245,7 +247,7 @@ export default function ProductWrapper() {
                                     </div>
                                 </div>
 
-                                <div>
+                                {/* <div>
                                     <button className="hs-collapse-toggle py-4 inline-flex justify-between items-center gap-2 transition-all uppercase font-medium text-lg text-default-900 w-full open" data-hs-collapse="#price_range" id="hs-basic-collapse" type="button">
                                         Price Range
                                     </button>
@@ -320,9 +322,9 @@ export default function ProductWrapper() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
-                                <div>
+                                {/* <div>
                                     <button className="hs-collapse-toggle py-4 inline-flex justify-between items-center gap-2 transition-all uppercase font-medium text-lg text-default-900 w-full open" data-hs-collapse="#cafe_restaurant" id="hs-basic-collapse" type="button">
                                         Popular Café / Restaurant
                                     </button>
@@ -421,9 +423,9 @@ export default function ProductWrapper() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
-                                <div>
+                                {/* <div>
                                     <button className="hs-collapse-toggle py-4 inline-flex justify-between items-center gap-2 transition-all uppercase font-medium text-lg text-default-900 w-full open" data-hs-collapse="#popular_tags" id="hs-basic-collapse" type="button">
                                         Popular tags
                                     </button>
@@ -481,9 +483,9 @@ export default function ProductWrapper() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
-                                <div className="py-6">
+                                {/* <div className="py-6">
                                     <div className="relative rounded-lg bg-opacity-5 bg-center bg-cover overflow-hidden" style={{ backgroundImage: "url('/images/other/offer-bg.png')" }}>
                                         <div className="absolute inset-0 bg-primary/10 -z-10"></div>
                                         <div className="p-12">
@@ -511,7 +513,7 @@ export default function ProductWrapper() {
                                             </button>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
 
@@ -537,13 +539,33 @@ export default function ProductWrapper() {
                                         : null}
                                 </h6>
 
-                                <ProductViewModeToggle
-                                    value={viewMode}
-                                    onChange={setViewMode}
-                                />
+                                <div
+                                    className="inline-flex items-center gap-1 rounded-full border border-default-200 p-1"
+                                    role="group"
+                                    aria-label="Product view mode"
+                                >
+                                    <button
+                                        type="button"
+                                        className={buttonClass(viewMode === "grid")}
+                                        onClick={() => setViewMode("grid")}
+                                        aria-label="Grid view"
+                                        aria-pressed={viewMode === "grid"}
+                                    >
+                                        <LayoutGrid className="size-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={buttonClass(viewMode === "list")}
+                                        onClick={() => setViewMode("list")}
+                                        aria-label="List view"
+                                        aria-pressed={viewMode === "list"}
+                                    >
+                                        <List className="size-4" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            {/* <div className="flex items-center gap-4">
                                 <span className="text-base text-default-950 me-3">Sort By :</span>
                                 <div className="hs-dropdown relative inline-flex [--placement:bottom-left]">
                                     <button className="hs-dropdown-toggle flex items-center gap-2 font-medium text-default-950 text-sm py-2.5 px-4 xl:px-5 rounded-full border border-default-200 transition-all" type="button">
@@ -570,20 +592,92 @@ export default function ProductWrapper() {
                                         </ul>
                                     </div>
                                 </div>
+                            </div> */}
+                        </div>
+
+                        <div className="mb-5 w-full">
+                            <div
+                                className="relative rounded-lg overflow-hidden bg-primary/10 bg-cover bg-center w-full min-h-[280px]"
+                                style={{ backgroundImage: "url('/images/other/discount.png')" }}
+                            >
+                                <div className="absolute inset-0 bg-black/10" />
+                                <div className="relative p-8 md:p-12">
+                                    <h4 className="text-5xl text-yellow-500 font-semibold mb-6">
+                                        52% Discount
+                                    </h4>
+                                    <p className="text-lg text-default-500 mb-6">on your first order</p>
+                                    <button
+                                        type="button"
+                                        className="md:mb-10 inline-flex items-center justify-center gap-2 rounded-full border border-primary bg-primary px-4 py-2 text-center text-sm font-medium text-white shadow-sm transition-all duration-200 hover:border-primary-700 hover:bg-primary-500"
+                                    >
+                                        Shop Now
+                                        <ArrowRight className="size-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <ProductCatalogResults
-                            products={products}
-                            isLoading={isLoading}
-                            page={page}
-                            totalPages={totalPages}
-                            total={total}
-                            startItem={startItem}
-                            endItem={endItem}
-                            viewMode={viewMode}
-                            onPageChange={setPage}
-                        />
+                        {
+                            isLoading ? (
+                                <ProductGridSkeleton count={6} viewMode={viewMode} />
+                            ) : (
+                                total === 0 ? (
+                                    <div className="py-16 text-center text-sm text-default-500">
+                                        No products found.
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div
+                                            className={
+                                                viewMode === "grid"
+                                                    ? "grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                                                    : "grid grid-cols-1 gap-5"
+                                            }
+                                        >
+                                            {products.map((product) => (
+                                                <ProductCard
+                                                    key={product.id ?? product.name}
+                                                    product={product}
+                                                    variant={viewMode}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center justify-between gap-4 pt-6">
+                                            <p className="text-sm text-default-500 lg:hidden">
+                                                Showing {startItem}–{endItem} of {total} results
+                                            </p>
+
+                                            <div className="flex flex-wrap justify-center md:justify-end items-center gap-4 w-full md:w-auto ms-auto">
+                                                <button
+                                                    type="button"
+                                                    disabled={page <= 1}
+                                                    onClick={() => setPage(page - 1)}
+                                                    className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:text-white disabled:opacity-50 disabled:pointer-events-none"
+                                                    aria-label="Previous page"
+                                                >
+                                                    <ChevronLeft className="size-5" />
+                                                </button>
+
+                                                <span className="text-sm text-default-600">
+                                                    Page {page} of {totalPages}
+                                                </span>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={page >= totalPages}
+                                                    onClick={() => setPage(page + 1)}
+                                                    className="inline-flex items-center justify-center h-9 w-9 bg-default-100 rounded-full transition-all duration-500 text-default-800 hover:bg-primary hover:text-white disabled:opacity-50 disabled:pointer-events-none"
+                                                    aria-label="Next page"
+                                                >
+                                                    <ChevronRight className="size-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )
+                            )
+                        }
                     </div>
                 </div>
             </div>

@@ -40,10 +40,9 @@ export function toPhoneInputValue(phone?: string | null): string {
   return phone.replace(/\D/g, "");
 }
 
-/** Normalizes react-phone-input-2 value to E.164 (+digits). */
+/** Normalizes react-phone-input-2 value to digits-only storage (e.g. 918004716907). */
 export function toStoredPhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  return digits ? `+${digits}` : "";
+  return value.replace(/\D/g, "");
 }
 
 const variantClass: Record<PhoneInputVariant, string> = {

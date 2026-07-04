@@ -1,13 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { isAnonymousUser } from "@/lib/auth/anonymous-user";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
 import { getProfileByUserId } from "@/lib/supabase/account/profile";
 import type { IUser } from "@/types/user";
 
 export type MiddlewareSession = {
   response: NextResponse;
-  user: { id: string; email?: string } | null;
+  user: User | null;
   profile: IUser | null;
+  isAnonymous: boolean;
   supabase: SupabaseClient;
 };
 
@@ -37,8 +39,9 @@ export async function updateSession(
 
   return {
     response,
-    user: user ? { id: user.id, email: user.email } : null,
+    user,
     profile,
+    isAnonymous: user ? isAnonymousUser(user) : false,
     supabase,
   };
 }

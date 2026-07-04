@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
-import { isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
 import { sendEmailOtpMessage } from "@/lib/email-otp/delivery";
+import { isValidEmail, normalizeEmail } from "@/lib/email-otp/email";
 import {
   createPendingEmailOtpToken,
   generateEmailOtpCode,
@@ -24,9 +25,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const settings = await getCachedBusinessSettings();
     const otp = generateEmailOtpCode();
     const pending = createPendingEmailOtpToken(email, otp);
-    const delivery = await sendEmailOtpMessage(email, otp);
+    const delivery = await sendEmailOtpMessage(email, otp, {
+      siteName: settings.general.site_name,
+    });
 
     if (!delivery.sent) {
       return NextResponse.json(
@@ -37,13 +41,10 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      message: "OTP sent to your email.",
+      message: delivery.message,
       data: {
         email,
         expiresInSeconds: pending.maxAge,
-        ...(process.env.NODE_ENV === "development"
-          ? { debugOtp: otp }
-          : {}),
       },
     });
 

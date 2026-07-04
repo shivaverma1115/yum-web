@@ -54,16 +54,6 @@ export default function Register() {
           </div>
         </div>
       </div>
-
-      <div className="fixed lg:bottom-5 end-5 bottom-18 flex flex-col items-center bg-primary/25 rounded-full z-10">
-        <button
-          type="button"
-          className="rounded-full h-10 w-10 bg-primary text-white flex justify-center items-center z-20"
-        >
-          <i className="h-5 w-5" data-lucide="sun" id="light-theme" />
-          <i className="h-5 w-5" data-lucide="moon" id="dark-theme" />
-        </button>
-      </div>
     </div>
   );
 }

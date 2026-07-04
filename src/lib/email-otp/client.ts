@@ -3,7 +3,7 @@ type ApiResult<T> =
   | { success: false; message: string; errors?: Record<string, string> };
 
 export async function sendEmailOtp(email: string): Promise<
-  ApiResult<{ email: string; expiresInSeconds: number; debugOtp?: string }>
+  ApiResult<{ email: string; expiresInSeconds: number }>
 > {
   const response = await fetch("/api/email-otp/send", {
     method: "POST",

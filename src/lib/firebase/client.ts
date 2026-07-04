@@ -22,7 +22,6 @@ async function registerMessagingServiceWorker(): Promise<ServiceWorkerRegistrati
     swRegistrationPromise = navigator.serviceWorker
       .register(SW_PATH, { scope: "/" })
       .then((registration) => {
-        console.info("[fcm] service worker registered", SW_PATH);
         return registration;
       })
       .catch((error: unknown) => {
@@ -96,11 +95,6 @@ export async function requestFcmToken(): Promise<FcmTokenResult> {
     if (!token) {
       return { ok: false, reason: "Firebase returned an empty FCM token." };
     }
-
-    console.info("[fcm] token obtained", {
-      projectId: publicConfig.projectId,
-      tokenPreview: `${token.slice(0, 12)}…`,
-    });
 
     return { ok: true, token };
   } catch (error) {

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  verifyPhoneAuthOtp,
-  verifyPhoneAuthOtpLocal,
-} from "@/lib/auth/phone-session";
+import { verifyPhoneAuthOtp } from "@/lib/auth/phone-session";
 import {
   getAuthMethodDisabledMessage,
   isPhoneAuthEnabled,
@@ -11,7 +8,6 @@ import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import {
   getOtpDisabledMessage,
   getOtpProductionBlockedInDevMessage,
-  isLocalTestOtpMode,
   isProductionOtpBlockedInDev,
 } from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
@@ -48,21 +44,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const admin = createAdminClient();
-    const result = isLocalTestOtpMode(mode)
-      ? await verifyPhoneAuthOtpLocal(
-          supabase,
-          admin,
-          body.phone ?? "",
-          body.otp ?? "",
-        )
-      : await verifyPhoneAuthOtp(
-          supabase,
-          admin,
-          body.phone ?? "",
-          body.otp ?? "",
-        );
+    const result = await verifyPhoneAuthOtp(
+      await createClient(),
+      createAdminClient(),
+      body.phone ?? "",
+      body.otp ?? "",
+      mode,
+    );
 
     if (!result.success) {
       return NextResponse.json(
@@ -77,12 +65,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: result.isNewUser
-        ? "Account created successfully."
-        : "Logged in successfully.",
+      message: result.mergeMessage
+        ? `${result.isNewUser ? "Account created successfully." : "Logged in successfully."} ${result.mergeMessage}`
+        : result.isNewUser
+          ? "Account created successfully."
+          : "Logged in successfully.",
       data: {
         user: result.user,
         isNewUser: result.isNewUser,
+        mergeMessage: result.mergeMessage ?? null,
       },
     });
   } catch (error) {

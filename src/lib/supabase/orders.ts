@@ -600,6 +600,55 @@ export async function updateOrderStatusWithSupabase(
   return { success: true, order: data as IOrder };
 }
 
+export async function deleteOrderWithSupabase(
+  supabase: SupabaseClient,
+  orderId: string,
+): Promise<
+  { success: true } | { success: false; message: string; status: number }
+> {
+  if (!orderId.trim()) {
+    return {
+      success: false,
+      message: "Order id is required.",
+      status: 400,
+    };
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (fetchError) {
+    return {
+      success: false,
+      message: fetchError.message,
+      status: 400,
+    };
+  }
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "Order not found.",
+      status: 404,
+    };
+  }
+
+  const { error } = await supabase.from("orders").delete().eq("id", orderId);
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: 400,
+    };
+  }
+
+  return { success: true };
+}
+
 export function getOrderPaymentStatus(order: IOrder): {
   label: string;
   color: BadgeColor;

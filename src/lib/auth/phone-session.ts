@@ -1,12 +1,21 @@
+import { randomBytes } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { establishAuthSessionForUser } from "@/lib/auth/establish-session";
+import type { PhoneOtpMode } from "@/types/business-settings";
+import { isLocalTestOtpMode } from "@/lib/business-settings/phone-verification";
 import { PHONE_OTP_LENGTH } from "@/lib/phone-otp/constants";
 import { LOCAL_TEST_OTP, matchesLocalTestOtp } from "@/lib/phone-otp/local-test";
 import {
   isValidPhoneNumber,
   normalizePhoneE164,
+  normalizeProfilePhone,
+  phonesMatch,
 } from "@/lib/phone-otp/phone";
 import { profileEmailFromAuth } from "@/lib/auth/verification";
+import {
+  getAnonymousUserId,
+  mergeAnonymousUserIntoAccount,
+  mergeSuccessMessage,
+} from "@/lib/auth/anonymous-upgrade";
 import {
   ensureProfileForUserId,
   getProfileByUserId,
@@ -42,8 +51,51 @@ function mapPhoneAuthError(message: string): string {
   return mapAuthErrorMessage(message);
 }
 
+function createBootstrapPassword(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+function invalidPhoneResult(): Extract<PhoneAuthResult, { success: false }> {
+  return {
+    success: false,
+    message: "Please enter a valid phone number.",
+    status: 400,
+    errors: { phone: "Invalid phone number." },
+  };
+}
+
+function invalidOtpResult(message = "Please enter a valid 6-digit OTP."): Extract<
+  PhoneAuthResult,
+  { success: false }
+> {
+  return {
+    success: false,
+    message,
+    status: 400,
+    errors: { otp: "Invalid OTP." },
+  };
+}
+
+function parsePhoneAuthInput(
+  phone: string,
+  otp: string,
+): { normalized: string; token: string } | Extract<PhoneAuthResult, { success: false }> {
+  const normalized = normalizeProfilePhone(phone);
+  const token = otp.trim();
+
+  if (!isValidPhoneNumber(normalized)) {
+    return invalidPhoneResult();
+  }
+
+  if (!/^\d+$/.test(token) || token.length !== PHONE_OTP_LENGTH) {
+    return invalidOtpResult();
+  }
+
+  return { normalized, token };
+}
+
 export type PhoneAuthResult =
-  | { success: true; user: IUser; isNewUser: boolean }
+  | { success: true; user: IUser; isNewUser: boolean; mergeMessage?: string | null }
   | {
       success: false;
       message: string;
@@ -63,20 +115,20 @@ export type PhoneOtpSendResult =
 export async function sendPhoneAuthOtp(
   supabase: SupabaseClient,
   phone: string,
+  mode: PhoneOtpMode,
 ): Promise<PhoneOtpSendResult> {
-  const normalized = normalizePhoneE164(phone);
+  const profilePhone = normalizeProfilePhone(phone);
 
-  if (!isValidPhoneNumber(normalized)) {
-    return {
-      success: false,
-      message: "Please enter a valid phone number.",
-      status: 400,
-      errors: { phone: "Invalid phone number." },
-    };
+  if (!isValidPhoneNumber(profilePhone)) {
+    return invalidPhoneResult();
+  }
+
+  if (isLocalTestOtpMode(mode)) {
+    return { success: true, phone: profilePhone };
   }
 
   const { error } = await supabase.auth.signInWithOtp({
-    phone: normalized,
+    phone: normalizePhoneE164(profilePhone),
   });
 
   if (error) {
@@ -88,62 +140,23 @@ export async function sendPhoneAuthOtp(
     };
   }
 
-  return { success: true, phone: normalized };
+  return { success: true, phone: profilePhone };
 }
 
-export async function sendPhoneAuthOtpLocal(
-  phone: string,
-): Promise<PhoneOtpSendResult> {
-  const normalized = normalizePhoneE164(phone);
-
-  if (!isValidPhoneNumber(normalized)) {
-    return {
-      success: false,
-      message: "Please enter a valid phone number.",
-      status: 400,
-      errors: { phone: "Invalid phone number." },
-    };
-  }
-
-  return { success: true, phone: normalized };
-}
-
-export async function verifyPhoneAuthOtpLocal(
+/**
+ * Local test mode: create or locate a phone-only auth user and sign in with a
+ * server-side bootstrap password. Never writes placeholder emails to auth.users.
+ */
+async function authenticateLocalPhoneAuthUser(
   supabase: SupabaseClient,
   admin: SupabaseClient,
   phone: string,
-  otp: string,
-): Promise<PhoneAuthResult> {
-  const normalized = normalizePhoneE164(phone);
-  const token = otp.trim();
-
-  if (!isValidPhoneNumber(normalized)) {
-    return {
-      success: false,
-      message: "Please enter a valid phone number.",
-      status: 400,
-      errors: { phone: "Invalid phone number." },
-    };
-  }
-
-  if (!/^\d+$/.test(token) || token.length !== PHONE_OTP_LENGTH) {
-    return {
-      success: false,
-      message: "Please enter a valid 6-digit OTP.",
-      status: 400,
-      errors: { otp: "Invalid OTP." },
-    };
-  }
-
-  if (!matchesLocalTestOtp(token)) {
-    return {
-      success: false,
-      message: `Invalid OTP. Use ${LOCAL_TEST_OTP} in local test mode.`,
-      status: 400,
-      errors: { otp: `Use OTP ${LOCAL_TEST_OTP} in local test mode.` },
-    };
-  }
-
+): Promise<
+  | { userId: string; isNewUser: boolean }
+  | Extract<PhoneAuthResult, { success: false }>
+> {
+  const normalized = normalizeProfilePhone(phone);
+  const bootstrapPassword = createBootstrapPassword();
   let userId = await findUserIdByPhone(admin, normalized);
   let isNewUser = false;
 
@@ -151,11 +164,12 @@ export async function verifyPhoneAuthOtpLocal(
     const { data, error } = await admin.auth.admin.createUser({
       phone: normalized,
       phone_confirm: true,
+      password: bootstrapPassword,
     });
 
     if (error) {
-      const existingId = await findUserIdByPhone(admin, normalized);
-      if (!existingId) {
+      userId = await findUserIdByPhone(admin, normalized);
+      if (!userId) {
         return {
           success: false,
           message: error.message,
@@ -163,7 +177,6 @@ export async function verifyPhoneAuthOtpLocal(
           errors: {},
         };
       }
-      userId = existingId;
     } else if (data.user?.id) {
       userId = data.user.id;
       isNewUser = true;
@@ -177,8 +190,48 @@ export async function verifyPhoneAuthOtpLocal(
     }
   }
 
-  const ensureProfile = await ensureProfileForUserId(admin, userId, {
+  if (!isNewUser) {
+    const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
+      password: bootstrapPassword,
+    });
+
+    if (updateError) {
+      return {
+        success: false,
+        message: updateError.message,
+        status: 400,
+        errors: {},
+      };
+    }
+  }
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
     phone: normalized,
+    password: bootstrapPassword,
+  });
+
+  if (signInError) {
+    return {
+      success: false,
+      message: mapPhoneAuthError(signInError.message),
+      status: normalizeHttpStatus(signInError.status),
+      errors: {},
+    };
+  }
+
+  return { userId, isNewUser };
+}
+
+async function finalizePhoneAuth(
+  supabase: SupabaseClient,
+  admin: SupabaseClient,
+  userId: string,
+  phone: string,
+  isNewUser: boolean,
+  failureMessage: string,
+): Promise<PhoneAuthResult> {
+  const ensureProfile = await ensureProfileForUserId(admin, userId, {
+    phone,
   });
 
   if (!ensureProfile.ok) {
@@ -190,22 +243,7 @@ export async function verifyPhoneAuthOtpLocal(
     };
   }
 
-  const sessionResult = await establishAuthSessionForUser(
-    supabase,
-    admin,
-    userId,
-  );
-
-  if (!sessionResult.success) {
-    return {
-      success: false,
-      message: sessionResult.message,
-      status: 400,
-      errors: {},
-    };
-  }
-
-  await syncProfileAfterPhoneAuth(admin, userId, normalized);
+  await syncProfileAfterPhoneAuth(admin, userId, phone);
 
   const profile =
     (await getProfileByUserId(supabase, userId)) ??
@@ -214,7 +252,7 @@ export async function verifyPhoneAuthOtpLocal(
   if (!profile) {
     return {
       success: false,
-      message: "Account was created but the profile could not be loaded.",
+      message: failureMessage,
       status: 500,
       errors: {},
     };
@@ -227,45 +265,95 @@ export async function verifyPhoneAuthOtpLocal(
   };
 }
 
+async function applyAnonymousMerge(
+  admin: SupabaseClient,
+  anonymousId: string | null,
+  targetUserId: string,
+): Promise<string | null> {
+  if (!anonymousId || anonymousId === targetUserId) {
+    return null;
+  }
+
+  const merge = await mergeAnonymousUserIntoAccount(
+    admin,
+    anonymousId,
+    targetUserId,
+  );
+  return mergeSuccessMessage(merge);
+}
+
 export async function verifyPhoneAuthOtp(
   supabase: SupabaseClient,
   admin: SupabaseClient,
   phone: string,
   otp: string,
+  mode: PhoneOtpMode,
 ): Promise<PhoneAuthResult> {
-  const normalized = normalizePhoneE164(phone);
-  const token = otp.trim();
+  const parsed = parsePhoneAuthInput(phone, otp);
+  if ("success" in parsed) {
+    return parsed;
+  }
 
-  if (!isValidPhoneNumber(normalized)) {
+  const { normalized, token } = parsed;
+  const anonymousId = await getAnonymousUserId(supabase);
+
+  if (isLocalTestOtpMode(mode)) {
+    if (!matchesLocalTestOtp(token)) {
+      return invalidOtpResult(
+        `Invalid OTP. Use ${LOCAL_TEST_OTP} in local test mode.`,
+      );
+    }
+
+    const authResult = await authenticateLocalPhoneAuthUser(
+      supabase,
+      admin,
+      normalized,
+    );
+
+    if ("success" in authResult) {
+      return authResult;
+    }
+
+    const mergeMessage = await applyAnonymousMerge(
+      admin,
+      anonymousId,
+      authResult.userId,
+    );
+
+    const finalized = await finalizePhoneAuth(
+      supabase,
+      admin,
+      authResult.userId,
+      normalized,
+      authResult.isNewUser,
+      "Account was created but the profile could not be loaded.",
+    );
+
+    if (!finalized.success) {
+      return finalized;
+    }
+
     return {
-      success: false,
-      message: "Please enter a valid phone number.",
-      status: 400,
-      errors: { phone: "Invalid phone number." },
+      ...finalized,
+      mergeMessage,
     };
   }
 
-  if (!/^\d+$/.test(token) || token.length !== PHONE_OTP_LENGTH) {
-    return {
-      success: false,
-      message: "Please enter a valid 6-digit OTP.",
-      status: 400,
-      errors: { otp: "Invalid OTP." },
-    };
-  }
+  const existingUserId = await findUserIdByPhone(admin, normalized);
 
   const { data, error } = await supabase.auth.verifyOtp({
-    phone: normalized,
+    phone: normalizePhoneE164(normalized),
     token,
     type: "sms",
   });
 
   if (error) {
+    const message = mapPhoneAuthError(error.message);
     return {
       success: false,
-      message: mapPhoneAuthError(error.message),
+      message,
       status: 400,
-      errors: { otp: mapPhoneAuthError(error.message) },
+      errors: { otp: message },
     };
   }
 
@@ -278,40 +366,28 @@ export async function verifyPhoneAuthOtp(
     };
   }
 
-  const isNewUser = (data.user.identities?.length ?? 0) <= 1;
+  const mergeMessage = await applyAnonymousMerge(
+    admin,
+    anonymousId,
+    data.user.id,
+  );
 
-  const ensureProfile = await ensureProfileForUserId(admin, data.user.id, {
-    phone: normalized,
-  });
+  const finalized = await finalizePhoneAuth(
+    supabase,
+    admin,
+    data.user.id,
+    normalized,
+    !existingUserId,
+    "Signed in but the profile could not be loaded.",
+  );
 
-  if (!ensureProfile.ok) {
-    return {
-      success: false,
-      message: ensureProfile.message,
-      status: 400,
-      errors: {},
-    };
-  }
-
-  await syncProfileAfterPhoneAuth(admin, data.user.id, normalized);
-
-  const profile =
-    (await getProfileByUserId(supabase, data.user.id)) ??
-    (await getProfileByUserIdAdmin(admin, data.user.id));
-
-  if (!profile) {
-    return {
-      success: false,
-      message: "Signed in but the profile could not be loaded.",
-      status: 500,
-      errors: {},
-    };
+  if (!finalized.success) {
+    return finalized;
   }
 
   return {
-    success: true,
-    user: profile,
-    isNewUser,
+    ...finalized,
+    mergeMessage,
   };
 }
 
@@ -321,7 +397,7 @@ export async function syncProfileAfterPhoneAuth(
   userId: string,
   phone: string,
 ): Promise<void> {
-  const normalized = normalizePhoneE164(phone);
+  const normalized = normalizeProfilePhone(phone);
 
   const { data: existing } = await admin
     .from("profiles")
@@ -338,7 +414,8 @@ export async function syncProfileAfterPhoneAuth(
 
   if (
     !existing.phone?.trim() ||
-    existing.phone.trim() === "-"
+    existing.phone.trim() === "-" ||
+    !phonesMatch(existing.phone, normalized)
   ) {
     updates.phone = normalized;
   }

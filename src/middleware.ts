@@ -41,12 +41,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { response: sessionResponse, user, profile } =
+  const { response: sessionResponse, user, profile, isAnonymous } =
     await updateSession(request);
 
   const role = profile?.role ?? UserRole.USER;
 
-  if (user && isAuthRoute(pathname) && pathname !== "/reset-password") {
+  if (
+    user &&
+    !isAnonymous &&
+    isAuthRoute(pathname) &&
+    pathname !== "/reset-password"
+  ) {
     return redirectWithCookies(
       new URL(getDefaultPathForRole(role), request.url),
       sessionResponse,

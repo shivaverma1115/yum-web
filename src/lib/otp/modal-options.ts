@@ -49,9 +49,6 @@ export function createEmailOtpModalSession(email: string): OtpModalSession {
       const result = await sendEmailOtp(email);
       if (result.success) {
         toast.success(result.message);
-        if (result.data.debugOtp) {
-          toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
-        }
       }
       return {
         success: result.success,

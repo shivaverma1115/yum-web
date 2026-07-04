@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { Banknote, ChevronDown, ShoppingBag, Wallet } from "lucide-react";
 import OrderExpandableTableRow from "@/components/admin/orders/OrderExpandableTableRow";
 import EnableOrderNotificationsButton from "@/components/storefront/EnableOrderNotificationsButton";
@@ -10,6 +11,7 @@ import { formatCurrency } from "@/lib/constants";
 import { type CustomerOrdersFilter } from "@/lib/supabase/orders";
 import { UserRole } from "@/types/user";
 import { useOrders } from "@/hooks/orders/use-orders";
+import type { IOrderWithItems } from "@/types/order";
 
 const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -18,12 +20,12 @@ const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const TABLE_COLUMN_COUNT = 7;
 const DEFAULT_LIMIT = 10;
 
 export default function OrdersList({ userRole }: { userRole: UserRole }) {
   const [filter, setFilter] = useState<CustomerOrdersFilter>("all");
   const [page, setPage] = useState(1);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const isAdmin = userRole === UserRole.ADMIN;
   const {
     orders,
@@ -39,6 +41,43 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
   useEffect(() => {
     setPage(1);
   }, [filter]);
+
+  const handleDeleteOrder = async (order: IOrderWithItems) => {
+    if (!isAdmin || !order.id) return;
+
+    const confirmed = window.confirm(
+      `Delete order ${order.id.slice(0, 8)}…? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(order.id);
+
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        toast.error(data.message ?? "Failed to delete order.");
+        return;
+      }
+
+      toast.success(data.message ?? "Order deleted.");
+
+      if (orders.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        refreshOrders();
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete order.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const activeLabel =
     FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? "All";
@@ -207,7 +246,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                   </th>
                   {userRole === UserRole.ADMIN ? (
                     <th className="px-6 py-3 text-end text-sm whitespace-nowrap font-medium text-default-800">
-                      Action
+                      Actions
                     </th>
                   ) : null}
                 </tr>
@@ -218,13 +257,15 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                   <OrderExpandableTableRow
                     key={order.id}
                     order={order}
-                    columnCount={TABLE_COLUMN_COUNT}
+                    columnCount={isAdmin ? 8 : 7}
                     userRole={userRole}
                     isRealtimeNew={
                       order.id ? recentRealtimeOrderIds.has(order.id) : false
                     }
                     onStatusUpdated={updateOrderStatus}
                     onPaymentUpdated={refreshOrders}
+                    onDelete={isAdmin ? handleDeleteOrder : undefined}
+                    isDeleting={order.id ? deletingId === order.id : false}
                   />
                 ))}
               </tbody>

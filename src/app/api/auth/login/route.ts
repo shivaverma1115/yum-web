@@ -7,11 +7,13 @@ import {
     loginWithSupabase,
     type LoginPayload,
 } from "@/lib/supabase/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { BusinessSettings } from "@/types/business-settings";
 
 export async function POST(request: NextRequest) {
     try {
-        const settings = await getCachedBusinessSettings();
+        const settings: BusinessSettings = await getCachedBusinessSettings();
 
         if (!isEmailAuthEnabled(settings)) {
             return NextResponse.json(
@@ -26,8 +28,10 @@ export async function POST(request: NextRequest) {
         const payload = await request.json().catch(() => ({})) as LoginPayload;
 
         const supabase = await createClient();
+        const adminClient = createAdminClient();
         const result = await loginWithSupabase(
             supabase,
+            adminClient,
             payload.email!.trim(),
             payload.password!,
         );
@@ -45,9 +49,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: "Logged in successfully.",
+            message: result.mergeMessage
+                ? `Logged in successfully. ${result.mergeMessage}`
+                : "Logged in successfully.",
             data: {
                 user: result.user,
+                mergeMessage: result.mergeMessage ?? null,
             },
         });
     } catch (error) {

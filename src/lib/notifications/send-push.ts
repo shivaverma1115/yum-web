@@ -40,13 +40,6 @@ function logPushResult(
   result: PushSendResult,
   meta?: Record<string, unknown>,
 ): void {
-  console.info(`[fcm] ${context}`, {
-    success: result.success,
-    successCount: result.successCount,
-    failureCount: result.failureCount,
-    skippedReason: result.skippedReason,
-    ...meta,
-  });
 
   if (result.failureCount > 0 && result.errors.length > 0) {
     console.warn(`[fcm] ${context} errors`, result.errors);

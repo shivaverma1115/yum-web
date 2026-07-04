@@ -75,15 +75,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const { userId } = await context.params;
     const force = request.nextUrl.searchParams.get("force") === "true";
 
-    if (force && auth.profile.id === userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "You cannot force delete your own account.",
-        },
-        { status: 400 },
-      );
-    }
+    // if (force && auth.profile.id === userId) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: "You cannot force delete your own account.",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     const adminClient = createAdminClient();
     const result = force

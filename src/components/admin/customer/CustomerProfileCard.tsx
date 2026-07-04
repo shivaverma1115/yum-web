@@ -9,8 +9,9 @@ import {
 } from "@/hooks/use-admin-customer";
 import { formatCustomerSince } from "@/lib/constants";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
-import type { IUserWithVerification } from "@/types/user";
+import UserAvatar from "@/components/common/UserAvatar";
 import HtmlContent from "@/components/common/HtmlContent";
+import type { IUserWithVerification } from "@/types/user";
 
 function displayValue(value: string | null | undefined) {
   if (!value?.trim()) return "—";
@@ -34,10 +35,9 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
         className="w-full p-6 text-start hover:bg-default-50/80 transition-colors"
       >
         <div className="flex items-start gap-4">
-          <img
-            src="/images/avatars/avatar1.png"
-            alt=""
-            className="w-16 shrink-0 rounded-full border border-default-200 bg-default-100 p-1 dark:bg-default-700 dark:border-default-600"
+          <UserAvatar
+            user={customer}
+            className="w-16 shrink-0 rounded-full border border-default-200 bg-default-100 object-cover p-1 dark:bg-default-700 dark:border-default-600"
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">

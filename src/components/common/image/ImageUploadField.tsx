@@ -278,6 +278,7 @@ export default function ImageUploadField({
                 src={coverPreview}
                 alt="Avatar preview"
                 className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
               />
             ) : (
               <ImageIcon className="h-10 w-10 text-primary" />

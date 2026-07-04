@@ -1,4 +1,3 @@
-import type { ProductViewMode } from "@/components/storefront/Products/ProductViewModeToggle";
 import {
   SkeletonBox,
   SkeletonList,
@@ -7,7 +6,7 @@ import {
 
 type ProductGridSkeletonProps = {
   count?: number;
-  viewMode?: ProductViewMode;
+  viewMode?: 'grid' | 'list';
 };
 
 export function ProductGridSkeleton({

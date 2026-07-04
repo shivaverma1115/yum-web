@@ -13,6 +13,11 @@ export function getPhoneDigits(phone?: string | null): string {
   return phone?.replace(/\D/g, "") ?? "";
 }
 
+/** Digits-only phone for profiles and auth.users (e.g. 918004716907). */
+export function normalizeProfilePhone(phone?: string | null): string {
+  return getPhoneDigits(phone);
+}
+
 /** Returns the subscriber number without the India country code (+91). */
 export function getNationalMobileDigits(phone?: string | null): string {
   const digits = getPhoneDigits(phone);

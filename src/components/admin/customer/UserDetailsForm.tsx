@@ -152,9 +152,6 @@ export default function UserDetailsForm({
         return;
       }
       toast.success(result.message);
-      if (result.data.debugOtp) {
-        toast.info(`Dev OTP: ${result.data.debugOtp}`, { autoClose: 10000 });
-      }
       const verified = await openOtpModal(createEmailOtpModalSession(value));
       if (verified) {
         setEmailVerified(true);

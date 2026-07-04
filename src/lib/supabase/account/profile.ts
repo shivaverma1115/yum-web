@@ -1,7 +1,7 @@
 import { IUser, UserRole } from "@/types/user";
 import { profileEmailFromAuth } from "@/lib/auth/verification";
 import { normalizeProfileContactPatch } from "@/lib/profile/sync-contact";
-import { normalizePhoneE164 } from "@/lib/phone-otp/phone";
+import { normalizeProfilePhone } from "@/lib/phone-otp/phone";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 const PROFILE_COLUMNS =
@@ -67,9 +67,9 @@ export async function ensureProfileForUserId(
   }
 
   const phone = options?.phone
-    ? normalizePhoneE164(options.phone)
+    ? normalizeProfilePhone(options.phone)
     : authData.user.phone?.trim()
-      ? normalizePhoneE164(authData.user.phone)
+      ? normalizeProfilePhone(authData.user.phone)
       : "";
 
   const email =

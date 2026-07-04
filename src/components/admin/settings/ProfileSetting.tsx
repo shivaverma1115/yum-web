@@ -86,6 +86,9 @@ export default function ProfileSetting() {
                             variant="avatar"
                             multiple={false}
                             aspect={1}
+                            initialExistingUrls={
+                              user?.avatar_url ? [user.avatar_url] : []
+                            }
                             onChange={handleAvatarChange}
                         />
                     </div>

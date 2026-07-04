@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendPhoneAuthOtp, sendPhoneAuthOtpLocal } from "@/lib/auth/phone-session";
+import { sendPhoneAuthOtp } from "@/lib/auth/phone-session";
 import {
   getAuthMethodDisabledMessage,
   isPhoneAuthEnabled,
@@ -9,7 +9,6 @@ import {
   getOtpDisabledMessage,
   getOtpProductionBlockedInDevMessage,
   getOtpSendSuccessMessage,
-  isLocalTestOtpMode,
   isProductionOtpBlockedInDev,
 } from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
@@ -41,9 +40,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = isLocalTestOtpMode(mode)
-      ? await sendPhoneAuthOtpLocal(body.phone ?? "")
-      : await sendPhoneAuthOtp(await createClient(), body.phone ?? "");
+    const result = await sendPhoneAuthOtp(
+      await createClient(),
+      body.phone ?? "",
+      mode,
+    );
 
     if (!result.success) {
       return NextResponse.json(

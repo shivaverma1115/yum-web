@@ -40,7 +40,8 @@ export default function AppProviders({
           </CartProvider>
           </OtpModalProvider>
         </ContextApiProvider>
-        <FloatingWhatsAppWidget />
+        {/* <FloatingWhatsAppWidget /> */}
+        <ThemeToggle />
       </BusinessSettingsProvider>
       <ToastContainer
         position="top-right"

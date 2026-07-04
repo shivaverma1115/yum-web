@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { enrichProfileFromAuthUser } from "@/lib/auth/user-metadata";
 import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { normalizeEmail } from "@/lib/email-otp/email";
-import { isValidPhoneNumber, normalizePhoneE164 } from "@/lib/phone-otp/phone";
+import { isValidPhoneNumber, normalizeProfilePhone } from "@/lib/phone-otp/phone";
 import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-errors";
 import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
 import {
@@ -45,7 +46,7 @@ async function attachVerification(
   }
 
   return {
-    ...user,
+    ...enrichProfileFromAuthUser(user, data.user),
     verification: getUserVerificationStatus(data.user),
   };
 }
@@ -391,7 +392,7 @@ export async function createCustomerWithSupabase(
   input: IUser,
 ): Promise<CustomerMutationResult> {
   const email = input.email?.trim() ? normalizeEmail(input.email) : "";
-  const phone = input.phone?.trim() ? normalizePhoneE164(input.phone) : "";
+  const phone = input.phone?.trim() ? normalizeProfilePhone(input.phone) : "";
 
   if (!email && !isValidPhoneNumber(phone)) {
     return {

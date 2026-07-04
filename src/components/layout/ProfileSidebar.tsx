@@ -320,9 +320,6 @@ export default function ProfileSidebar({
               Logout
             </button>
           </li>
-          <li className="menu-item">
-            <ThemeToggle />
-          </li>
         </ul>
       </div>
     </div>

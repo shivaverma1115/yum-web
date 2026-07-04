@@ -34,7 +34,7 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResult<T>> {
 export async function loginWithEmailClient(
   email: string,
   password: string,
-): Promise<ApiResult<{ user: IUser }>> {
+): Promise<ApiResult<{ user: IUser; mergeMessage?: string | null }>> {
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -42,7 +42,9 @@ export async function loginWithEmailClient(
     body: JSON.stringify({ email, password }),
   });
 
-  return parseApiResponse<{ user: IUser }>(response);
+  return parseApiResponse<{ user: IUser; mergeMessage?: string | null }>(
+    response,
+  );
 }
 
 export type RegisterEmailPayload = {
@@ -82,7 +84,7 @@ export async function sendAuthPhoneOtpClient(
 export async function verifyAuthPhoneOtpClient(
   phone: string,
   otp: string,
-): Promise<ApiResult<{ user: IUser; isNewUser: boolean }>> {
+): Promise<ApiResult<{ user: IUser; isNewUser: boolean; mergeMessage?: string | null }>> {
   const response = await fetch("/api/auth/phone/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -90,15 +92,31 @@ export async function verifyAuthPhoneOtpClient(
     body: JSON.stringify({ phone, otp }),
   });
 
-  return parseApiResponse<{ user: IUser; isNewUser: boolean }>(response);
+  return parseApiResponse<{
+    user: IUser;
+    isNewUser: boolean;
+    mergeMessage?: string | null;
+  }>(response);
 }
 
+/**
+ * Guest users: prepare-merge cookie + signInWithOAuth (orders merge on callback).
+ * Avoids linkIdentity, which fails when the Google email already exists.
+ */
 export async function signInWithGoogleClient(
   nextPath = "/home",
+  options?: { linkAnonymous?: boolean },
 ): Promise<{ success: true } | { success: false; message: string }> {
   const supabase = createClient();
   const redirectUrl = new URL("/api/auth/callback", window.location.origin);
   redirectUrl.searchParams.set("next", nextPath);
+
+  if (options?.linkAnonymous) {
+    await fetch("/api/auth/anonymous/prepare-merge", {
+      method: "POST",
+      credentials: "include",
+    });
+  }
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -106,7 +124,7 @@ export async function signInWithGoogleClient(
       redirectTo: redirectUrl.toString(),
       queryParams: {
         access_type: "offline",
-        prompt: "consent",
+        prompt: "select_account",
       },
     },
   });

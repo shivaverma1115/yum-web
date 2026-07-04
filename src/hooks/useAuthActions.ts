@@ -21,7 +21,7 @@ type UseAuthActionsOptions = {
 
 export function useAuthActions(options: UseAuthActionsOptions = {}) {
   const router = useRouter();
-  const { setUser, refresh } = useContextApi();
+  const { setUser, refresh, isAnonymous } = useContextApi();
 
   const finishAuth = useCallback(
     async (user: IUser, message?: string) => {
@@ -54,7 +54,12 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
         return false;
       }
 
-      await finishAuth(result.data.user, "Logged in successfully.");
+      await finishAuth(
+        result.data.user,
+        result.data.mergeMessage
+          ? `Logged in successfully. ${result.data.mergeMessage}`
+          : "Logged in successfully.",
+      );
       return true;
     },
     [finishAuth],
@@ -109,9 +114,11 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
 
       await finishAuth(
         result.data.user,
-        result.data.isNewUser
-          ? "Account created successfully."
-          : "Logged in successfully.",
+        result.data.mergeMessage
+          ? `${result.data.isNewUser ? "Account created successfully." : "Logged in successfully."} ${result.data.mergeMessage}`
+          : result.data.isNewUser
+            ? "Account created successfully."
+            : "Logged in successfully.",
       );
       return true;
     },
@@ -120,7 +127,9 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
 
   const signInWithGoogle = useCallback(async () => {
     const nextPath = options.redirectTo ?? "/home";
-    const result = await signInWithGoogleClient(nextPath);
+    const result = await signInWithGoogleClient(nextPath, {
+      linkAnonymous: isAnonymous,
+    });
 
     if (!result.success) {
       toast.error(result.message);
@@ -128,7 +137,7 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
     }
 
     return true;
-  }, [options.redirectTo]);
+  }, [isAnonymous, options.redirectTo]);
 
   return {
     loginWithEmail,
