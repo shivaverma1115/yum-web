@@ -6,12 +6,17 @@ import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import PhoneVerification, { PhoneVerificationHandle } from "@/components/common/phone-verification/PhoneVerification";
 import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
+import { AppTooltip } from "@/components/common/AppTooltip";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { ensureCheckoutSession, type CheckoutSessionUser } from "@/lib/auth/ensure-checkout-session";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import {
+    getStoreClosedMessage,
+    isStoreOpen,
+} from "@/lib/business-settings/store-hours";
 import { formatCurrency } from "@/lib/constants";
 import { loadTableQrContext } from "@/lib/table-qr/context";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
@@ -54,6 +59,8 @@ export default function Checkout() {
     const [orderCompleted, setOrderCompleted] = useState(false);
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const checkoutOtpRequired = isOtpRequiredFor(businessSettings, "checkout");
+    const storeOpen = isStoreOpen(businessSettings);
+    const storeClosedMessage = getStoreClosedMessage(businessSettings);
     const trustedPhone =
         verification?.phone_verified && user?.phone ? user.phone : null;
     const showSendOtp =
@@ -513,24 +520,44 @@ export default function Checkout() {
                                     </div>
                                 </div>
 
-                                <button
-                                    type={showSendOtp ? "button" : "submit"}
-                                    onClick={showSendOtp ? () => void handleSendOtp() : undefined}
-                                    disabled={isSubmitting || isSendingOtp}
-                                    className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
-                                >
-                                    {isSendingOtp
-                                        ? "Sending OTP..."
-                                        : isSubmitting
-                                            ? paymentMethod === "online"
-                                                ? "Processing payment..."
-                                                : "Placing order..."
-                                            : showSendOtp
-                                                ? "Send OTP"
-                                                : paymentMethod === "online"
+                                {!storeOpen ? (
+                                    <AppTooltip
+                                        content={storeClosedMessage}
+                                        isMobile
+                                        side="top"
+                                    >
+                                        <span className="block w-full cursor-not-allowed">
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="pointer-events-none w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm opacity-60"
+                                            >
+                                                {paymentMethod === "online"
                                                     ? "Pay & Place Order"
                                                     : "Place Order"}
-                                </button>
+                                            </button>
+                                        </span>
+                                    </AppTooltip>
+                                ) : (
+                                    <button
+                                        type={showSendOtp ? "button" : "submit"}
+                                        onClick={showSendOtp ? () => void handleSendOtp() : undefined}
+                                        disabled={isSubmitting || isSendingOtp}
+                                        className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
+                                    >
+                                        {isSendingOtp
+                                            ? "Sending OTP..."
+                                            : isSubmitting
+                                                ? paymentMethod === "online"
+                                                    ? "Processing payment..."
+                                                    : "Placing order..."
+                                                : showSendOtp
+                                                    ? "Send OTP"
+                                                    : paymentMethod === "online"
+                                                        ? "Pay & Place Order"
+                                                        : "Place Order"}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

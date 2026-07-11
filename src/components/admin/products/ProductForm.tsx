@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { Loader2, Package, Save, X } from "lucide-react";
+import { Loader2, Package, Plus, Save, Trash2, X } from "lucide-react";
 import { fetchProductCategories } from "@/lib/api/categories";
 import { formatCurrency, MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
@@ -17,11 +17,18 @@ import { validateProductImageFiles } from "@/lib/products/imageValidation";
 import {
     ALLERGEN_OPTIONS,
     DIET_TYPE_OPTIONS,
+    FOOD_TAG_OPTIONS,
     INGREDIENT_OPTIONS,
+    NUTRITION_OPTIONS,
     normalizeAllergens,
+    normalizeCustomizations,
+    normalizeFoodTags,
     normalizeIngredients,
+    normalizeNutrition,
     normalizeSpiceLevels,
+    normalizeVariants,
     SPICE_LEVEL_OPTIONS,
+    type NutritionKey,
 } from "@/lib/products/attributes";
 import { normalizeOrderTypes, ORDER_TYPE_OPTIONS } from "@/lib/order-types";
 import type { IProductCategory } from "@/types/product-category";
@@ -35,7 +42,6 @@ const DEFAULT_FORM_VALUES: ProductFormInput = {
     name: "",
     category: "",
     selling_price: null,
-    quantity: null,
     order_type: [],
     short_description: "",
     long_description: "",
@@ -43,6 +49,10 @@ const DEFAULT_FORM_VALUES: ProductFormInput = {
     discount_percent: null,
     preparation_time_minutes: null,
     diet_type: "veg",
+    food_tags: [],
+    variants: [],
+    customizations: [],
+    nutrition: [],
     spice_levels: [],
     ingredients: [],
     allergens: [],
@@ -57,6 +67,46 @@ type ApiResponse = {
     errors?: Record<string, string>;
 };
 
+function resolveCategorySlug(
+    stored: string | null | undefined,
+    categories: IProductCategory[],
+): string {
+    const value = String(stored ?? "").trim();
+    if (!value) return "";
+
+    const bySlug = categories.find((category) => category.slug === value);
+    if (bySlug) return bySlug.slug;
+
+    const byName = categories.find(
+        (category) => category.name.toLowerCase() === value.toLowerCase(),
+    );
+    if (byName) return byName.slug;
+
+    return value;
+}
+
+function toFormValues(
+    product?: IProduct | null,
+    categories: IProductCategory[] = [],
+): ProductFormInput {
+    if (!product) return DEFAULT_FORM_VALUES;
+
+    return {
+        ...DEFAULT_FORM_VALUES,
+        ...product,
+        category: resolveCategorySlug(product.category, categories),
+        order_type: normalizeOrderTypes(product.order_type),
+        food_tags: normalizeFoodTags(product.food_tags),
+        variants: normalizeVariants(product.variants),
+        customizations: normalizeCustomizations(product.customizations),
+        nutrition: normalizeNutrition(product.nutrition),
+        spice_levels: normalizeSpiceLevels(product.spice_levels),
+        ingredients: normalizeIngredients(product.ingredients),
+        allergens: normalizeAllergens(product.allergens),
+        is_available: product.is_available !== false,
+    };
+}
+
 function buildProductFormData(
     values: ProductFormInput,
     imageValue: ImageUploadValue,
@@ -68,7 +118,6 @@ function buildProductFormData(
     formData.append("name", values.name);
     formData.append("category", values.category);
     formData.append("selling_price", String(values.selling_price));
-    formData.append("quantity", String(values.quantity));
     for (const orderType of values.order_type) {
         formData.append("order_type", orderType);
     }
@@ -87,6 +136,15 @@ function buildProductFormData(
     if (values.diet_type) {
         formData.append("diet_type", values.diet_type);
     }
+    for (const tag of values.food_tags) {
+        formData.append("food_tags", tag);
+    }
+    formData.append("variants", JSON.stringify(values.variants ?? []));
+    formData.append("customizations", JSON.stringify(values.customizations ?? []));
+    formData.append(
+        "nutrition",
+        JSON.stringify(normalizeNutrition(values.nutrition)),
+    );
     for (const level of values.spice_levels) {
         formData.append("spice_levels", level);
     }
@@ -165,34 +223,37 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
         setError,
         clearErrors,
         reset,
+        setValue,
         watch,
         formState: { errors, isSubmitting },
     } = useForm<ProductFormInput>({
-        defaultValues: product
-            ? {
-                ...DEFAULT_FORM_VALUES,
-                ...product,
-                order_type: normalizeOrderTypes(product.order_type),
-                spice_levels: normalizeSpiceLevels(product.spice_levels),
-                ingredients: normalizeIngredients(product.ingredients),
-                allergens: normalizeAllergens(product.allergens),
-                is_available: product.is_available !== false,
-            }
-            : DEFAULT_FORM_VALUES,
+        defaultValues: toFormValues(product),
     });
 
+    const {
+        fields: variantFields,
+        append: appendVariant,
+        remove: removeVariant,
+    } = useFieldArray({
+        control,
+        name: "variants",
+    });
+
+    const {
+        fields: customizationFields,
+        append: appendCustomization,
+        remove: removeCustomization,
+    } = useFieldArray({
+        control,
+        name: "customizations",
+    });
+
+    // Reset after product loads, and again once categories arrive so the
+    // <select> can match option values (slug) that were missing on first paint.
     useEffect(() => {
         if (!product) return;
-        reset({
-            ...DEFAULT_FORM_VALUES,
-            ...product,
-            order_type: normalizeOrderTypes(product.order_type),
-            spice_levels: normalizeSpiceLevels(product.spice_levels),
-            ingredients: normalizeIngredients(product.ingredients),
-            allergens: normalizeAllergens(product.allergens),
-            is_available: product.is_available !== false,
-        });
-    }, [product, reset]);
+        reset(toFormValues(product, categories));
+    }, [product, categories, reset]);
 
     const handleImageUploadChange = useCallback(
         (value: ImageUploadValue) => {
@@ -206,8 +267,41 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     const addDiscount = watch("add_discount");
     const discountPercent = watch("discount_percent");
     const sellingPrice = watch("selling_price");
+    const nutrition = watch("nutrition") ?? [];
     const discountedPrice = calculateDiscountedPrice(sellingPrice, discountPercent);
     const maxImageSizeMb = MAX_PRODUCT_IMAGE_SIZE_BYTES / (1024 * 1024);
+
+    const toggleNutrition = (key: NutritionKey, checked: boolean) => {
+        const current = nutrition ?? [];
+        if (checked) {
+            if (current.some((item) => item.key === key)) return;
+            setValue("nutrition", [...current, { key, value: 0 }], {
+                shouldDirty: true,
+            });
+            return;
+        }
+
+        setValue(
+            "nutrition",
+            current.filter((item) => item.key !== key),
+            { shouldDirty: true },
+        );
+    };
+
+    const updateNutritionValue = (key: NutritionKey, rawValue: string) => {
+        const current = nutrition ?? [];
+        const parsed =
+            rawValue.trim() === "" ? 0 : Number(rawValue);
+        const value = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+
+        setValue(
+            "nutrition",
+            current.map((item) =>
+                item.key === key ? { ...item, value } : item,
+            ),
+            { shouldDirty: true },
+        );
+    };
 
     const toggleClassName =
         "relative h-7 w-[3.25rem] cursor-pointer appearance-none rounded-full border-2 border-transparent bg-default-200 transition-colors duration-200 ease-in-out before:inline-block before:h-6 before:w-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:transition before:duration-200 before:ease-in-out checked:border-transparent checked:bg-none checked:!bg-primary checked:before:translate-x-full focus:ring-0 focus:ring-transparent";
@@ -242,7 +336,27 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
             ? `/api/admin/products/${productId}`
             : "/api/admin/products";
         const method = isEditMode ? "PATCH" : "POST";
-        const formData = buildProductFormData(values, imageValue);
+        const formData = buildProductFormData(
+            {
+                ...values,
+                variants: (values.variants ?? [])
+                    .map((item) => ({
+                        name: item.name.trim(),
+                        price: Number(item.price) || 0,
+                    }))
+                    .filter((item) => item.name.length > 0),
+                customizations: (values.customizations ?? [])
+                    .map((item) => ({
+                        label: item.label.trim(),
+                        extra_price: Number(item.extra_price) || 0,
+                    }))
+                    .filter((item) => item.label.length > 0),
+                nutrition: normalizeNutrition(values.nutrition).filter(
+                    (item) => item.value >= 0,
+                ),
+            },
+            imageValue,
+        );
 
         try {
             const data = await saveProduct(endpoint, method, formData);
@@ -343,17 +457,32 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 <Input
                                     as="select"
                                     id="category"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || categories.length === 0}
                                     {...register("category", {
                                         required: "Please select a category.",
                                     })}
                                 >
-                                    <option value="">Select Product Category</option>
+                                    <option value="">
+                                        {categories.length === 0
+                                            ? "Loading categories..."
+                                            : "Select Product Category"}
+                                    </option>
                                     {categories.map((category) => (
                                         <option key={category.id} value={category.slug}>
                                             {category.name}
                                         </option>
                                     ))}
+                                    {product?.category &&
+                                    !categories.some(
+                                        (category) =>
+                                            category.slug === product.category ||
+                                            category.name.toLowerCase() ===
+                                                product.category.toLowerCase(),
+                                    ) ? (
+                                        <option value={product.category}>
+                                            {product.category}
+                                        </option>
+                                    ) : null}
                                 </Input>
                                 {errors.category?.message ? (
                                     <span className={errorClassName}>{errors.category.message}</span>
@@ -379,27 +508,6 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 />
                                 {errors.selling_price?.message ? (
                                     <span className={errorClassName}>{errors.selling_price.message}</span>
-                                ) : null}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="quantity">
-                                    Available Quantity <span className="text-required" >*</span>
-                                </label>
-                                <Input
-                                    type="number"
-                                    id="quantity"
-                                    min={0}
-                                    placeholder="Available Quantity"
-                                    disabled={isSubmitting}
-                                    {...register("quantity", {
-                                        required: "Quantity is required.",
-                                        valueAsNumber: true,
-                                        min: { value: 0, message: "Quantity cannot be negative." },
-                                    })}
-                                />
-                                {errors.quantity?.message ? (
-                                    <span className={errorClassName}>{errors.quantity.message}</span>
                                 ) : null}
                             </div>
 
@@ -432,17 +540,17 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                             <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="diet_type">
-                                    Veg / Non Veg <span className="text-required">*</span>
+                                    Food Type <span className="text-required">*</span>
                                 </label>
                                 <Input
                                     as="select"
                                     id="diet_type"
                                     disabled={isSubmitting}
                                     {...register("diet_type", {
-                                        required: "Please select Veg or Non Veg.",
+                                        required: "Please select a food type.",
                                     })}
                                 >
-                                    <option value="">Select type</option>
+                                    <option value="">Select food type</option>
                                     {DIET_TYPE_OPTIONS.map((option) => (
                                         <option key={option.value} value={option.value}>
                                             {option.label}
@@ -452,6 +560,249 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 {errors.diet_type?.message ? (
                                     <span className={errorClassName}>{errors.diet_type.message}</span>
                                 ) : null}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="food_tags">
+                                    Food Tags
+                                </label>
+                                <Controller
+                                    name="food_tags"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            id="food_tags"
+                                            options={FOOD_TAG_OPTIONS}
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            placeholder="Select food tags"
+                                            disabled={isSubmitting}
+                                            error={errors.food_tags?.message}
+                                            aria-label="Food tags"
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <h4 className="text-sm font-medium text-default-900">
+                                            Variants
+                                        </h4>
+                                        <p className="mt-1 text-sm text-default-600">
+                                            Portion options with their own price (e.g. Half ₹120, Full ₹190).
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={isSubmitting}
+                                        onClick={() =>
+                                            appendVariant({ name: "", price: 0 })
+                                        }
+                                        className="inline-flex items-center gap-1.5 rounded-lg bg-default-100 px-3 py-2 text-sm font-medium text-default-700 transition-all hover:bg-default-200 disabled:opacity-60"
+                                    >
+                                        <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                                        Add
+                                    </button>
+                                </div>
+
+                                {variantFields.length === 0 ? (
+                                    <p className="text-sm text-default-500">
+                                        No variants yet. Add Half/Full, Regular/Large, etc.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {variantFields.map((field, index) => (
+                                            <div
+                                                key={field.id}
+                                                className="grid gap-3 sm:grid-cols-[1fr_120px_auto]"
+                                            >
+                                                <div>
+                                                    <Input
+                                                        placeholder="e.g. Half"
+                                                        disabled={isSubmitting}
+                                                        {...register(
+                                                            `variants.${index}.name` as const,
+                                                        )}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step="0.01"
+                                                        placeholder="Price ₹"
+                                                        disabled={isSubmitting}
+                                                        {...register(
+                                                            `variants.${index}.price` as const,
+                                                            {
+                                                                valueAsNumber: true,
+                                                                min: {
+                                                                    value: 0,
+                                                                    message: "Price cannot be negative.",
+                                                                },
+                                                            },
+                                                        )}
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={isSubmitting}
+                                                    onClick={() => removeVariant(index)}
+                                                    className="inline-flex items-center justify-center rounded-lg border border-default-200 px-3 py-2 text-default-600 transition-all hover:bg-default-50 disabled:opacity-60"
+                                                    aria-label={`Remove variant ${index + 1}`}
+                                                >
+                                                    <Trash2 className="h-4 w-4" aria-hidden />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <h4 className="text-sm font-medium text-default-900">
+                                            Customizations
+                                        </h4>
+                                        <p className="mt-1 text-sm text-default-600">
+                                            Optional add-ons customers can choose (e.g. Extra Butter +20).
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={isSubmitting}
+                                        onClick={() =>
+                                            appendCustomization({ label: "", extra_price: 0 })
+                                        }
+                                        className="inline-flex items-center gap-1.5 rounded-lg bg-default-100 px-3 py-2 text-sm font-medium text-default-700 transition-all hover:bg-default-200 disabled:opacity-60"
+                                    >
+                                        <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                                        Add
+                                    </button>
+                                </div>
+
+                                {customizationFields.length === 0 ? (
+                                    <p className="text-sm text-default-500">
+                                        No customizations yet.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {customizationFields.map((field, index) => (
+                                            <div
+                                                key={field.id}
+                                                className="grid gap-3 sm:grid-cols-[1fr_120px_auto]"
+                                            >
+                                                <div>
+                                                    <Input
+                                                        placeholder="e.g. Extra Butter"
+                                                        disabled={isSubmitting}
+                                                        {...register(
+                                                            `customizations.${index}.label` as const,
+                                                        )}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step="0.01"
+                                                        placeholder="Extra ₹"
+                                                        disabled={isSubmitting}
+                                                        {...register(
+                                                            `customizations.${index}.extra_price` as const,
+                                                            {
+                                                                valueAsNumber: true,
+                                                                min: {
+                                                                    value: 0,
+                                                                    message: "Price cannot be negative.",
+                                                                },
+                                                            },
+                                                        )}
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={isSubmitting}
+                                                    onClick={() => removeCustomization(index)}
+                                                    className="inline-flex items-center justify-center rounded-lg border border-default-200 px-3 py-2 text-default-600 transition-all hover:bg-default-50 disabled:opacity-60"
+                                                    aria-label={`Remove customization ${index + 1}`}
+                                                >
+                                                    <Trash2 className="h-4 w-4" aria-hidden />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4 rounded-lg border border-default-200 p-4">
+                                <div>
+                                    <h4 className="text-sm font-medium text-default-900">
+                                        Nutrition
+                                    </h4>
+                                    <p className="mt-1 text-sm text-default-600">
+                                        Select nutrients to include, then enter values (per serving).
+                                    </p>
+                                </div>
+                                <div className="space-y-3">
+                                    {NUTRITION_OPTIONS.map((option) => {
+                                        const selected = nutrition.find(
+                                            (item) => item.key === option.key,
+                                        );
+                                        const inputId = `nutrition_${option.key}`;
+
+                                        return (
+                                            <div
+                                                key={option.key}
+                                                className="rounded-lg border border-default-200 p-3"
+                                            >
+                                                <label className="flex cursor-pointer items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="size-4 rounded border-default-300 text-primary focus:ring-primary"
+                                                        checked={Boolean(selected)}
+                                                        disabled={isSubmitting}
+                                                        onChange={(event) =>
+                                                            toggleNutrition(
+                                                                option.key,
+                                                                event.target.checked,
+                                                            )
+                                                        }
+                                                    />
+                                                    <span className="text-sm font-medium text-default-900">
+                                                        {option.label}{" "}
+                                                        <span className="font-normal text-default-500">
+                                                            ({option.unit})
+                                                        </span>
+                                                    </span>
+                                                </label>
+
+                                                {selected ? (
+                                                    <div className="mt-3 ps-7">
+                                                        <Input
+                                                            type="number"
+                                                            id={inputId}
+                                                            min={0}
+                                                            step={option.step}
+                                                            placeholder={option.placeholder}
+                                                            disabled={isSubmitting}
+                                                            value={selected.value}
+                                                            onChange={(event) =>
+                                                                updateNutritionValue(
+                                                                    option.key,
+                                                                    event.target.value,
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             <div>

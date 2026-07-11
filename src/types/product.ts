@@ -1,8 +1,12 @@
 import type { FulfillmentType } from "@/types/order";
 import type {
+  FoodTag,
   ProductAllergen,
+  ProductCustomization,
   ProductDietType,
   ProductIngredient,
+  ProductNutritionItem,
+  ProductVariant,
   SpiceLevel,
 } from "@/lib/products/attributes";
 
@@ -13,7 +17,6 @@ export type IProduct = {
   name: string;
   category: string;
   selling_price: number | null;
-  quantity: number | null;
   order_type: FulfillmentType[];
   short_description: string;
   long_description: string;
@@ -21,6 +24,10 @@ export type IProduct = {
   discount_percent: number | null;
   preparation_time_minutes: number | null;
   diet_type: ProductDietType | null;
+  food_tags: FoodTag[];
+  variants: ProductVariant[];
+  customizations: ProductCustomization[];
+  nutrition: ProductNutritionItem[];
   spice_levels: SpiceLevel[];
   ingredients: ProductIngredient[];
   allergens: ProductAllergen[];

@@ -17,8 +17,11 @@ import { isRichTextEmpty } from "@/lib/rich-text";
 import { formatCurrency } from "@/lib/constants";
 import {
     ALLERGEN_OPTIONS,
+    formatSlugLabel,
     getDietTypeLabel,
+    getNutritionOption,
     getOptionLabel,
+    hasProductNutrition,
     INGREDIENT_OPTIONS,
     SPICE_LEVEL_OPTIONS,
 } from "@/lib/products/attributes";
@@ -145,31 +148,36 @@ export default function ProductDetails({
             <section className="lg:py-10 py-6">
                 <div className="container">
                     <div className="grid lg:grid-cols-2 gap-6">
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="rounded-lg border border-default-200 p-4 flex items-center justify-center min-h-[320px]">
-                                <img
-                                    src={activeImage}
-                                    alt={product.name}
-                                    className="max-w-full max-h-[400px] object-contain mx-auto"
-                                />
+                        <div className="flex w-full flex-col gap-4">
+                            <div className="relative w-full overflow-hidden rounded-xl border border-default-200 bg-default-50">
+                                <div className="">
+                                    <img
+                                        src={activeImage}
+                                        alt={product.name}
+                                        className="h-full w-full object-contain"
+                                    />
+                                </div>
                             </div>
 
                             {images.length > 1 ? (
-                                <div className="flex flex-wrap justify-center gap-2">
+                                <div className="grid w-full grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
                                     {images.map((src, index) => (
                                         <button
                                             key={`${src}-${index}`}
                                             type="button"
                                             onClick={() => setActiveImageIndex(index)}
-                                            className={`cursor-pointer rounded overflow-hidden border-2 transition-all !w-24 !h-24 lg:!w-32 lg:!h-32 ${index === activeImageIndex
-                                                ? "border-primary"
-                                                : "border-transparent"
-                                                }`}
+                                            aria-label={`View image ${index + 1} of ${images.length}`}
+                                            aria-current={index === activeImageIndex}
+                                            className={`aspect-square w-full overflow-hidden rounded-lg border-2 bg-default-50 transition-all ${
+                                                index === activeImageIndex
+                                                    ? "border-primary ring-1 ring-primary/30"
+                                                    : "border-default-200 hover:border-default-300"
+                                            }`}
                                         >
                                             <img
                                                 src={src}
                                                 alt={`${product.name} ${index + 1}`}
-                                                className="w-full h-full object-cover"
+                                                className="h-full w-full object-cover"
                                             />
                                         </button>
                                     ))}
@@ -185,7 +193,7 @@ export default function ProductDetails({
                                 <span className="text-base font-normal text-default-500">
                                     Category:
                                 </span>{" "}
-                                {product.category}
+                                {formatSlugLabel(product.category)}
                             </p>
 
                             {hasShortDescription ? (
@@ -208,7 +216,7 @@ export default function ProductDetails({
                             <div className="flex flex-wrap gap-2 mb-5">
                                 <OrderTypeBadges types={product.order_type} />
                                 <div className="border border-default-200 rounded-full px-3 py-1.5 flex items-center">
-                                    <span className="text-xs">{product.category}</span>
+                                    <span className="text-xs">{formatSlugLabel(product.category)}</span>
                                 </div>
                                 {product.add_discount ? (
                                     <div className="border border-primary/30 bg-primary/10 rounded-full px-3 py-1.5 flex items-center">
@@ -261,6 +269,30 @@ export default function ProductDetails({
                                 ))}
                             </div>
 
+                            {hasProductNutrition(product.nutrition) ? (
+                                <div className="mb-6 rounded-lg border border-default-200 p-4">
+                                    <h4 className="mb-3 text-sm font-semibold text-default-800">
+                                        Nutrition
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                        {product.nutrition.map((item) => {
+                                            const option = getNutritionOption(item.key);
+                                            return (
+                                                <div key={item.key}>
+                                                    <p className="text-xs text-default-500">
+                                                        {option?.label ?? item.key}
+                                                    </p>
+                                                    <p className="text-sm font-medium text-default-800">
+                                                        {item.value}
+                                                        {option?.unit ? ` ${option.unit}` : ""}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ) : null}
+
                             <p className="text-3xl font-semibold text-primary mb-6">
                                 {product.add_discount &&
                                     product.discount_percent != null &&
@@ -282,9 +314,9 @@ export default function ProductDetails({
                             </p>
 
                             <p className="text-sm text-default-600 mb-6">
-                                {product.quantity != null && product.quantity > 0
-                                    ? `${product.quantity} in stock`
-                                    : "Out of stock"}
+                                {product.is_available === false
+                                    ? "Currently unavailable"
+                                    : "Available to order"}
                             </p>
 
                             <div className="flex items-center gap-2 mb-8">

@@ -312,6 +312,40 @@ export default function BusinessSettingsForm() {
             disabled={isSubmitting}
           />
         </FieldGroup>
+
+        <ToggleField
+          label="Enforce store hours"
+          description="Block checkout when the store is outside open hours."
+          checked={watch("order.store_hours_enabled")}
+          disabled={isSubmitting}
+          onChange={(checked) => setValue("order.store_hours_enabled", checked)}
+        />
+
+        <FieldGroup
+          label="Opens at"
+          error={errors.order?.open_time?.message}
+        >
+          <Input
+            type="time"
+            {...register("order.open_time", {
+              required: "Open time is required.",
+            })}
+            disabled={isSubmitting || !watch("order.store_hours_enabled")}
+          />
+        </FieldGroup>
+
+        <FieldGroup
+          label="Closes at"
+          error={errors.order?.close_time?.message}
+        >
+          <Input
+            type="time"
+            {...register("order.close_time", {
+              required: "Close time is required.",
+            })}
+            disabled={isSubmitting || !watch("order.store_hours_enabled")}
+          />
+        </FieldGroup>
       </SettingsSection>
 
       <SettingsSection

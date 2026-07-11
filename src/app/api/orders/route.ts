@@ -3,6 +3,10 @@ import { requireAuth } from "@/lib/auth/requireAuth";
 import { getUserVerificationStatus } from "@/lib/auth/verification";
 import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
+import {
+  getStoreClosedMessage,
+  isStoreOpen,
+} from "@/lib/business-settings/store-hours";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
 import { phonesMatch } from "@/lib/phone-otp/phone";
@@ -46,6 +50,16 @@ export async function POST(request: NextRequest) {
     const settings = await getCachedBusinessSettings();
     const fulfillment = body.fulfillment_type;
     const checkoutPhone = body.phone?.trim() || auth.profile?.phone?.trim() || "";
+
+    if (!isStoreOpen(settings)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: getStoreClosedMessage(settings),
+        },
+        { status: 403 },
+      );
+    }
 
     if (
       (fulfillment === "delivery" || fulfillment === "pickup") &&

@@ -27,17 +27,6 @@ async function parseApiResponse<T>(response: Response): Promise<ApiResult<T>> {
   };
 }
 
-export async function fetchTableQrCodes(): Promise<
-  ApiResult<{ tableQrCodes: ITableQrCode[] }>
-> {
-  const response = await fetch("/api/admin/table-qr", {
-    method: "GET",
-    cache: "no-store",
-  });
-
-  return parseApiResponse<{ tableQrCodes: ITableQrCode[] }>(response);
-}
-
 export async function createTableQrCodes(
   input: CreateTableQrInput,
 ): Promise<ApiResult<{ tableQrCodes: ITableQrCode[] }>> {

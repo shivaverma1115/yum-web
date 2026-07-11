@@ -26,11 +26,14 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+/** Soft cap per cart line — restaurants don't track inventory stock. */
+export const MAX_CART_LINE_QUANTITY = 20;
+
 function productToCartItem(product: IProduct, quantity: number): ICartItem | null {
   if (!product.id) return null;
+  if (product.is_available === false) return null;
 
   const images = getProductImages(product);
-  const maxQuantity = Math.max(0, product.quantity ?? 0) || 99;
 
   return {
     productId: product.id,
@@ -38,8 +41,8 @@ function productToCartItem(product: IProduct, quantity: number): ICartItem | nul
     name: product.name,
     image_url: images[0] ?? "/images/dishes/pizza.png",
     price: product.selling_price ?? 0,
-    quantity: Math.min(Math.max(1, quantity), maxQuantity),
-    maxQuantity,
+    quantity: Math.min(Math.max(1, quantity), MAX_CART_LINE_QUANTITY),
+    maxQuantity: MAX_CART_LINE_QUANTITY,
   };
 }
 

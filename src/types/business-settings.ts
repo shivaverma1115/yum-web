@@ -10,6 +10,14 @@ export type BusinessSettingsOrder = {
   online_payment_enabled: boolean;
   min_order_amount: number;
   delivery_charge: number;
+  /** When false, ignore hours and always allow orders */
+  store_hours_enabled: boolean;
+  /** "HH:mm" 24h, e.g. "09:00" */
+  open_time: string;
+  /** "HH:mm" 24h, e.g. "22:00" */
+  close_time: string;
+  /** IANA timezone used to evaluate open/close */
+  timezone: string;
 };
 
 export type PhoneOtpMode = "off" | "test" | "test_local" | "production";
@@ -67,6 +75,10 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
     online_payment_enabled: true,
     min_order_amount: 100,
     delivery_charge: 40,
+    store_hours_enabled: true,
+    open_time: "09:00",
+    close_time: "22:00",
+    timezone: "Asia/Kolkata",
   },
   phone_verification: {
     mode: "test",

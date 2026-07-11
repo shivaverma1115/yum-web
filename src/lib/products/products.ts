@@ -1,7 +1,11 @@
 import {
   normalizeAllergens,
+  normalizeCustomizations,
+  normalizeFoodTags,
   normalizeIngredients,
+  normalizeNutrition,
   normalizeSpiceLevels,
+  normalizeVariants,
 } from "@/lib/products/attributes";
 import { normalizeOrderTypes } from "@/lib/order-types";
 import type { IProduct } from "@/types/product";
@@ -10,6 +14,10 @@ function normalizeProduct(product: IProduct): IProduct {
   return {
     ...product,
     order_type: normalizeOrderTypes(product.order_type),
+    food_tags: normalizeFoodTags(product.food_tags),
+    variants: normalizeVariants(product.variants),
+    customizations: normalizeCustomizations(product.customizations),
+    nutrition: normalizeNutrition(product.nutrition),
     spice_levels: normalizeSpiceLevels(product.spice_levels),
     ingredients: normalizeIngredients(product.ingredients),
     allergens: normalizeAllergens(product.allergens),

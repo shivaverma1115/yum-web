@@ -1,4 +1,5 @@
 import type { BusinessSettings, PhoneOtpMode } from "@/types/business-settings";
+import { isValidStoreTime } from "@/lib/business-settings/store-hours";
 import { isValidEmail } from "../email-otp/email";
 
 const PHONE_OTP_MODES: PhoneOtpMode[] = [
@@ -155,6 +156,37 @@ export function validateBusinessSettingsPatch(
       );
       if (charge !== null) {
         order.delivery_charge = charge;
+      }
+    }
+
+    if (patch.order.store_hours_enabled !== undefined) {
+      order.store_hours_enabled = Boolean(patch.order.store_hours_enabled);
+    }
+
+    if (patch.order.open_time !== undefined) {
+      const openTime = String(patch.order.open_time).trim();
+      if (!isValidStoreTime(openTime)) {
+        errors["order.open_time"] = "Enter a valid open time (HH:mm).";
+      } else {
+        order.open_time = openTime;
+      }
+    }
+
+    if (patch.order.close_time !== undefined) {
+      const closeTime = String(patch.order.close_time).trim();
+      if (!isValidStoreTime(closeTime)) {
+        errors["order.close_time"] = "Enter a valid close time (HH:mm).";
+      } else {
+        order.close_time = closeTime;
+      }
+    }
+
+    if (patch.order.timezone !== undefined) {
+      const timezone = String(patch.order.timezone).trim();
+      if (!timezone) {
+        errors["order.timezone"] = "Timezone is required.";
+      } else {
+        order.timezone = timezone;
       }
     }
 

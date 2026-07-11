@@ -4,8 +4,12 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import {
   isProductDietType,
   normalizeAllergens,
+  normalizeCustomizations,
+  normalizeFoodTags,
   normalizeIngredients,
+  normalizeNutrition,
   normalizeSpiceLevels,
+  normalizeVariants,
   parseStringArrayFromFormData,
 } from "@/lib/products/attributes";
 import {
@@ -23,7 +27,7 @@ import {
 } from "@/lib/products/slug";
 
 const PRODUCT_COLUMNS =
-  "id, user_id, slug, name, category, selling_price, quantity, order_type, short_description, long_description, add_discount, discount_percent, preparation_time_minutes, diet_type, spice_levels, ingredients, allergens, is_available, image_url, image_urls, created_at, updated_at";
+  "id, user_id, slug, name, category, selling_price, order_type, short_description, long_description, add_discount, discount_percent, preparation_time_minutes, diet_type, food_tags, variants, customizations, nutrition, spice_levels, ingredients, allergens, is_available, image_url, image_urls, created_at, updated_at";
 
 async function resolveUniqueProductSlug(
   supabase: SupabaseClient,
@@ -109,6 +113,10 @@ function mapProductRow(row: Record<string, unknown>): IProduct {
   return {
     ...(row as IProduct),
     order_type: normalizeOrderTypes(row.order_type),
+    food_tags: normalizeFoodTags(row.food_tags),
+    variants: normalizeVariants(row.variants),
+    customizations: normalizeCustomizations(row.customizations),
+    nutrition: normalizeNutrition(row.nutrition),
     spice_levels: normalizeSpiceLevels(row.spice_levels),
     ingredients: normalizeIngredients(row.ingredients),
     allergens: normalizeAllergens(row.allergens),
@@ -141,16 +149,11 @@ export function parseProductFormData(formData: FormData): {
   }
 
   const sellingPriceResult = parseNumber(formData.get("selling_price"), "Selling price");
-  const quantityResult = parseNumber(formData.get("quantity"), "Quantity");
 
   if (!sellingPriceResult.ok) errors.selling_price = sellingPriceResult.message;
-  if (!quantityResult.ok) errors.quantity = quantityResult.message;
 
   if (sellingPriceResult.ok && sellingPriceResult.value < 0) {
     errors.selling_price = "Selling price cannot be negative.";
-  }
-  if (quantityResult.ok && quantityResult.value < 0) {
-    errors.quantity = "Quantity cannot be negative.";
   }
 
   const add_discount = parseBoolean(formData.get("add_discount"));
@@ -193,9 +196,17 @@ export function parseProductFormData(formData: FormData): {
   const dietTypeRaw = String(formData.get("diet_type") ?? "").trim();
   const diet_type = isProductDietType(dietTypeRaw) ? dietTypeRaw : null;
   if (!diet_type) {
-    errors.diet_type = "Please select Veg or Non Veg.";
+    errors.diet_type = "Please select a food type.";
   }
 
+  const food_tags = normalizeFoodTags(
+    parseStringArrayFromFormData(formData, "food_tags"),
+  );
+  const variants = normalizeVariants(String(formData.get("variants") ?? ""));
+  const customizations = normalizeCustomizations(
+    String(formData.get("customizations") ?? ""),
+  );
+  const nutrition = normalizeNutrition(String(formData.get("nutrition") ?? ""));
   const spice_levels = normalizeSpiceLevels(
     parseStringArrayFromFormData(formData, "spice_levels"),
   );
@@ -216,7 +227,6 @@ export function parseProductFormData(formData: FormData): {
       name,
       category,
       selling_price: sellingPriceResult.ok ? sellingPriceResult.value : 0,
-      quantity: quantityResult.ok ? quantityResult.value : 0,
       order_type,
       short_description,
       long_description,
@@ -224,6 +234,10 @@ export function parseProductFormData(formData: FormData): {
       discount_percent,
       preparation_time_minutes,
       diet_type,
+      food_tags,
+      variants,
+      customizations,
+      nutrition,
       spice_levels,
       ingredients,
       allergens,
@@ -266,7 +280,6 @@ export async function createProductWithSupabase(
       name: input.name,
       category: input.category,
       selling_price: input.selling_price,
-      quantity: input.quantity,
       order_type: input.order_type,
       short_description: input.short_description,
       long_description: input.long_description,
@@ -274,6 +287,10 @@ export async function createProductWithSupabase(
       discount_percent: input.add_discount ? input.discount_percent : null,
       preparation_time_minutes: input.preparation_time_minutes,
       diet_type: input.diet_type,
+      food_tags: input.food_tags,
+      variants: input.variants,
+      customizations: input.customizations,
+      nutrition: input.nutrition,
       spice_levels: input.spice_levels,
       ingredients: input.ingredients,
       allergens: input.allergens,
@@ -416,7 +433,6 @@ export async function updateProductWithSupabase(
       name: input.name,
       category: input.category,
       selling_price: input.selling_price,
-      quantity: input.quantity,
       order_type: input.order_type,
       short_description: input.short_description,
       long_description: input.long_description,
@@ -424,6 +440,10 @@ export async function updateProductWithSupabase(
       discount_percent: input.add_discount ? input.discount_percent : null,
       preparation_time_minutes: input.preparation_time_minutes,
       diet_type: input.diet_type,
+      food_tags: input.food_tags,
+      variants: input.variants,
+      customizations: input.customizations,
+      nutrition: input.nutrition,
       spice_levels: input.spice_levels,
       ingredients: input.ingredients,
       allergens: input.allergens,

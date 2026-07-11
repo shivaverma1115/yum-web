@@ -1,18 +1,26 @@
-import Preloader from "@/components/layout/Preloader";
 import { Metadata } from "next";
-import dynamic from "next/dynamic";
-import { Suspense } from "react";
-
-const TableQrManager = dynamic(
-  () => import("@/components/admin/table-qr/TableQrManager"),
-);
+import TableQrManager from "@/components/admin/table-qr/TableQrManager";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { listTableQrCodesWithSupabase } from "@/lib/supabase/table-qr/table-qr";
+import type { ITableQrCode } from "@/types/table-qr";
 
 export const metadata: Metadata = {
   title: "Table QR Codes",
   description: "Generate and manage dine-in table QR codes",
 };
 
-export default function AdminTableQrPage() {
+export default async function AdminTableQrPage() {
+  let initialTableQrCodes: ITableQrCode[] = [];
+
+  const auth = await requireAdmin();
+  if (auth.authorized) {
+    const result = await listTableQrCodesWithSupabase(createAdminClient());
+    if (result.success) {
+      initialTableQrCodes = result.tableQrCodes;
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,9 +31,7 @@ export default function AdminTableQrPage() {
         </p>
       </div>
 
-      <Suspense fallback={<Preloader />}>
-        <TableQrManager />
-      </Suspense>
+      <TableQrManager initialTableQrCodes={initialTableQrCodes} />
     </div>
   );
 }

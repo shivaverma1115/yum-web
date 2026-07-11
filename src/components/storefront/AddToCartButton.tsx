@@ -56,8 +56,8 @@ export default function AddToCartButton({
       return;
     }
 
-    if (product.quantity !== null && product.quantity !== undefined && product.quantity <= 0) {
-      toast.error("This product is out of stock.");
+    if (product.is_available === false) {
+      toast.error("This product is currently unavailable.");
       return;
     }
 

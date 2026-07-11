@@ -1,22 +1,13 @@
 import {
   SkeletonBox,
-  SkeletonList,
   SkeletonText,
 } from "./SkeletonToolkit";
 
 type ProductGridSkeletonProps = {
   count?: number;
-  viewMode?: 'grid' | 'list';
 };
 
-export function ProductGridSkeleton({
-  count = 6,
-  viewMode = "grid",
-}: ProductGridSkeletonProps) {
-  if (viewMode === "list") {
-    return <SkeletonList rows={count} showTrailing={false} />;
-  }
-
+export function ProductGridSkeleton({ count = 6 }: ProductGridSkeletonProps) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
       {Array.from({ length: count }).map((_, index) => (
