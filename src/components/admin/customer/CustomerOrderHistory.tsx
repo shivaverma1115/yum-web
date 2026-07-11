@@ -47,7 +47,7 @@ function OrderCard({ order }: { order: IOrderWithItems }) {
                 {formatCustomerSince(order.created_at)}
               </p>
               <span className="text-xs font-mono text-default-500">
-                {formatOrderIdShort(order.id)}
+                {formatOrderIdShort(order)}
               </span>
             </div>
             <p className="text-sm text-default-600 mt-1 truncate">

@@ -1,9 +1,12 @@
 export {
+  AccountPageSkeleton,
   AddressCardsSkeleton,
   CategoryFilterSkeleton,
   FormSectionSkeleton,
   ProductDetailsSkeleton,
   ProductGridSkeleton,
+  ProfileNavSkeleton,
+  ProfileUserChipSkeleton,
   SettingsFormSkeleton,
   StatsCardsSkeleton,
 } from "./presets";

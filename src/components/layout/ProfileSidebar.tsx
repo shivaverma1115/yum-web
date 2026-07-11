@@ -27,6 +27,7 @@ import {
 } from "@/lib/profile-navigation";
 import { useContextApi } from "@/context-api/use-context";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
+import { ProfileNavSkeleton } from "@/components/skeleton";
 import ThemeToggle from "./ThemeToggle";
 
 const navLinkClass =
@@ -215,8 +216,9 @@ export default function ProfileSidebar({
   mobileOpen = false,
   onMobileClose,
 }: ProfileSidebarProps) {
-  const { user } = useContextApi();
+  const { user, loading } = useContextApi();
   const { settings: businessSettings } = useBusinessSettings();
+  const isSessionLoading = loading && !user;
   const isAdmin = user?.role === "admin";
   const pathname = usePathname();
   const handleLogout = useLogout();
@@ -274,37 +276,29 @@ export default function ProfileSidebar({
           </button>
         </div>
 
-        <div className="h-[calc(100%-390px)]" data-simplebar>
-          <ul className="admin-menu p-4 w-full flex flex-col gap-1.5">
-            <AdminNavMenu
-              openSectionId={openSectionId}
-              onToggle={handleToggle}
-              isAdmin={isAdmin}
-            />
-          </ul>
+        <div
+          key={isSessionLoading ? "nav-loading" : "nav-ready"}
+          className="h-[calc(100%-390px)]"
+          data-simplebar
+        >
+          {isSessionLoading ? (
+            <ProfileNavSkeleton />
+          ) : (
+            <ul className="admin-menu p-4 w-full flex flex-col gap-1.5">
+              <AdminNavMenu
+                openSectionId={openSectionId}
+                onToggle={handleToggle}
+                isAdmin={isAdmin}
+              />
+            </ul>
+          )}
         </div>
 
         <ul className="admin-menu flex flex-col gap-2 px-4 pt-10">
-          {/* <li className="menu-item">
-            <div
-              className="flex flex-col items-center rounded-md bg-primary/5 bg-cover bg-no-repeat p-4 text-center text-sm text-default-700"
-              style={{ backgroundImage: "url('/images/other/offer-bg.png')" }}
-            >
-              <div className="-mt-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-default-100 bg-white text-primary shadow-lg dark:bg-default-50">
-                <Headphones className="h-6 w-6" aria-hidden />
-              </div>
-              <p className="mb-4 text-sm text-default-700">
-                🔥 Upgrade Your Plan. Find Out here
-              </p>
-              <button
-                type="button"
-                className="rounded bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-white"
-              >
-                Contact Support
-              </button>
-            </div>
-          </li> */}
-
+          {isSessionLoading ? (
+            <ProfileNavSkeleton rows={2} />
+          ) : (
+            <>
           <NavLink href={isAdmin ? "/admin/settings" : "/user/settings"}>
             <NavIcon name="settings" />
             Settings
@@ -320,6 +314,8 @@ export default function ProfileSidebar({
               Logout
             </button>
           </li>
+            </>
+          )}
         </ul>
       </div>
     </div>

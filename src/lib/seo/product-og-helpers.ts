@@ -1,4 +1,5 @@
 import { calculateDiscountedPrice } from "@/lib/products/discount";
+import { getProductBasePrice } from "@/lib/cart/line";
 import { richTextToPlainText } from "@/lib/rich-text";
 import type { IProduct } from "@/types/product";
 
@@ -40,28 +41,29 @@ export function getOgProductPrice(
   product: IProduct,
   currencySymbol: string,
 ): OgProductPrice | null {
-  if (product.selling_price == null || !Number.isFinite(product.selling_price)) {
+  const basePrice = getProductBasePrice(product);
+  if (basePrice == null || !Number.isFinite(basePrice)) {
     return null;
   }
 
   const discounted = product.add_discount
-    ? calculateDiscountedPrice(product.selling_price, product.discount_percent)
-    : product.selling_price;
+    ? calculateDiscountedPrice(basePrice, product.discount_percent)
+    : basePrice;
 
   if (
     discounted != null &&
-    discounted < product.selling_price &&
+    discounted < basePrice &&
     product.add_discount &&
     product.discount_percent
   ) {
     return {
       price: formatOgPrice(discounted, currencySymbol),
-      originalPrice: formatOgPrice(product.selling_price, currencySymbol),
+      originalPrice: formatOgPrice(basePrice, currencySymbol),
       discountPercent: Math.round(product.discount_percent),
     };
   }
 
-  return { price: formatOgPrice(product.selling_price, currencySymbol) };
+  return { price: formatOgPrice(basePrice, currencySymbol) };
 }
 
 export function getOgProductDescription(product: IProduct): string {

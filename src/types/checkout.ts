@@ -15,6 +15,7 @@ export type CheckoutPayload = Pick<IUser, "phone"> & {
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   razorpay_signature?: string;
+  coupon_code?: string | null;
   items: {
     productId: string;
     name: string;

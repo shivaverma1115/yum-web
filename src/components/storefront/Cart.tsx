@@ -1,243 +1,362 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { XCircle } from "lucide-react";
+import {
+  Loader2,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Tag,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "react-toastify";
+import OrderSummary from "@/components/common/OrderSummary";
 import { useCart } from "@/context-api/cart-context";
+import { formatCartItemOptionsLabel } from "@/lib/cart/line";
+import { getCartLinePricing } from "@/lib/cart/totals";
+import { validateCouponCode } from "@/lib/coupons/client";
 import { formatCurrency } from "@/lib/constants";
+import type { ICartItem } from "@/types/cart";
+import Input from "@/components/ui/Input";
 
-export default function Cart() {
-  const { items, subtotal, removeItem, setItemQuantity, clearCart } = useCart();
-
-  const total = subtotal;
-
-  if (items.length === 0) {
-    return (
-      <section className="lg:py-10 py-6">
-        <div className="container text-center py-16">
-          <h4 className="text-xl font-semibold text-default-800 mb-2">
+function EmptyCart() {
+  return (
+    <section className="py-6 lg:py-10">
+      <div className="container">
+        <div className="mx-auto max-w-md rounded-2xl border border-default-200 bg-white px-6 py-16 text-center dark:bg-default-50">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ShoppingBag className="h-7 w-7" aria-hidden />
+          </div>
+          <h1 className="mb-2 text-xl font-semibold text-default-900">
             Your cart is empty
-          </h4>
-          <p className="text-sm text-default-500 mb-6">
-            Add products from the shop to see them here.
+          </h1>
+          <p className="mb-6 text-sm text-default-500">
+            Add dishes from the menu to build your order.
           </p>
           <Link
             href="/products"
-            className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-sm font-medium text-white hover:bg-primary-500"
+            className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-500"
           >
-            Browse products
+            Browse menu
           </Link>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
+
+function CartLineItem({
+  item,
+  onRemove,
+  onQuantityChange,
+}: {
+  item: ICartItem;
+  onRemove: (lineId: string) => void;
+  onQuantityChange: (lineId: string, quantity: number) => void;
+}) {
+  const optionsLabel = formatCartItemOptionsLabel(item);
+  const pricing = getCartLinePricing(item);
+  const atMax = item.quantity >= item.maxQuantity;
+
+  return (
+    <article className="flex gap-3 border-b border-default-200 px-4 py-4 last:border-b-0 sm:gap-4 sm:px-6">
+      <img
+        src={item.image_url ?? "/images/dishes/pizza.png"}
+        alt={item.name}
+        className="h-20 w-20 shrink-0 rounded-xl object-cover sm:h-24 sm:w-24"
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold text-default-900 sm:text-base">
+              {item.name}
+            </h2>
+            {optionsLabel ? (
+              <p className="mt-0.5 text-xs text-default-500 sm:text-sm">
+                {optionsLabel}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => onRemove(item.lineId)}
+            className="rounded-full p-1.5 text-default-400 transition-colors hover:bg-red-50 hover:text-red-500"
+            aria-label={`Remove ${item.name}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-default-500">
+              Unit price
+            </p>
+            <div className="flex flex-wrap items-baseline gap-1.5">
+              <span className="text-sm font-semibold text-default-900">
+                {formatCurrency(pricing.unitPrice)}
+              </span>
+              {pricing.compareAtUnit != null ? (
+                <span className="text-xs text-default-400 line-through">
+                  {formatCurrency(pricing.compareAtUnit)}
+                </span>
+              ) : null}
+            </div>
+            {pricing.addOnsTotal > 0 ? (
+              <p className="mt-0.5 text-xs text-default-500">
+                Includes add-ons {formatCurrency(pricing.addOnsTotal)}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="inline-flex items-center gap-1 rounded-full border border-default-200 p-1">
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-default-100 text-default-800 transition-colors hover:bg-default-200"
+              onClick={() => onQuantityChange(item.lineId, item.quantity - 1)}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="min-w-8 text-center text-sm font-medium text-default-900">
+              {item.quantity}
+            </span>
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              disabled={atMax}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-default-100 text-default-800 transition-colors hover:bg-default-200 disabled:opacity-40"
+              onClick={() => onQuantityChange(item.lineId, item.quantity + 1)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="text-end">
+            <p className="text-[11px] uppercase tracking-wide text-default-500">
+              Line total
+            </p>
+            <p className="text-sm font-semibold text-default-900">
+              {formatCurrency(pricing.lineTotal)}
+            </p>
+            {pricing.compareLineTotal != null ? (
+              <p className="text-xs text-default-400 line-through">
+                {formatCurrency(pricing.compareLineTotal)}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CouponSection({
+  subtotal,
+  appliedCode,
+  discountAmount,
+  onApplied,
+  onRemove,
+}: {
+  subtotal: number;
+  appliedCode: string | null;
+  discountAmount: number;
+  onApplied: (coupon: import("@/types/coupon").AppliedCoupon) => void;
+  onRemove: () => void;
+}) {
+  const [code, setCode] = useState("");
+  const [applying, setApplying] = useState(false);
+
+  const apply = async () => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      toast.error("Enter a coupon code.");
+      return;
+    }
+
+    setApplying(true);
+    try {
+      const result = await validateCouponCode(trimmed, subtotal);
+      if (!result.ok || !result.data.data?.coupon) {
+        toast.error(result.data.message ?? "Invalid coupon code.");
+        return;
+      }
+      onApplied(result.data.data.coupon);
+      setCode("");
+      toast.success(result.data.message ?? "Coupon applied.");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  if (appliedCode) {
+    return (
+      <div className="rounded-2xl border border-green-200 bg-green-50/60 px-4 py-3.5 dark:bg-green-950/20">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-600 text-white">
+              <Tag className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-default-900">
+                {appliedCode}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-green-700">
+                You save {formatCurrency(discountAmount)}
+              </p>
+              <p className="mt-1 text-[11px] text-default-500">
+                Each account can use this coupon once
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-sm font-medium text-default-500 transition-colors hover:text-red-600"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <section className="lg:py-10 py-6">
+    <div className="rounded-2xl border border-default-200 bg-white px-4 py-4 shadow-sm dark:bg-default-50">
+      <div className="mb-3 flex items-center gap-2">
+        <Tag className="h-4 w-4 text-primary" aria-hidden />
+        <h3 className="text-sm font-semibold text-default-900">
+          Have a coupon?
+        </h3>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Enter coupon code"
+          className="rounded-full"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void apply();
+            }
+          }}
+          aria-label="Coupon code"
+        />
+        <button
+          type="button"
+          disabled={applying}
+          onClick={() => void apply()}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-60"
+        >
+          {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function Cart() {
+  const {
+    items,
+    bill,
+    amountToPay,
+    setAppliedCoupon,
+    removeItem,
+    setItemQuantity,
+    clearCart,
+  } = useCart();
+
+  if (items.length === 0) {
+    return <EmptyCart />;
+  }
+
+  return (
+    <section className="py-6 lg:py-10">
       <div className="container">
-        <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
-          <div className="lg:col-span-2 col-span-1">
-            <div className="border border-default-200 rounded-lg">
-              <div className="border-b border-default-200 px-6 py-5">
-                <h4 className="text-lg font-medium text-default-800">
-                  Shopping Cart
-                </h4>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-default-900">Your cart</h1>
+          <p className="mt-1 text-sm text-default-500">
+            {bill.itemsCount} item{bill.itemsCount === 1 ? "" : "s"} · Review
+            prices before checkout
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="overflow-hidden rounded-2xl border border-default-200 bg-white dark:bg-default-50">
+              <div className="flex items-center justify-between gap-3 border-b border-default-200 px-4 py-4 sm:px-6">
+                <h2 className="text-base font-semibold text-default-900">
+                  Order items
+                </h2>
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-default-500 transition-colors hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                  Clear all
+                </button>
               </div>
 
-              <div className="flex flex-col overflow-hidden">
-                <div className="-m-1.5 overflow-x-auto">
-                  <div className="p-1.5 min-w-full inline-block align-middle">
-                    <div className="overflow-hidden">
-                      <table className="min-w-full divide-y divide-default-200">
-                        <thead className="bg-default-400/10">
-                          <tr>
-                            <th
-                              scope="col"
-                              className="min-w-[14rem] px-5 py-3 text-start text-xs font-medium text-default-500 uppercase"
-                            >
-                              Products
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-5 py-3 text-start text-xs font-medium text-default-500 uppercase"
-                            >
-                              Price
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-5 py-3 text-start text-xs font-medium text-default-500 uppercase"
-                            >
-                              Quantity
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-5 py-3 text-center text-xs font-medium text-default-500 uppercase"
-                            >
-                              Sub-Total
-                            </th>
-                          </tr>
-                        </thead>
-
-                        <tbody className="divide-y divide-default-200">
-                          {items.map((item) => (
-                            <tr key={item.productId}>
-                              <td className="px-5 py-3 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeItem(item.productId)}
-                                    aria-label={`Remove ${item.name}`}
-                                  >
-                                    <XCircle className="w-5 h-5 text-default-400 hover:text-red-500" />
-                                  </button>
-                                  <img
-                                    src={item.image_url ?? "/images/dishes/pizza.png"}
-                                    alt={item.name}
-                                    className="h-18 w-18 object-cover rounded"
-                                  />
-                                  <Link
-                                    href={
-                                      item.slug
-                                        ? `/products/${item.slug}`
-                                        : `/products/${item.productId}`
-                                    }
-                                    className="text-sm font-medium text-default-800 hover:text-primary"
-                                  >
-                                    {item.name}
-                                  </Link>
-                                </div>
-                              </td>
-                              <td className="px-5 py-3 whitespace-nowrap text-sm text-default-800">
-                                {formatCurrency(item.price)}
-                              </td>
-                              <td className="px-5 py-3 whitespace-nowrap">
-                                <div className="inline-flex justify-between border border-default-200 p-1 rounded-full">
-                                  <button
-                                    type="button"
-                                    className="minus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center"
-                                    onClick={() =>
-                                      setItemQuantity(
-                                        item.productId,
-                                        item.quantity - 1,
-                                      )
-                                    }
-                                  >
-                                    –
-                                  </button>
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={item.quantity}
-                                    className="w-8 border-0 text-sm text-center text-default-800 focus:ring-0 p-0 bg-transparent"
-                                  />
-                                  <button
-                                    type="button"
-                                    className="plus flex-shrink-0 bg-default-200 text-default-800 rounded-full h-6 w-6 text-sm inline-flex items-center justify-center disabled:opacity-50"
-                                    disabled={item.quantity >= item.maxQuantity}
-                                    onClick={() =>
-                                      setItemQuantity(
-                                        item.productId,
-                                        item.quantity + 1,
-                                      )
-                                    }
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-5 py-3 whitespace-nowrap text-sm text-center text-default-800">
-                                {formatCurrency(item.price * item.quantity)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                {items.map((item) => (
+                  <CartLineItem
+                    key={item.lineId}
+                    item={item}
+                    onRemove={removeItem}
+                    onQuantityChange={setItemQuantity}
+                  />
+                ))}
               </div>
 
-              <div className="border-t border-default-200 px-6 py-5">
-                <div className="flex flex-wrap justify-between items-center gap-2">
-                  <Link
-                    href="/products"
-                    className="inline-flex items-center justify-center rounded-full border border-primary text-primary hover:bg-primary hover:text-white px-6 py-3 text-center text-sm font-medium shadow-sm transition-all duration-500"
-                  >
-                    Return to Shop
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={clearCart}
-                    className="inline-flex items-center justify-center rounded-full border border-default-300 text-default-700 hover:bg-default-100 px-6 py-3 text-center text-sm font-medium transition-all duration-500"
-                  >
-                    Clear Cart
-                  </button>
-                </div>
+              <div className="border-t border-default-200 px-4 py-4 sm:px-6">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center justify-center rounded-full border border-default-200 px-5 py-2.5 text-sm font-medium text-default-700 transition-colors hover:border-primary hover:text-primary"
+                >
+                  Add more items
+                </Link>
               </div>
             </div>
           </div>
 
-          <div>
-            <div className="border border-default-200 rounded-lg mb-5">
-              <div className="px-6 py-5 border-b border-default-200">
-                <h4 className="text-lg font-semibold text-default-800">
-                  Coupon Code
-                </h4>
-              </div>
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <CouponSection
+              subtotal={bill.itemTotal}
+              appliedCode={bill.couponCode}
+              discountAmount={bill.couponDiscount}
+              onApplied={setAppliedCoupon}
+              onRemove={() => setAppliedCoupon(null)}
+            />
 
-              <div className="p-6">
-                <input
-                  className="block w-full bg-transparent rounded-full py-2.5 px-4 border border-default-200"
-                  type="text"
-                  placeholder="Enter Coupon Code"
-                />
-
-                <div className="flex justify-end mt-4">
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
-                  >
-                    Apply Coupon
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="border border-default-200 rounded-lg p-5 ">
-              <h4 className="text-lg font-semibold text-default-800 mb-5">
-                Cart Totals
-              </h4>
-              <div className="mb-6">
-                <div className="flex justify-between mb-3">
-                  <p className="text-sm text-default-500">Sub-total</p>
-                  <p className="text-sm text-default-700 font-medium">
-                    {formatCurrency(subtotal)}
+            <OrderSummary
+              bill={bill}
+              variant="collapsible"
+              footer={
+                <>
+                  <p className="text-sm font-medium text-default-600">
+                    Cancellation policy:
                   </p>
-                </div>
-
-                <div className="flex justify-between mb-3">
-                  <p className="text-sm text-default-500">Delivery</p>
-                  <p className="text-sm text-default-700 font-medium">Free</p>
-                </div>
-
-                <div className="border-b border-default-200 my-4" />
-                <div className="flex justify-between mb-3">
-                  <p className="text-base text-default-700">Total</p>
-                  <p className="text-base text-default-700 font-medium">
-                    {formatCurrency(total)}
+                  <p className="mt-1 text-xs leading-relaxed text-default-400">
+                    Please double-check your order details. Orders are non-refundable once
+                    placed.
                   </p>
-                </div>
-              </div>
+                </>
+              }
+            />
 
-              <Link
-                href="/checkout"
-                className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
-              >
-                Proceed to Checkout
-              </Link>
-            </div>
-
-          </div>
+            <Link
+              href="/checkout"
+              className="inline-flex w-full items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-500"
+            >
+              Proceed to checkout · {formatCurrency(amountToPay)}
+            </Link>
+          </aside>
         </div>
       </div>
     </section>

@@ -9,12 +9,13 @@ import { useLogout } from "@/lib/auth/useLogout";
 import { UserRole } from "@/types/user";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { SkeletonBox } from "@/components/skeleton";
+import RunningTruncate from "@/components/ui/RunningTruncate";
 import {
     ChevronDown,
     Heart,
     Home,
     Menu,
-    Search,
     User,
     Utensils,
     X,
@@ -29,12 +30,12 @@ function isActivePath(pathname: string, href: string) {
 export default function Navbar() {
     const pathname = usePathname();
     const handleLogout = useLogout();
-    const { user, isAuthenticated } = useContextApi();
+    const { user, isAuthenticated, loading } = useContextApi();
     const { settings: businessSettings } = useBusinessSettings();
     const { itemCount } = useCart();
+    const isSessionLoading = loading && !user;
     const isAdmin = user?.role === UserRole.ADMIN;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
 
     const closeMobileMenu = useCallback(() => {
@@ -44,11 +45,10 @@ export default function Navbar() {
 
     useEffect(() => {
         closeMobileMenu();
-        setIsMobileSearchOpen(false);
     }, [pathname, closeMobileMenu]);
 
     useEffect(() => {
-        if (!isMobileMenuOpen && !isMobileSearchOpen) return;
+        if (!isMobileMenuOpen) return;
 
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
@@ -56,7 +56,7 @@ export default function Navbar() {
         return () => {
             document.body.style.overflow = previousOverflow;
         };
-    }, [isMobileMenuOpen, isMobileSearchOpen]);
+    }, [isMobileMenuOpen]);
 
     useEffect(() => {
         let cancelled = false;
@@ -124,7 +124,12 @@ export default function Navbar() {
                                 <Link href="/home" className="flex items-center gap-2">
                                     <img src="/images/logo-dark(1).png" alt="logo" className="h-10 flex dark:hidden" />
                                     <img src="/images/logo-light(1).png" alt="logo" className="h-10 hidden dark:flex" />
-                                    <span className="text-4xl font-bold">{businessSettings.general.site_name}</span>
+                                    <span className="text-4xl font-bold w-full">
+                                        <RunningTruncate
+                                            text={businessSettings.general.site_name}
+                                            maxWidthClassName="max-w-[6rem]"
+                                        />
+                                    </span>
                                 </Link>
                             </div>
 
@@ -159,17 +164,6 @@ export default function Navbar() {
                                     </span>
                                 </li>
 
-                                <li className="2xl:hidden flex menu-item">
-                                    <button
-                                        type="button"
-                                        className="relative flex text-base transition-all text-default-600 hover:text-primary"
-                                        aria-label="Open search"
-                                        onClick={() => setIsMobileSearchOpen(true)}
-                                    >
-                                        <Search className="w-5 h-5" aria-hidden />
-                                    </button>
-                                </li>
-
                                 <li className="flex menu-item">
                                     <Link href="/cart" className="relative flex text-base transition-all text-default-600 hover:text-primary">
                                         <i className="w-5 h-5" data-lucide="shopping-bag"></i>
@@ -182,54 +176,68 @@ export default function Navbar() {
                                 </li>
 
                                 <li className="flex menu-item">
-                                    <div className="hs-dropdown relative inline-flex [--trigger:hover] [--placement:bottom]">
-                                        <Link className="hs-dropdown-toggle after:absolute hover:after:-bottom-10 after:inset-0 relative flex items-center text-base transition-all text-default-600 hover:text-primary"
-                                            href={`${user ? (isAdmin ? "/admin/settings" : "/user/settings") : "/login"}`}
-                                        >
-                                            <User className="size-5 mr-2" />
-                                            {user ? getUserDisplayName(user) : "Login"}
-                                        </Link>
-
-                                        <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5 dark:bg-default-50">
-                                            <ul className="flex flex-col gap-1">
-                                                {user ? (
-                                                    <li className="px-3 py-2 text-sm font-medium text-default-800">
-                                                        {getUserDisplayName(user)}
-                                                    </li>
-                                                ) : null}
-                                                {isAdmin ? (
-                                                    <li>
-                                                        <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/admin/dashboard"><i className="h-4 w-4" data-lucide="user-circle"></i> Admin</Link>
-                                                    </li>
-                                                ) : null}
-                                                <li>
-                                                    <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/cart"><i className="h-4 w-4" data-lucide="shopping-cart"></i>
-                                                        Cart
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/wishlist"><i className="h-4 w-4" data-lucide="heart"></i>
-                                                        Wishlist
-                                                    </Link>
-                                                </li>
-                                                {isAuthenticated ? (
-                                                    <li>
-                                                        <button
-                                                            type="button"
-                                                            className="flex w-full items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded"
-                                                            onClick={handleLogout}
-                                                        >
-                                                            <i className="h-4 w-4" data-lucide="log-out"></i> Log Out
-                                                        </button>
-                                                    </li>
-                                                ) : (
-                                                    <li>
-                                                        <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/login"><i className="h-4 w-4" data-lucide="log-in"></i> Log In</Link>
-                                                    </li>
-                                                )}
-                                            </ul>
+                                    {isSessionLoading ? (
+                                        <div className="inline-flex items-center gap-2" aria-busy="true">
+                                            <SkeletonBox className="h-5 w-5 rounded" />
+                                            <SkeletonBox className="skel-line-sm h-3 w-16" />
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="hs-dropdown relative inline-flex [--trigger:hover] [--placement:bottom]">
+                                            <Link className="hs-dropdown-toggle after:absolute hover:after:-bottom-10 after:inset-0 relative flex items-center text-base transition-all text-default-600 hover:text-primary"
+                                                href={`${user ? (isAdmin ? "/admin/settings" : "/user/settings") : "/login"}`}
+                                            >
+                                                <User className="size-5 mr-2 shrink-0" />
+                                                {user ? (
+                                                    <RunningTruncate text={getUserDisplayName(user)} />
+                                                ) : (
+                                                    "Login"
+                                                )}
+                                            </Link>
+
+                                            <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5 dark:bg-default-50">
+                                                <ul className="flex flex-col gap-1">
+                                                    {user ? (
+                                                        <li className="px-3 py-2 text-sm font-medium text-default-800">
+                                                            <RunningTruncate
+                                                                text={getUserDisplayName(user)}
+                                                                maxWidthClassName="max-w-full"
+                                                            />
+                                                        </li>
+                                                    ) : null}
+                                                    {isAdmin ? (
+                                                        <li>
+                                                            <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/admin/dashboard"><i className="h-4 w-4" data-lucide="user-circle"></i> Admin</Link>
+                                                        </li>
+                                                    ) : null}
+                                                    <li>
+                                                        <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/cart"><i className="h-4 w-4" data-lucide="shopping-cart"></i>
+                                                            Cart
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/wishlist"><i className="h-4 w-4" data-lucide="heart"></i>
+                                                            Wishlist
+                                                        </Link>
+                                                    </li>
+                                                    {isAuthenticated ? (
+                                                        <li>
+                                                            <button
+                                                                type="button"
+                                                                className="flex w-full items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded"
+                                                                onClick={handleLogout}
+                                                            >
+                                                                <i className="h-4 w-4" data-lucide="log-out"></i> Log Out
+                                                            </button>
+                                                        </li>
+                                                    ) : (
+                                                        <li>
+                                                            <Link className="flex items-center gap-3 font-normal text-default-600 py-2 px-3 transition-all hover:text-default-700 hover:bg-default-100 rounded" href="/login"><i className="h-4 w-4" data-lucide="log-in"></i> Log In</Link>
+                                                        </li>
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
                                 </li>
                             </ul>
                         </div>
@@ -372,7 +380,11 @@ export default function Navbar() {
                                 </Link>
                             </li>
 
-                            {isAuthenticated ? (
+                            {isSessionLoading ? (
+                                <li className="px-2.5 py-2" aria-busy="true">
+                                    <SkeletonBox className="skel-line-sm h-4 w-20" />
+                                </li>
+                            ) : isAuthenticated ? (
                                 <li>
                                     <button
                                         type="button"
@@ -403,49 +415,6 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {isMobileSearchOpen ? (
-                <button
-                    type="button"
-                    className="fixed inset-0 z-50 bg-default-900/50 2xl:hidden"
-                    aria-label="Close search"
-                    onClick={() => setIsMobileSearchOpen(false)}
-                />
-            ) : null}
-
-            <div
-                id="mobileSearchSidebar"
-                className={`fixed inset-0 z-60 overflow-x-hidden overflow-y-auto 2xl:hidden pointer-events-none ${isMobileSearchOpen ? "block" : "hidden"
-                    }`}
-            >
-                <div
-                    className={`transition-all duration-500 ease-out sm:max-w-lg sm:w-full m-3 sm:mx-auto pointer-events-auto ${isMobileSearchOpen ? "mt-7 opacity-100" : "mt-0 opacity-0"
-                        }`}
-                >
-                    <div className="flex flex-col bg-white dark:bg-default-50 shadow-sm rounded-lg">
-                        <div className="relative flex w-full">
-                            <span className="absolute start-4 top-3">
-                                <Search className="w-4 h-4 text-primary-500" aria-hidden />
-                            </span>
-
-                            <input
-                                className="px-10 py-2.5 block w-full border-transparent placeholder-primary-500 rounded-lg text-sm bg-transparent text-primary-500"
-                                placeholder="Search for items..."
-                                type="search"
-                                autoFocus={isMobileSearchOpen}
-                            />
-
-                            <button
-                                type="button"
-                                className="absolute end-4 top-3"
-                                aria-label="Close search"
-                                onClick={() => setIsMobileSearchOpen(false)}
-                            >
-                                <X className="w-4 h-4 text-primary-500" aria-hidden />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     )
 }

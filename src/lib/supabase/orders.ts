@@ -15,6 +15,18 @@ import type {
 } from "@/types/order";
 import type { CheckoutPayload } from "@/types/checkout";
 import { getProfileByUserId } from "@/lib/supabase/account/profile";
+import {
+  redeemCouponForOrder,
+  releaseCouponRedemptionForOrder,
+  validateCouponForUser,
+} from "@/lib/supabase/coupons/coupons";
+import { roundMoney } from "@/lib/coupons/discount";
+import {
+  computePayableFromItemTotal,
+  feeConfigFromBusinessSettings,
+} from "@/lib/cart/totals";
+import { allocateOrderNumber } from "@/lib/orders/order-number";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "pending",
@@ -86,10 +98,56 @@ export async function createOrderWithSupabase(
     };
   }
 
-  const subtotal = payload.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
+  const subtotal = roundMoney(
+    payload.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   );
+
+  let couponId: string | null = null;
+  let couponCode: string | null = null;
+  let discountAmount = 0;
+
+  const requestedCoupon = payload.coupon_code?.trim();
+  if (requestedCoupon) {
+    const couponResult = await validateCouponForUser(supabase, {
+      code: requestedCoupon,
+      subtotal,
+      userId,
+    });
+
+    if (!couponResult.success) {
+      return {
+        success: false,
+        message: couponResult.message,
+        status: couponResult.status,
+        errors: { coupon_code: couponResult.message },
+      };
+    }
+
+    couponId = couponResult.coupon.id;
+    couponCode = couponResult.coupon.code;
+    discountAmount = couponResult.discountAmount;
+  }
+
+  const payable = computePayableFromItemTotal(
+    subtotal,
+    discountAmount,
+    feeConfigFromBusinessSettings(await getBusinessSettings()),
+  );
+  const total = payable.amountToPay;
+
+  let orderNumber: string;
+  try {
+    orderNumber = await allocateOrderNumber(supabase);
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to allocate order number.",
+      status: 500,
+    };
+  }
 
   const profile = await getProfileByUserId(supabase, userId);
   const checkoutPhone = payload.phone?.trim();
@@ -97,6 +155,7 @@ export async function createOrderWithSupabase(
 
   const orderRow = {
     user_id: userId,
+    order_number: orderNumber,
     fulfillment_type: payload.fulfillment_type,
     status: "pending" as const,
     payment_method: payload.payment_method,
@@ -104,7 +163,10 @@ export async function createOrderWithSupabase(
     razorpay_order_id: payload.payment_method === "online" ? payload.razorpay_order_id?.trim() ?? null : null,
     razorpay_payment_id: payload.payment_method === "online" && !isOnlinePending ? payload.razorpay_payment_id?.trim() ?? null : null,
     subtotal,
-    total: subtotal,
+    total,
+    coupon_id: couponId,
+    coupon_code: couponCode,
+    discount_amount: discountAmount,
     customer_phone:
       checkoutPhone && checkoutPhone !== "-"
         ? checkoutPhone
@@ -151,6 +213,25 @@ export async function createOrderWithSupabase(
       message: itemsError.message ?? ERROR_MESSAGE_GENERIC,
       status: 400,
     };
+  }
+
+  if (couponId) {
+    const redeem = await redeemCouponForOrder(supabase, {
+      couponId,
+      userId,
+      orderId: order.id,
+      discountAmount,
+    });
+
+    if (!redeem.success) {
+      await supabase.from("orders").delete().eq("id", order.id);
+      return {
+        success: false,
+        message: redeem.message,
+        status: redeem.status,
+        errors: { coupon_code: redeem.message },
+      };
+    }
   }
 
   return {
@@ -303,6 +384,8 @@ export async function failOrderPaymentWithSupabase(
       status: 400,
     };
   }
+
+  await releaseCouponRedemptionForOrder(supabase, orderId);
 
   return { success: true, order: updated as IOrder, items: [] };
 }

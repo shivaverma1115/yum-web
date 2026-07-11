@@ -35,6 +35,8 @@ export type IOrderWithItems = IOrder & {
 
 export type IOrder = {
   id?: string;
+  /** Public display code, e.g. YUM-250711-0001 */
+  order_number?: string | null;
   user_id: string;
   fulfillment_type: FulfillmentType;
   status: OrderStatus;
@@ -44,6 +46,9 @@ export type IOrder = {
   razorpay_payment_id?: string | null;
   subtotal: number;
   total: number;
+  coupon_id?: string | null;
+  coupon_code?: string | null;
+  discount_amount?: number;
   customer_phone: string;
   delivery_address?: string | null;
   pickup_time?: string | null;

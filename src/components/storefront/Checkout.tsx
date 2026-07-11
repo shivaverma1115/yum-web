@@ -7,9 +7,11 @@ import { toast } from "react-toastify";
 import PhoneVerification, { PhoneVerificationHandle } from "@/components/common/phone-verification/PhoneVerification";
 import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { AppTooltip } from "@/components/common/AppTooltip";
+import { OrderSummaryBreakdown } from "@/components/common/OrderSummary";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { ensureCheckoutSession, type CheckoutSessionUser } from "@/lib/auth/ensure-checkout-session";
+import { formatCartItemOptionsLabel, formatCartItemOrderName } from "@/lib/cart/line";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
@@ -30,7 +32,7 @@ const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full 
 export default function Checkout() {
     const router = useRouter();
     const { user, verification, loading: userLoading, refresh: refreshUser } = useContextApi();
-    const { items, subtotal, clearCart } = useCart();
+    const { items, appliedCoupon, bill, amountToPay, clearCart } = useCart();
     const { settings: businessSettings } = useBusinessSettings();
     const {
         register,
@@ -117,10 +119,11 @@ export default function Checkout() {
         address: values.address,
         table_number: values.table_number,
         additional_notes: values.additional_notes,
+        coupon_code: appliedCoupon?.code ?? null,
         ...extras,
         items: items.map((item) => ({
             productId: item.productId,
-            name: item.name,
+            name: formatCartItemOrderName(item),
             quantity: item.quantity,
             price: item.price,
             imageUrl: item.image_url ?? null,
@@ -195,7 +198,7 @@ export default function Checkout() {
 
             if (values.payment_method === "online") {
                 const paymentResult = await runCheckoutOnlinePayment({
-                    subtotal,
+                    subtotal: amountToPay,
                     prefill: {
                         name: checkoutSession.displayName,
                         email: checkoutSession.email ?? "",
@@ -479,15 +482,23 @@ export default function Checkout() {
                                     Order summary
                                 </h4>
 
-                                {items.map((item) => (
-                                    <div key={item.productId} className="flex items-center mb-4">
+                                {items.map((item) => {
+                                    const optionsLabel = formatCartItemOptionsLabel(item);
+
+                                    return (
+                                    <div key={item.lineId} className="flex items-center mb-4">
                                         <img
                                             src={item.image_url ?? "/images/dishes/pizza.png"}
                                             alt={item.name}
                                             className="h-20 w-20 me-2 object-cover rounded"
                                         />
                                         <div>
-                                            <h4 className="text-sm text-default-600 mb-2">{item.name}</h4>
+                                            <h4 className="text-sm text-default-600 mb-1">{item.name}</h4>
+                                            {optionsLabel ? (
+                                                <p className="mb-1 text-xs text-default-400">
+                                                    {optionsLabel}
+                                                </p>
+                                            ) : null}
                                             <h4 className="text-sm text-default-400">
                                                 {item.quantity} x{" "}
                                                 <span className="text-primary font-semibold">
@@ -496,28 +507,11 @@ export default function Checkout() {
                                             </h4>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
 
                                 <div className="mb-6">
-                                    <div className="flex justify-between mb-3">
-                                        <p className="text-sm text-default-500">Sub-total</p>
-                                        <p className="text-sm text-default-700 font-medium">
-                                            {formatCurrency(subtotal)}
-                                        </p>
-                                    </div>
-                                    <div className="flex justify-between mb-3">
-                                        <p className="text-sm text-default-500">
-                                            {fulfillmentType === "delivery" ? "Delivery" : "Service"}
-                                        </p>
-                                        <p className="text-sm text-default-700 font-medium">Free</p>
-                                    </div>
-                                    <div className="border-b border-default-200 my-4" />
-                                    <div className="flex justify-between mb-3">
-                                        <p className="text-base text-default-700">Total</p>
-                                        <p className="text-base text-default-700 font-medium">
-                                            {formatCurrency(subtotal)}
-                                        </p>
-                                    </div>
+                                    <OrderSummaryBreakdown bill={bill} />
                                 </div>
 
                                 {!storeOpen ? (

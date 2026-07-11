@@ -25,6 +25,7 @@ import {
   getOptionLabel,
 } from "@/lib/products/attributes";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
+import { getProductBasePrice } from "@/lib/cart/line";
 import { richTextToPlainText } from "@/lib/rich-text";
 import Badge from "@/components/ui/Badge";
 import { AppTooltip } from "@/components/common/AppTooltip";
@@ -156,15 +157,16 @@ function dietBadgeColor(dietType: IProduct["diet_type"]) {
 }
 
 function ProductPriceCell({ product }: { product: IProduct }) {
+  const basePrice = getProductBasePrice(product);
   const hasDiscount =
     product.add_discount &&
     product.discount_percent != null &&
-    product.selling_price != null;
+    basePrice != null;
   const discounted = hasDiscount
-    ? calculateDiscountedPrice(product.selling_price, product.discount_percent)
+    ? calculateDiscountedPrice(basePrice, product.discount_percent)
     : null;
 
-  if (product.selling_price == null) {
+  if (basePrice == null) {
     return <span className="text-default-400">—</span>;
   }
 
@@ -175,7 +177,7 @@ function ProductPriceCell({ product }: { product: IProduct }) {
           {formatCurrency(discounted)}
         </p>
         <p className="text-xs text-default-400 line-through">
-          {formatCurrency(product.selling_price)}
+          {formatCurrency(basePrice)}
         </p>
         <Badge color="primary" size="sm">
           {product.discount_percent}% off
@@ -186,7 +188,7 @@ function ProductPriceCell({ product }: { product: IProduct }) {
 
   return (
     <p className="font-semibold text-default-900">
-      {formatCurrency(product.selling_price)}
+      {formatCurrency(basePrice)}
     </p>
   );
 }
@@ -382,7 +384,7 @@ function ProductPrepTimeTooltip({
 }
 
 function ProductMetaCell({ product }: { product: IProduct }) {
-  const tags = product.food_tags ?? [];
+  const tag = product.food_tag;
   const variants = product.variants ?? [];
   const customizations = product.customizations ?? [];
 
@@ -390,21 +392,11 @@ function ProductMetaCell({ product }: { product: IProduct }) {
     <div className="min-w-[220px] max-w-[280px] space-y-2">
       <ProductDescriptionTooltip product={product} />
 
-      {tags.length > 0 ? (
+      {tag ? (
         <div className="flex flex-wrap gap-1">
-          {tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-default-100 px-2 py-0.5 text-[11px] font-medium text-default-700"
-            >
-              {getOptionLabel(FOOD_TAG_OPTIONS, tag)}
-            </span>
-          ))}
-          {tags.length > 3 ? (
-            <span className="rounded-full bg-default-100 px-2 py-0.5 text-[11px] text-default-500">
-              +{tags.length - 3}
-            </span>
-          ) : null}
+          <span className="rounded-full bg-default-100 px-2 py-0.5 text-[11px] font-medium text-default-700">
+            {getOptionLabel(FOOD_TAG_OPTIONS, tag)}
+          </span>
         </div>
       ) : null}
 

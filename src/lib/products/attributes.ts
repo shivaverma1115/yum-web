@@ -271,8 +271,31 @@ export function isProductDietType(value: string): value is ProductDietType {
   return DIET_TYPE_SET.has(value);
 }
 
+export function isFoodTag(value: string): value is FoodTag {
+  return FOOD_TAG_SET.has(value);
+}
+
+/** Normalize a single food tag (or first entry from a legacy array). */
+export function normalizeFoodTag(value: unknown): FoodTag | null {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (typeof entry === "string" && FOOD_TAG_SET.has(entry)) {
+        return entry as FoodTag;
+      }
+    }
+    return null;
+  }
+
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || !FOOD_TAG_SET.has(trimmed)) return null;
+  return trimmed as FoodTag;
+}
+
+/** @deprecated Use normalizeFoodTag. Kept for any remaining array callers. */
 export function normalizeFoodTags(value: unknown): FoodTag[] {
-  return normalizeStringArray<FoodTag>(value, FOOD_TAG_SET);
+  const tag = normalizeFoodTag(value);
+  return tag ? [tag] : [];
 }
 
 export function normalizeSpiceLevels(value: unknown): SpiceLevel[] {

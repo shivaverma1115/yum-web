@@ -9,7 +9,13 @@ export type BusinessSettingsOrder = {
   cod_enabled: boolean;
   online_payment_enabled: boolean;
   min_order_amount: number;
+  /** Amount charged for delivery (0 = free). */
   delivery_charge: number;
+  /**
+   * Flat platform / handling fee (includes payment gateway costs).
+   * Shown as a single “Miscellaneous” line — not split as Razorpay.
+   */
+  miscellaneous_fee: number;
   /** When false, ignore hours and always allow orders */
   store_hours_enabled: boolean;
   /** "HH:mm" 24h, e.g. "09:00" */
@@ -74,7 +80,8 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
     cod_enabled: true,
     online_payment_enabled: true,
     min_order_amount: 100,
-    delivery_charge: 40,
+    delivery_charge: 0,
+    miscellaneous_fee: 8,
     store_hours_enabled: true,
     open_time: "09:00",
     close_time: "22:00",

@@ -1,5 +1,6 @@
 import {
   SkeletonBox,
+  SkeletonList,
   SkeletonText,
 } from "./SkeletonToolkit";
 
@@ -173,6 +174,58 @@ export function CategoryFilterSkeleton({ rows = 6 }: { rows?: number }) {
           <SkeletonBox className="skel-line-sm w-32" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Page body placeholder while `/api/account/me` is loading. */
+export function AccountPageSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-live="polite">
+      <div className="space-y-2">
+        <SkeletonBox className="skel-line h-7 w-48" />
+        <SkeletonBox className="skel-line-sm w-72" />
+      </div>
+      <StatsCardsSkeleton count={3} />
+      <div className="overflow-hidden rounded-lg border border-default-200">
+        <div className="border-b border-default-200 p-6">
+          <SkeletonBox className="skel-line h-6 w-40" />
+        </div>
+        <div className="p-4">
+          <SkeletonList rows={6} showLeading showTrailing />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Sidebar nav placeholder while account session is loading. */
+export function ProfileNavSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-1.5 p-4" aria-hidden>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div
+          // eslint-disable-next-line react/no-array-index-key
+          key={index}
+          className="flex items-center gap-3 rounded-md px-4 py-3"
+        >
+          <SkeletonBox className="h-4 w-4 rounded" />
+          <SkeletonBox className="skel-line-sm h-3 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Topbar account chip placeholder. */
+export function ProfileUserChipSkeleton() {
+  return (
+    <div className="inline-flex items-center gap-2" aria-hidden>
+      <SkeletonBox className="h-10 w-10 rounded-full" />
+      <div className="hidden space-y-1.5 lg:block">
+        <SkeletonBox className="skel-line-sm h-3 w-24" />
+        <SkeletonBox className="skel-line-sm h-2.5 w-12" />
+      </div>
     </div>
   );
 }

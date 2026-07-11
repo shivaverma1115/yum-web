@@ -15,7 +15,9 @@ import {
 import { useContextApi } from "@/context-api/use-context";
 import { useLogout } from "@/lib/auth/useLogout";
 import UserAvatar from "@/components/common/UserAvatar";
+import { ProfileUserChipSkeleton } from "@/components/skeleton";
 import { getUserDisplayName } from "@/lib/user/display-name";
+import RunningTruncate from "@/components/ui/RunningTruncate";
 import { UserRole } from "@/types/user";
 
 type ProfileTopbarProps = {
@@ -23,8 +25,9 @@ type ProfileTopbarProps = {
 };
 
 export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
-    const { user } = useContextApi();
+    const { user, loading } = useContextApi();
     const handleLogout = useLogout();
+    const isSessionLoading = loading && !user;
 
     const isAdmin = user?.role === UserRole.ADMIN;
     const dashboardHref = isAdmin ? "/admin/dashboard" : "/user/orders";
@@ -139,6 +142,9 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
                     </div>
 
                     <div className="flex">
+                        {isSessionLoading ? (
+                            <ProfileUserChipSkeleton />
+                        ) : (
                         <div className="hs-dropdown relative inline-flex [--placement:bottom-right]">
                             <button
                                 type="button"
@@ -151,7 +157,10 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
                                 />
                                 <div className="hidden text-start lg:block">
                                     <p className="text-sm font-medium text-default-700">
-                                        {displayName}
+                                        <RunningTruncate
+                                            text={displayName}
+                                            maxWidthClassName="max-w-[9rem]"
+                                        />
                                     </p>
                                     <p className="mt-1 text-xs text-default-500">{roleLabel}</p>
                                 </div>
@@ -193,6 +202,7 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
                                 </button>
                             </div>
                         </div>
+                        )}
                     </div>
                 </div>
             </nav>

@@ -1,7 +1,5 @@
-import {
-  formatOrderIdShort,
-  getOrderStatusLabel,
-} from "@/components/admin/orders/order-details-shared";
+import { getOrderStatusLabel } from "@/components/admin/orders/order-details-shared";
+import { formatOrderIdShort } from "@/lib/orders/order-number";
 import { sendPushToUser } from "@/lib/notifications/send-push";
 import { logError } from "@/lib/utils/logError";
 import type { IOrder, PaymentStatus } from "@/types/order";
@@ -24,7 +22,7 @@ function getPaymentStatusLabel(status: PaymentStatus): string {
 export function buildOrderNotificationMessage(
   payload: OrderNotificationPayload,
 ): { title: string; body: string } | null {
-  const orderRef = formatOrderIdShort(payload.order.id);
+  const orderRef = formatOrderIdShort(payload.order);
 
   if (payload.kind === "status") {
     const nextStatus = payload.order.status;

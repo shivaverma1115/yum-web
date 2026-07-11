@@ -1,3 +1,4 @@
+import { getProductBasePrice } from "@/lib/cart/line";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import type { IProduct } from "@/types/product";
 
@@ -10,7 +11,8 @@ export function formatProductPriceDisplay(
   product: IProduct,
   currencySymbol: string,
 ): ProductPriceDisplay | null {
-  if (product.selling_price == null || !Number.isFinite(product.selling_price)) {
+  const basePrice = getProductBasePrice(product);
+  if (basePrice == null || !Number.isFinite(basePrice)) {
     return null;
   }
 
@@ -22,19 +24,19 @@ export function formatProductPriceDisplay(
     })}`;
 
   const discounted = product.add_discount
-    ? calculateDiscountedPrice(product.selling_price, product.discount_percent)
-    : product.selling_price;
+    ? calculateDiscountedPrice(basePrice, product.discount_percent)
+    : basePrice;
 
   if (
     discounted != null &&
-    discounted < product.selling_price &&
+    discounted < basePrice &&
     product.add_discount
   ) {
     return {
       price: format(discounted),
-      originalPrice: format(product.selling_price),
+      originalPrice: format(basePrice),
     };
   }
 
-  return { price: format(product.selling_price) };
+  return { price: format(basePrice) };
 }

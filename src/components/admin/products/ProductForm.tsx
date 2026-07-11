@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { Loader2, Package, Plus, Save, Trash2, X } from "lucide-react";
 import { fetchProductCategories } from "@/lib/api/categories";
 import { formatCurrency, MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
+import { getPrimaryVariant } from "@/lib/cart/line";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import ImageUploadField, {
     type ImageUploadValue,
@@ -22,7 +23,7 @@ import {
     NUTRITION_OPTIONS,
     normalizeAllergens,
     normalizeCustomizations,
-    normalizeFoodTags,
+    normalizeFoodTag,
     normalizeIngredients,
     normalizeNutrition,
     normalizeSpiceLevels,
@@ -41,7 +42,6 @@ const errorClassName = "text-red-500 text-sm mt-1";
 const DEFAULT_FORM_VALUES: ProductFormInput = {
     name: "",
     category: "",
-    selling_price: null,
     order_type: [],
     short_description: "",
     long_description: "",
@@ -49,7 +49,7 @@ const DEFAULT_FORM_VALUES: ProductFormInput = {
     discount_percent: null,
     preparation_time_minutes: null,
     diet_type: "veg",
-    food_tags: [],
+    food_tag: null,
     variants: [],
     customizations: [],
     nutrition: [],
@@ -96,7 +96,7 @@ function toFormValues(
         ...product,
         category: resolveCategorySlug(product.category, categories),
         order_type: normalizeOrderTypes(product.order_type),
-        food_tags: normalizeFoodTags(product.food_tags),
+        food_tag: normalizeFoodTag(product.food_tag),
         variants: normalizeVariants(product.variants),
         customizations: normalizeCustomizations(product.customizations),
         nutrition: normalizeNutrition(product.nutrition),
@@ -117,7 +117,6 @@ function buildProductFormData(
 
     formData.append("name", values.name);
     formData.append("category", values.category);
-    formData.append("selling_price", String(values.selling_price));
     for (const orderType of values.order_type) {
         formData.append("order_type", orderType);
     }
@@ -136,8 +135,8 @@ function buildProductFormData(
     if (values.diet_type) {
         formData.append("diet_type", values.diet_type);
     }
-    for (const tag of values.food_tags) {
-        formData.append("food_tags", tag);
+    if (values.food_tag) {
+        formData.append("food_tag", values.food_tag);
     }
     formData.append("variants", JSON.stringify(values.variants ?? []));
     formData.append("customizations", JSON.stringify(values.customizations ?? []));
@@ -266,9 +265,13 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     );
     const addDiscount = watch("add_discount");
     const discountPercent = watch("discount_percent");
-    const sellingPrice = watch("selling_price");
+    const watchedVariants = watch("variants") ?? [];
     const nutrition = watch("nutrition") ?? [];
-    const discountedPrice = calculateDiscountedPrice(sellingPrice, discountPercent);
+    const primaryVariantPrice = getPrimaryVariant(watchedVariants)?.price ?? null;
+    const discountedPrice = calculateDiscountedPrice(
+        primaryVariantPrice,
+        discountPercent,
+    );
     const maxImageSizeMb = MAX_PRODUCT_IMAGE_SIZE_BYTES / (1024 * 1024);
 
     const toggleNutrition = (key: NutritionKey, checked: boolean) => {
@@ -315,6 +318,22 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
         const imageValue = imageUploadRef.current;
         const files = imageValue.files;
 
+        const cleanedVariants = (values.variants ?? [])
+            .map((item) => ({
+                name: item.name.trim(),
+                price: Number(item.price) || 0,
+            }))
+            .filter((item) => item.name.length > 0);
+
+        if (!cleanedVariants.length) {
+            setError("variants", {
+                type: "required",
+                message: "Add at least one variant with a price.",
+            });
+            toast.error("Add at least one variant with a price.");
+            return;
+        }
+
         if (!files.length && !imageValue.existingUrls.length) {
             setError("image_url", {
                 type: "required",
@@ -339,12 +358,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
         const formData = buildProductFormData(
             {
                 ...values,
-                variants: (values.variants ?? [])
-                    .map((item) => ({
-                        name: item.name.trim(),
-                        price: Number(item.price) || 0,
-                    }))
-                    .filter((item) => item.name.length > 0),
+                variants: cleanedVariants,
                 customizations: (values.customizations ?? [])
                     .map((item) => ({
                         label: item.label.trim(),
@@ -490,28 +504,6 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="selling_price">
-                                    Selling Price <span className="text-required" >*</span>
-                                </label>
-                                <Input
-                                    type="number"
-                                    id="selling_price"
-                                    step="0.01"
-                                    min={0}
-                                    placeholder="Selling Price"
-                                    disabled={isSubmitting}
-                                    {...register("selling_price", {
-                                        required: "Selling price is required.",
-                                        valueAsNumber: true,
-                                        min: { value: 0, message: "Price cannot be negative." },
-                                    })}
-                                />
-                                {errors.selling_price?.message ? (
-                                    <span className={errorClassName}>{errors.selling_price.message}</span>
-                                ) : null}
-                            </div>
-
-                            <div>
                                 <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="order_type">
                                     Order Type <span className="text-required" >*</span>
                                 </label>
@@ -563,35 +555,40 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="food_tags">
-                                    Food Tags
+                                <label className="block text-sm font-medium text-default-900 mb-2" htmlFor="food_tag">
+                                    Food Tag
                                 </label>
-                                <Controller
-                                    name="food_tags"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <MultiSelect
-                                            id="food_tags"
-                                            options={FOOD_TAG_OPTIONS}
-                                            value={field.value}
-                                            onChange={field.onChange}
-                                            placeholder="Select food tags"
-                                            disabled={isSubmitting}
-                                            error={errors.food_tags?.message}
-                                            aria-label="Food tags"
-                                        />
-                                    )}
-                                />
+                                <Input
+                                    as="select"
+                                    id="food_tag"
+                                    disabled={isSubmitting}
+                                    {...register("food_tag", {
+                                        setValueAs: (value) =>
+                                            value === "" || value == null
+                                                ? null
+                                                : value,
+                                    })}
+                                >
+                                    <option value="">No tag</option>
+                                    {FOOD_TAG_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </Input>
+                                {errors.food_tag?.message ? (
+                                    <span className={errorClassName}>{errors.food_tag.message}</span>
+                                ) : null}
                             </div>
 
                             <div className="space-y-4 rounded-lg border border-default-200 p-4">
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
                                         <h4 className="text-sm font-medium text-default-900">
-                                            Variants
+                                            Variants <span className="text-required">*</span>
                                         </h4>
                                         <p className="mt-1 text-sm text-default-600">
-                                            Portion options with their own price (e.g. Half ₹120, Full ₹190).
+                                            Portion options with their own price (e.g. Half ₹120, Full ₹190). At least one is required.
                                         </p>
                                     </div>
                                     <button
@@ -624,6 +621,9 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                                         disabled={isSubmitting}
                                                         {...register(
                                                             `variants.${index}.name` as const,
+                                                            {
+                                                                required: "Variant name is required.",
+                                                            },
                                                         )}
                                                     />
                                                 </div>
@@ -659,6 +659,11 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                         ))}
                                     </div>
                                 )}
+                                {errors.variants?.message || errors.variants?.root?.message ? (
+                                    <span className={errorClassName}>
+                                        {errors.variants.message ?? errors.variants.root?.message}
+                                    </span>
+                                ) : null}
                             </div>
 
                             <div className="space-y-4 rounded-lg border border-default-200 p-4">
@@ -931,11 +936,10 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
 
                                         <div className="rounded-lg bg-default-50 px-4 py-3 text-sm">
                                             <p className="text-default-600">
-                                                Selling price:{" "}
+                                                Base variant price:{" "}
                                                 <span className="font-medium text-default-900">
-                                                    {sellingPrice != null &&
-                                                        !Number.isNaN(sellingPrice)
-                                                        ? formatCurrency(sellingPrice)
+                                                    {primaryVariantPrice != null
+                                                        ? formatCurrency(primaryVariantPrice)
                                                         : "—"}
                                                 </span>
                                             </p>

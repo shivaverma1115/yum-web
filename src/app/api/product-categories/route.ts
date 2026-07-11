@@ -8,7 +8,9 @@ import { listProductCategoriesWithSupabase } from "@/lib/supabase/product/catego
 export async function GET() {
   try {
     const adminClient = createAdminClient();
-    const result = await listProductCategoriesWithSupabase(adminClient);
+    const result = await listProductCategoriesWithSupabase(adminClient, {
+      onlyWithProducts: true,
+    });
 
     if (!result.success) {
       return NextResponse.json(

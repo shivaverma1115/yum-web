@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import ProductCard from "@/components/storefront/Products/ProductCard";
+import ProductImageCarousel from "@/components/storefront/Products/ProductImageCarousel";
 import ProductReviewsSection from "@/components/storefront/Products/ProductReviewsSection";
 import {
     fetchProduct,
     fetchProductsPage,
-    getProductImages,
 } from "@/lib/products/products";
 import HtmlContent from "@/components/common/HtmlContent";
 import OrderTypeBadges from "@/components/common/OrderTypeBadges";
@@ -26,6 +26,7 @@ import {
     SPICE_LEVEL_OPTIONS,
 } from "@/lib/products/attributes";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
+import { getDefaultVariant, getProductBasePrice } from "@/lib/cart/line";
 import type { IProduct } from "@/types/product";
 import { ProductDetailsSkeleton } from "@/components/skeleton";
 import { HeartIcon } from "lucide-react";
@@ -46,7 +47,6 @@ export default function ProductDetails({
     const [related, setRelated] = useState<IProduct[]>(initialRelated);
     const [isLoading, setIsLoading] = useState(!initialProduct);
     const [error, setError] = useState<string | null>(null);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     useEffect(() => {
         if (!slug) {
@@ -77,7 +77,6 @@ export default function ProductDetails({
                 const loaded = await fetchProduct(slug, controller.signal);
                 if (!active) return;
                 setProduct(loaded);
-                setActiveImageIndex(0);
 
                 const list = await fetchProductsPage({
                     page: 1,
@@ -111,13 +110,6 @@ export default function ProductDetails({
         };
     }, [slug, initialProduct, initialRelated]);
 
-    const images = useMemo(
-        () => (product ? getProductImages(product) : []),
-        [product],
-    );
-
-    const activeImage = images[activeImageIndex] ?? images[0];
-
     if (isLoading) {
         return <ProductDetailsSkeleton />;
     }
@@ -150,39 +142,12 @@ export default function ProductDetails({
                     <div className="grid lg:grid-cols-2 gap-6">
                         <div className="flex w-full flex-col gap-4">
                             <div className="relative w-full overflow-hidden rounded-xl border border-default-200 bg-default-50">
-                                <div className="">
-                                    <img
-                                        src={activeImage}
-                                        alt={product.name}
-                                        className="h-full w-full object-contain"
-                                    />
-                                </div>
+                                <ProductImageCarousel
+                                    product={product}
+                                    variant="detail"
+                                    className="rounded-xl"
+                                />
                             </div>
-
-                            {images.length > 1 ? (
-                                <div className="grid w-full grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
-                                    {images.map((src, index) => (
-                                        <button
-                                            key={`${src}-${index}`}
-                                            type="button"
-                                            onClick={() => setActiveImageIndex(index)}
-                                            aria-label={`View image ${index + 1} of ${images.length}`}
-                                            aria-current={index === activeImageIndex}
-                                            className={`aspect-square w-full overflow-hidden rounded-lg border-2 bg-default-50 transition-all ${
-                                                index === activeImageIndex
-                                                    ? "border-primary ring-1 ring-primary/30"
-                                                    : "border-default-200 hover:border-default-300"
-                                            }`}
-                                        >
-                                            <img
-                                                src={src}
-                                                alt={`${product.name} ${index + 1}`}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : null}
                         </div>
 
                         <div>
@@ -294,23 +259,31 @@ export default function ProductDetails({
                             ) : null}
 
                             <p className="text-3xl font-semibold text-primary mb-6">
-                                {product.add_discount &&
-                                    product.discount_percent != null &&
-                                    product.selling_price != null ? (
-                                    <>
-                                        {formatCurrency(
-                                            calculateDiscountedPrice(
-                                                product.selling_price,
-                                                product.discount_percent,
-                                            ) ?? product.selling_price,
-                                        )}
-                                        <span className="ms-2 text-lg font-medium text-default-400 line-through">
-                                            {formatCurrency(product.selling_price)}
-                                        </span>
-                                    </>
-                                ) : (
-                                    formatCurrency(product.selling_price ?? 0)
-                                )}
+                                {(() => {
+                                    const basePrice = getProductBasePrice(product);
+                                    if (basePrice == null) return "—";
+
+                                    if (
+                                        product.add_discount &&
+                                        product.discount_percent != null
+                                    ) {
+                                        return (
+                                            <>
+                                                {formatCurrency(
+                                                    calculateDiscountedPrice(
+                                                        basePrice,
+                                                        product.discount_percent,
+                                                    ) ?? basePrice,
+                                                )}
+                                                <span className="ms-2 text-lg font-medium text-default-400 line-through">
+                                                    {formatCurrency(basePrice)}
+                                                </span>
+                                            </>
+                                        );
+                                    }
+
+                                    return formatCurrency(basePrice);
+                                })()}
                             </p>
 
                             <p className="text-sm text-default-600 mb-6">
@@ -322,6 +295,9 @@ export default function ProductDetails({
                             <div className="flex items-center gap-2 mb-8">
                                 <AddToCartButton
                                     product={product}
+                                    options={{
+                                        variant: getDefaultVariant(product),
+                                    }}
                                     className="relative z-10 inline-flex items-center justify-center rounded-full border border-primary bg-primary px-12 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500"
                                 />
                                 <HeartIcon className="size-5 text-default-400 cursor-pointer hover:fill-red-600 hover:text-red-600" />

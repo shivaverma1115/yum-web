@@ -1,19 +1,16 @@
-
-import Preloader from '@/components/layout/Preloader'
-import { Suspense } from 'react'
-import dynamic from 'next/dynamic';
-import { createStorefrontMetadata } from '@/lib/seo/create-storefront-metadata';
-
-const Home = dynamic(() => import('@/components/storefront/Home'));
+import Home from "@/components/storefront/Home";
+import Preloader from "@/components/layout/Preloader";
+import { Suspense } from "react";
+import { createStorefrontMetadata } from "@/lib/seo/create-storefront-metadata";
 
 export async function generateMetadata() {
-    return createStorefrontMetadata("home");
+  return createStorefrontMetadata("home");
 }
 
 export default function HomePage() {
-    return (
-        <Suspense fallback={<Preloader />}>
-            <Home />
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<Preloader />}>
+      <Home />
+    </Suspense>
+  );
 }

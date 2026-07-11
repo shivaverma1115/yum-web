@@ -1,7 +1,7 @@
 import {
   normalizeAllergens,
   normalizeCustomizations,
-  normalizeFoodTags,
+  normalizeFoodTag,
   normalizeIngredients,
   normalizeNutrition,
   normalizeSpiceLevels,
@@ -14,7 +14,7 @@ function normalizeProduct(product: IProduct): IProduct {
   return {
     ...product,
     order_type: normalizeOrderTypes(product.order_type),
-    food_tags: normalizeFoodTags(product.food_tags),
+    food_tag: normalizeFoodTag(product.food_tag),
     variants: normalizeVariants(product.variants),
     customizations: normalizeCustomizations(product.customizations),
     nutrition: normalizeNutrition(product.nutrition),

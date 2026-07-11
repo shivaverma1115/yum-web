@@ -16,7 +16,6 @@ export type IProduct = {
   slug: string;
   name: string;
   category: string;
-  selling_price: number | null;
   order_type: FulfillmentType[];
   short_description: string;
   long_description: string;
@@ -24,7 +23,7 @@ export type IProduct = {
   discount_percent: number | null;
   preparation_time_minutes: number | null;
   diet_type: ProductDietType | null;
-  food_tags: FoodTag[];
+  food_tag: FoodTag | null;
   variants: ProductVariant[];
   customizations: ProductCustomization[];
   nutrition: ProductNutritionItem[];

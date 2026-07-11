@@ -8,6 +8,7 @@ import EnableOrderNotificationsButton from "@/components/storefront/EnableOrderN
 import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { StatsCardsSkeleton, TableSkeleton } from "@/components/skeleton";
 import { formatCurrency } from "@/lib/constants";
+import { formatOrderIdShort } from "@/lib/orders/order-number";
 import { type CustomerOrdersFilter } from "@/lib/supabase/orders";
 import { UserRole } from "@/types/user";
 import { useOrders } from "@/hooks/orders/use-orders";
@@ -46,7 +47,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     if (!isAdmin || !order.id) return;
 
     const confirmed = window.confirm(
-      `Delete order ${order.id.slice(0, 8)}…? This cannot be undone.`,
+      `Delete order ${formatOrderIdShort(order)}…? This cannot be undone.`,
     );
     if (!confirmed) return;
 
@@ -118,55 +119,55 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
       {loading ? (
         <StatsCardsSkeleton />
       ) : (
-      <div className="grid lg:grid-cols-3 sm:grid-cols-2 gap-6">
-        <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center justify-center rounded-full bg-primary/20 text-primary h-16 w-16">
-              <ShoppingBag className="h-8 w-8" aria-hidden />
-            </div>
-            <div>
-              <p className="text-base text-default-500 font-medium mb-1">
-                Total Orders
-              </p>
-              <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {stats.totalOrders}
-              </h4>
+        <div className="grid lg:grid-cols-3 sm:grid-cols-2 gap-6">
+          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex items-center justify-center rounded-full bg-primary/20 text-primary h-16 w-16">
+                <ShoppingBag className="h-8 w-8" aria-hidden />
+              </div>
+              <div>
+                <p className="text-base text-default-500 font-medium mb-1">
+                  Total Orders
+                </p>
+                <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                  {stats.totalOrders}
+                </h4>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center justify-center rounded-full bg-yellow-500/20 text-yellow-500 h-16 w-16">
-              <Wallet className="h-8 w-8" aria-hidden />
-            </div>
-            <div>
-              <p className="text-base text-default-500 font-medium mb-1">
-                Paid Revenue
-              </p>
-              <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {formatCurrency(stats.paidRevenue)}
-              </h4>
+          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex items-center justify-center rounded-full bg-yellow-500/20 text-yellow-500 h-16 w-16">
+                <Wallet className="h-8 w-8" aria-hidden />
+              </div>
+              <div>
+                <p className="text-base text-default-500 font-medium mb-1">
+                  Paid Revenue
+                </p>
+                <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                  {formatCurrency(stats.paidRevenue)}
+                </h4>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-          <div className="flex items-center gap-4">
-            <div className="inline-flex items-center justify-center rounded-full bg-green-500/20 text-green-500 h-16 w-16">
-              <Banknote className="h-8 w-8" aria-hidden />
-            </div>
-            <div>
-              <p className="text-base text-default-500 font-medium mb-1">
-                Pending Payment
-              </p>
-              <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                {stats.pendingCount}
-              </h4>
+          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex items-center justify-center rounded-full bg-green-500/20 text-green-500 h-16 w-16">
+                <Banknote className="h-8 w-8" aria-hidden />
+              </div>
+              <div>
+                <p className="text-base text-default-500 font-medium mb-1">
+                  Pending Payment
+                </p>
+                <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                  {stats.pendingCount}
+                </h4>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="border rounded-lg border-default-200">
@@ -229,11 +230,11 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                     Order ID
                   </th>
-                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
-                    Customer Phone Number
+                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w-[12rem]">
+                    Products
                   </th>
-                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800 min-w">
-                    Items
+                  <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-start text-sm whitespace-nowrap font-medium text-default-800">
                     Amount

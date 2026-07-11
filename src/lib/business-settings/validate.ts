@@ -159,6 +159,17 @@ export function validateBusinessSettingsPatch(
       }
     }
 
+    if (patch.order.miscellaneous_fee !== undefined) {
+      const misc = parseNonNegativeNumber(
+        patch.order.miscellaneous_fee,
+        "order.miscellaneous_fee",
+        errors,
+      );
+      if (misc !== null) {
+        order.miscellaneous_fee = misc;
+      }
+    }
+
     if (patch.order.store_hours_enabled !== undefined) {
       order.store_hours_enabled = Boolean(patch.order.store_hours_enabled);
     }

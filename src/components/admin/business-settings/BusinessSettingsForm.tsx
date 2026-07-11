@@ -311,6 +311,32 @@ export default function BusinessSettingsForm() {
             })}
             disabled={isSubmitting}
           />
+          <p className="mt-1 text-xs text-default-500">
+            Amount customers pay for delivery. Set to 0 for free delivery.
+          </p>
+        </FieldGroup>
+
+        <FieldGroup
+          label="Miscellaneous fee"
+          error={errors.order?.miscellaneous_fee?.message}
+        >
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            {...register("order.miscellaneous_fee", {
+              valueAsNumber: true,
+              min: {
+                value: 0,
+                message: "Miscellaneous fee must be 0 or greater.",
+              },
+            })}
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-default-500">
+            Flat platform / handling fee (includes payment gateway costs). Shown
+            as a single line on the order summary.
+          </p>
         </FieldGroup>
 
         <ToggleField

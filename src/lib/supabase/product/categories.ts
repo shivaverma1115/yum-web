@@ -31,7 +31,11 @@ function slugify(value: string): string {
 
 export async function listProductCategoriesWithSupabase(
   supabase: SupabaseClient,
-  options: { includeInactive?: boolean } = {},
+  options: {
+    includeInactive?: boolean;
+    /** Only categories that have at least one available product. */
+    onlyWithProducts?: boolean;
+  } = {},
 ): Promise<ListProductCategoriesResult> {
   let query = supabase
     .from("product_categories")
@@ -53,9 +57,38 @@ export async function listProductCategoriesWithSupabase(
     };
   }
 
+  let categories = (data ?? []) as IProductCategory[];
+
+  if (options.onlyWithProducts) {
+    const { data: productRows, error: productsError } = await supabase
+      .from("products")
+      .select("category")
+      .eq("is_available", true);
+
+    if (productsError) {
+      return {
+        success: false,
+        message: productsError.message ?? ERROR_MESSAGE_GENERIC,
+        status: 400,
+      };
+    }
+
+    const usedKeys = new Set(
+      (productRows ?? [])
+        .map((row) => String(row.category ?? "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+
+    categories = categories.filter((category) => {
+      const slug = category.slug.trim().toLowerCase();
+      const name = category.name.trim().toLowerCase();
+      return usedKeys.has(slug) || usedKeys.has(name);
+    });
+  }
+
   return {
     success: true,
-    categories: (data ?? []) as IProductCategory[],
+    categories,
   };
 }
 

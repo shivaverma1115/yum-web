@@ -5,7 +5,7 @@ import {
   isProductDietType,
   normalizeAllergens,
   normalizeCustomizations,
-  normalizeFoodTags,
+  normalizeFoodTag,
   normalizeIngredients,
   normalizeNutrition,
   normalizeSpiceLevels,
@@ -27,7 +27,7 @@ import {
 } from "@/lib/products/slug";
 
 const PRODUCT_COLUMNS =
-  "id, user_id, slug, name, category, selling_price, order_type, short_description, long_description, add_discount, discount_percent, preparation_time_minutes, diet_type, food_tags, variants, customizations, nutrition, spice_levels, ingredients, allergens, is_available, image_url, image_urls, created_at, updated_at";
+  "id, user_id, slug, name, category, order_type, short_description, long_description, add_discount, discount_percent, preparation_time_minutes, diet_type, food_tag, variants, customizations, nutrition, spice_levels, ingredients, allergens, is_available, image_url, image_urls, created_at, updated_at";
 
 async function resolveUniqueProductSlug(
   supabase: SupabaseClient,
@@ -113,7 +113,7 @@ function mapProductRow(row: Record<string, unknown>): IProduct {
   return {
     ...(row as IProduct),
     order_type: normalizeOrderTypes(row.order_type),
-    food_tags: normalizeFoodTags(row.food_tags),
+    food_tag: normalizeFoodTag(row.food_tag ?? row.food_tags),
     variants: normalizeVariants(row.variants),
     customizations: normalizeCustomizations(row.customizations),
     nutrition: normalizeNutrition(row.nutrition),
@@ -146,14 +146,6 @@ export function parseProductFormData(formData: FormData): {
   }
   if (isRichTextEmpty(long_description)) {
     errors.long_description = "Long description is required.";
-  }
-
-  const sellingPriceResult = parseNumber(formData.get("selling_price"), "Selling price");
-
-  if (!sellingPriceResult.ok) errors.selling_price = sellingPriceResult.message;
-
-  if (sellingPriceResult.ok && sellingPriceResult.value < 0) {
-    errors.selling_price = "Selling price cannot be negative.";
   }
 
   const add_discount = parseBoolean(formData.get("add_discount"));
@@ -199,10 +191,18 @@ export function parseProductFormData(formData: FormData): {
     errors.diet_type = "Please select a food type.";
   }
 
-  const food_tags = normalizeFoodTags(
-    parseStringArrayFromFormData(formData, "food_tags"),
-  );
+  const food_tag = normalizeFoodTag(String(formData.get("food_tag") ?? "").trim());
   const variants = normalizeVariants(String(formData.get("variants") ?? ""));
+  if (!variants.length) {
+    errors.variants = "Add at least one variant with a price.";
+  } else if (
+    variants.some(
+      (variant) => !variant.name.trim() || !Number.isFinite(variant.price),
+    )
+  ) {
+    errors.variants = "Each variant needs a name and a valid price.";
+  }
+
   const customizations = normalizeCustomizations(
     String(formData.get("customizations") ?? ""),
   );
@@ -226,7 +226,6 @@ export function parseProductFormData(formData: FormData): {
     input: {
       name,
       category,
-      selling_price: sellingPriceResult.ok ? sellingPriceResult.value : 0,
       order_type,
       short_description,
       long_description,
@@ -234,7 +233,7 @@ export function parseProductFormData(formData: FormData): {
       discount_percent,
       preparation_time_minutes,
       diet_type,
-      food_tags,
+      food_tag,
       variants,
       customizations,
       nutrition,
@@ -279,7 +278,6 @@ export async function createProductWithSupabase(
       slug,
       name: input.name,
       category: input.category,
-      selling_price: input.selling_price,
       order_type: input.order_type,
       short_description: input.short_description,
       long_description: input.long_description,
@@ -287,7 +285,7 @@ export async function createProductWithSupabase(
       discount_percent: input.add_discount ? input.discount_percent : null,
       preparation_time_minutes: input.preparation_time_minutes,
       diet_type: input.diet_type,
-      food_tags: input.food_tags,
+      food_tag: input.food_tag,
       variants: input.variants,
       customizations: input.customizations,
       nutrition: input.nutrition,
@@ -432,7 +430,6 @@ export async function updateProductWithSupabase(
       slug,
       name: input.name,
       category: input.category,
-      selling_price: input.selling_price,
       order_type: input.order_type,
       short_description: input.short_description,
       long_description: input.long_description,
@@ -440,7 +437,7 @@ export async function updateProductWithSupabase(
       discount_percent: input.add_discount ? input.discount_percent : null,
       preparation_time_minutes: input.preparation_time_minutes,
       diet_type: input.diet_type,
-      food_tags: input.food_tags,
+      food_tag: input.food_tag,
       variants: input.variants,
       customizations: input.customizations,
       nutrition: input.nutrition,
@@ -538,7 +535,22 @@ export async function listProductsWithSupabase(
 
   const categories = options.categories?.map((slug) => slug.trim()).filter(Boolean);
   if (categories?.length) {
-    query = query.in("category", categories);
+    // Expand selected slugs with category names so legacy rows (name stored in
+    // products.category) still match the same filter as ProductWrapper / home.
+    const { data: categoryRows } = await supabase
+      .from("product_categories")
+      .select("slug, name")
+      .in("slug", categories);
+
+    const keys = new Set<string>(categories);
+    for (const row of categoryRows ?? []) {
+      const slug = String(row.slug ?? "").trim();
+      const name = String(row.name ?? "").trim();
+      if (slug) keys.add(slug);
+      if (name) keys.add(name);
+    }
+
+    query = query.in("category", [...keys]);
   }
 
   if (options.availableOnly) {

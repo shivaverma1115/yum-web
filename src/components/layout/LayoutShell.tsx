@@ -8,6 +8,11 @@ type LayoutShellProps = {
   children: ReactNode;
 };
 
+/**
+ * Account chrome only. Do not swap `{children}` for a session skeleton —
+ * that fights SimpleBar/Preline DOM wrappers and causes removeChild errors
+ * on refresh. Page components already show their own loading skeletons.
+ */
 export default function LayoutShell({ children }: LayoutShellProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
