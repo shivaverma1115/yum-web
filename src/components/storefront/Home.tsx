@@ -23,13 +23,7 @@ export default function Home() {
 
                                     <p className="text-lg text-default-700 font-medium mb-8 md:max-w-md lg:mx-0 mx-auto">Imagine you don’t need a diet because we provide healthy and delicious food for you!.</p>
                                     <div className="flex flex-wrap items-center justify-center lg:justify-normal gap-5 mt-10">
-                                        <Link href="/" className="py-5 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Order Now</Link>
-                                        <Link href="/" className="text-primary flex items-center">
-                                            <span className="h-14 w-14 rounded-full border-2 border-e-transparent border-yellow-400 flex items-center justify-center me-2">
-                                                <i data-lucide="play" className="h-6 w-6 fill-primary"></i>
-                                            </span>
-                                            <span className="font-semibold">How to Order</span>
-                                        </Link>
+                                        <Link href="#special-menu" className="py-5 px-10 font-medium text-white bg-primary rounded-full hover:bg-primary-500 transition-all">Order Now</Link>
                                     </div>
 
                                     <div className="mt-14">

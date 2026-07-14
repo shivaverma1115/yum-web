@@ -46,7 +46,7 @@ export default function HomeSpecialMenu() {
   );
 
   return (
-    <section className="lg:py-16 py-6">
+    <section id="special-menu" className="scroll-mt-28 lg:py-16 py-6">
       <div className="container">
         <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
           <aside className="lg:col-span-3">

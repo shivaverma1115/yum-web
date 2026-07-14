@@ -1,17 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import PhoneVerification, { PhoneVerificationHandle } from "@/components/common/phone-verification/PhoneVerification";
-import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { AppTooltip } from "@/components/common/AppTooltip";
 import { OrderSummaryBreakdown } from "@/components/common/OrderSummary";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { ensureCheckoutSession, type CheckoutSessionUser } from "@/lib/auth/ensure-checkout-session";
 import { formatCartItemOptionsLabel, formatCartItemOrderName } from "@/lib/cart/line";
+import {
+    computeCartBillSummary,
+    feeConfigForFulfillment,
+} from "@/lib/cart/totals";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
 import { isOtpRequiredFor } from "@/lib/business-settings/phone-verification";
@@ -32,7 +35,7 @@ const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full 
 export default function Checkout() {
     const router = useRouter();
     const { user, verification, loading: userLoading, refresh: refreshUser } = useContextApi();
-    const { items, appliedCoupon, bill, amountToPay, clearCart } = useCart();
+    const { items, appliedCoupon, subtotal, couponDiscount, clearCart } = useCart();
     const { settings: businessSettings } = useBusinessSettings();
     const {
         register,
@@ -50,6 +53,27 @@ export default function Checkout() {
     const fulfillmentType = watch("fulfillment_type");
     const paymentMethod = watch("payment_method");
     const phone = watch("phone");
+
+    const checkoutBill = useMemo(
+        () =>
+            computeCartBillSummary({
+                items,
+                subtotal,
+                couponDiscount,
+                couponCode: appliedCoupon?.code ?? null,
+                fees: feeConfigForFulfillment(businessSettings, fulfillmentType),
+            }),
+        [
+            items,
+            subtotal,
+            couponDiscount,
+            appliedCoupon?.code,
+            businessSettings,
+            fulfillmentType,
+        ],
+    );
+    const amountToPay = checkoutBill.amountToPay;
+    const isDelivery = fulfillmentType === "delivery";
 
     const paymentOptions = getPaymentOptionsForFulfillment(fulfillmentType);
     const fulfillmentLabel = FULFILLMENT_OPTIONS.find((o) => o.value === fulfillmentType)?.label;
@@ -262,7 +286,6 @@ export default function Checkout() {
     return (
         <section className="lg:py-10 py-6">
             <div className="container">
-                <AnonymousUpgradeBanner className="mb-6" />
                 <form onSubmit={onSubmit} noValidate>
                     <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
                         <div className="lg:col-span-2 col-span-1 space-y-8">
@@ -511,7 +534,11 @@ export default function Checkout() {
                                 })}
 
                                 <div className="mb-6">
-                                    <OrderSummaryBreakdown bill={bill} />
+                                    <OrderSummaryBreakdown
+                                        bill={checkoutBill}
+                                        mode="final"
+                                        showDeliveryFee={isDelivery}
+                                    />
                                 </div>
 
                                 {!storeOpen ? (

@@ -1,5 +1,6 @@
 import { roundMoney } from "@/lib/coupons/discount";
 import type { ICartItem } from "@/types/cart";
+import type { FulfillmentType } from "@/types/order";
 import {
   DEFAULT_BUSINESS_SETTINGS,
   type BusinessSettings,
@@ -53,6 +54,20 @@ export function feeConfigFromBusinessSettings(
   return {
     deliveryFee: Math.max(0, Number(order.delivery_charge) || 0),
     miscellaneousFee: Math.max(0, Number(order.miscellaneous_fee) || 0),
+  };
+}
+
+/**
+ * Delivery fee applies only for delivery orders; miscellaneous always applies.
+ */
+export function feeConfigForFulfillment(
+  settings: Pick<BusinessSettings, "order"> | null | undefined,
+  fulfillment: FulfillmentType | null | undefined,
+): CartFeeConfig {
+  const base = feeConfigFromBusinessSettings(settings);
+  return {
+    deliveryFee: fulfillment === "delivery" ? base.deliveryFee : 0,
+    miscellaneousFee: base.miscellaneousFee,
   };
 }
 

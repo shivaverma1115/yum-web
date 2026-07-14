@@ -4,6 +4,43 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown, Receipt } from "lucide-react";
 import type { CartBillSummary } from "@/lib/cart/totals";
 import { formatCurrency } from "@/lib/constants";
+import { roundMoney } from "@/lib/coupons/discount";
+
+/**
+ * `estimate` — cart: items (+ coupon) only; fees come later at checkout.
+ * `final` — checkout / admin: full payable with delivery & miscellaneous.
+ */
+export type OrderSummaryMode = "estimate" | "final";
+
+export function getOrderSummaryPayable(
+  bill: CartBillSummary,
+  mode: OrderSummaryMode = "final",
+) {
+  if (mode === "estimate") {
+    const amountToPay = roundMoney(
+      Math.max(0, bill.itemTotal - bill.couponDiscount),
+    );
+    const amountCompare =
+      bill.itemCompareTotal != null && bill.itemCompareTotal > amountToPay
+        ? bill.itemCompareTotal
+        : null;
+    const totalSavings = roundMoney(
+      bill.productSavings + bill.couponDiscount,
+    );
+
+    return {
+      amountToPay,
+      amountCompare,
+      totalSavings: totalSavings > 0 ? totalSavings : 0,
+    };
+  }
+
+  return {
+    amountToPay: bill.amountToPay,
+    amountCompare: bill.amountCompare,
+    totalSavings: bill.totalSavings,
+  };
+}
 
 function SummaryRow({
   label,
@@ -49,16 +86,24 @@ function SummaryRow({
 
 export type OrderSummaryBreakdownProps = {
   bill: CartBillSummary;
+  mode?: OrderSummaryMode;
   /** Show helper hints under each row (cart style). Default true. */
   showHints?: boolean;
   totalLabel?: string;
+  /**
+   * When false, hides the delivery fee row (pickup / dine-in).
+   * Default true for `final` mode.
+   */
+  showDeliveryFee?: boolean;
 };
 
-/** Shared bill lines — identical on cart, checkout, and admin order details. */
+/** Shared bill lines — cart (estimate) or checkout/admin (final). */
 export function OrderSummaryBreakdown({
   bill,
+  mode = "final",
   showHints = true,
-  totalLabel = "To Pay",
+  totalLabel,
+  showDeliveryFee,
 }: OrderSummaryBreakdownProps) {
   const {
     itemTotal,
@@ -68,8 +113,13 @@ export function OrderSummaryBreakdown({
     couponDiscount,
     deliveryFee,
     miscellaneousFee,
-    amountToPay,
   } = bill;
+
+  const payable = getOrderSummaryPayable(bill, mode);
+  const isEstimate = mode === "estimate";
+  const resolvedTotalLabel =
+    totalLabel ?? (isEstimate ? "Items total" : "To Pay");
+  const includeDelivery = showDeliveryFee ?? !isEstimate;
 
   return (
     <div>
@@ -98,36 +148,49 @@ export function OrderSummaryBreakdown({
         />
       ) : null}
 
-      <SummaryRow
-        label="Delivery fee"
-        hint={
-          showHints
-            ? deliveryFee === 0
-              ? "No delivery charge on this order"
-              : "Delivery partner fee"
-            : undefined
-        }
-        value={deliveryFee === 0 ? "FREE" : formatCurrency(deliveryFee)}
-        freeLabel={deliveryFee === 0}
-      />
+      {!isEstimate ? (
+        <>
+          {includeDelivery ? (
+            <SummaryRow
+              label="Delivery fee"
+              hint={
+                showHints
+                  ? deliveryFee === 0
+                    ? "No delivery charge on this order"
+                    : "Delivery partner fee"
+                  : undefined
+              }
+              value={deliveryFee === 0 ? "FREE" : formatCurrency(deliveryFee)}
+              freeLabel={deliveryFee === 0}
+            />
+          ) : null}
 
-      <div className="my-1 border-t border-dashed border-default-200" />
+          <div className="my-1 border-t border-dashed border-default-200" />
 
-      <SummaryRow
-        label="Miscellaneous"
-        hint={
-          showHints
-            ? "Platform, handling & payment gateway charges"
-            : undefined
-        }
-        value={formatCurrency(miscellaneousFee)}
-      />
+          <SummaryRow
+            label="Miscellaneous"
+            hint={
+              showHints
+                ? "Platform, handling & payment gateway charges"
+                : undefined
+            }
+            value={formatCurrency(miscellaneousFee)}
+          />
+        </>
+      ) : showHints ? (
+        <p className="py-2 text-xs leading-relaxed text-default-400">
+          Delivery and other fees are calculated on checkout after you choose an
+          order type.
+        </p>
+      ) : null}
 
       <div className="mt-2 border-t border-default-200 pt-3">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-base font-bold text-default-900">{totalLabel}</p>
+          <p className="text-base font-bold text-default-900">
+            {resolvedTotalLabel}
+          </p>
           <p className="text-base font-bold text-default-900 tabular-nums">
-            {formatCurrency(amountToPay)}
+            {formatCurrency(payable.amountToPay)}
           </p>
         </div>
       </div>
@@ -137,31 +200,38 @@ export function OrderSummaryBreakdown({
 
 export type OrderSummaryProps = {
   bill: CartBillSummary;
+  /** `estimate` for cart; `final` for checkout / paid orders. Default `final`. */
+  mode?: OrderSummaryMode;
   variant?: "static" | "collapsible";
   title?: string;
   className?: string;
   showHints?: boolean;
   totalLabel?: string;
+  showDeliveryFee?: boolean;
   footer?: ReactNode;
   /** When collapsible, start expanded. Default false. */
   defaultExpanded?: boolean;
 };
 
 /**
- * Global order summary — same breakdown everywhere (cart, checkout, admin).
+ * Global order summary — estimate on cart, final on checkout/admin.
  */
 export default function OrderSummary({
   bill,
+  mode = "final",
   variant = "static",
   title = "Order summary",
   className = "",
   showHints = true,
-  totalLabel = "To Pay",
+  totalLabel,
+  showDeliveryFee,
   footer,
   defaultExpanded = false,
 }: OrderSummaryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const { amountToPay, amountCompare, totalSavings } = bill;
+  const payable = getOrderSummaryPayable(bill, mode);
+  const resolvedTotalLabel =
+    totalLabel ?? (mode === "estimate" ? "Items total" : "To Pay");
 
   if (variant === "collapsible") {
     return (
@@ -180,24 +250,26 @@ export default function OrderSummary({
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-baseline gap-1.5">
                 <span className="text-sm font-medium text-default-700">
-                  {totalLabel}
+                  {resolvedTotalLabel}
                 </span>
-                {amountCompare != null ? (
+                {payable.amountCompare != null ? (
                   <span className="text-sm text-default-400 line-through">
-                    {formatCurrency(amountCompare)}
+                    {formatCurrency(payable.amountCompare)}
                   </span>
                 ) : null}
                 <span className="text-base font-bold text-default-900">
-                  {formatCurrency(amountToPay)}
+                  {formatCurrency(payable.amountToPay)}
                 </span>
               </span>
-              {totalSavings > 0 ? (
+              {payable.totalSavings > 0 ? (
                 <span className="mt-0.5 block text-xs font-medium text-green-600">
-                  {formatCurrency(totalSavings)} saved on the total!
+                  {formatCurrency(payable.totalSavings)} saved on items!
                 </span>
               ) : (
                 <span className="mt-0.5 block text-xs text-default-500">
-                  Tap to see full bill details
+                  {mode === "estimate"
+                    ? "Tap for item details · fees at checkout"
+                    : "Tap to see full bill details"}
                 </span>
               )}
             </span>
@@ -214,8 +286,10 @@ export default function OrderSummary({
             <div className="border-t border-default-200 px-4 pb-4 pt-1">
               <OrderSummaryBreakdown
                 bill={bill}
+                mode={mode}
                 showHints={showHints}
-                totalLabel={totalLabel}
+                totalLabel={resolvedTotalLabel}
+                showDeliveryFee={showDeliveryFee}
               />
             </div>
           ) : null}
@@ -235,8 +309,10 @@ export default function OrderSummary({
       ) : null}
       <OrderSummaryBreakdown
         bill={bill}
+        mode={mode}
         showHints={showHints}
-        totalLabel={totalLabel}
+        totalLabel={resolvedTotalLabel}
+        showDeliveryFee={showDeliveryFee}
       />
       {footer}
     </div>

@@ -12,7 +12,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import OrderSummary from "@/components/common/OrderSummary";
+import OrderSummary, {
+  getOrderSummaryPayable,
+} from "@/components/common/OrderSummary";
 import { useCart } from "@/context-api/cart-context";
 import { formatCartItemOptionsLabel } from "@/lib/cart/line";
 import { getCartLinePricing } from "@/lib/cart/totals";
@@ -20,6 +22,7 @@ import { validateCouponCode } from "@/lib/coupons/client";
 import { formatCurrency } from "@/lib/constants";
 import type { ICartItem } from "@/types/cart";
 import Input from "@/components/ui/Input";
+import { useContextApi } from "@/context-api/use-context";
 
 function EmptyCart() {
   return (
@@ -264,12 +267,13 @@ export default function Cart() {
   const {
     items,
     bill,
-    amountToPay,
     setAppliedCoupon,
     removeItem,
     setItemQuantity,
     clearCart,
   } = useCart();
+  const { user } = useContextApi();
+  const cartPayable = getOrderSummaryPayable(bill, "estimate");
 
   if (items.length === 0) {
     return <EmptyCart />;
@@ -326,16 +330,21 @@ export default function Cart() {
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-            <CouponSection
-              subtotal={bill.itemTotal}
-              appliedCode={bill.couponCode}
-              discountAmount={bill.couponDiscount}
-              onApplied={setAppliedCoupon}
-              onRemove={() => setAppliedCoupon(null)}
-            />
+            {
+              user ? (
+                <CouponSection
+                  subtotal={bill.itemTotal}
+                  appliedCode={bill.couponCode}
+                  discountAmount={bill.couponDiscount}
+                  onApplied={setAppliedCoupon}
+                  onRemove={() => setAppliedCoupon(null)}
+                />
+              ) : null
+            }
 
             <OrderSummary
               bill={bill}
+              mode="estimate"
               variant="collapsible"
               footer={
                 <>
@@ -354,7 +363,7 @@ export default function Cart() {
               href="/checkout"
               className="inline-flex w-full items-center justify-center rounded-full border border-primary bg-primary px-6 py-3 text-center text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-500"
             >
-              Proceed to checkout · {formatCurrency(amountToPay)}
+              Proceed to checkout · {formatCurrency(cartPayable.amountToPay)}
             </Link>
           </aside>
         </div>

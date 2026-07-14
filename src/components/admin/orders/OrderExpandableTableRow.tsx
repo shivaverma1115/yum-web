@@ -16,7 +16,6 @@ import {
   getOrderStatusLabel,
   ORDER_STATUS_COLORS,
   OrderDetailsPanel,
-  PLACEHOLDER_IMAGE,
 } from "@/components/admin/orders/order-details-shared";
 import PayOrderButton from "@/components/storefront/PayOrderButton";
 import { UserRole } from "@/types/user";
@@ -46,7 +45,7 @@ export default function OrderExpandableTableRow({
   const [expanded, setExpanded] = useState(false);
   const items = order.items ?? [];
   const firstItem = items[0];
-  const imageSrc = firstItem?.image_url?.trim() || PLACEHOLDER_IMAGE;
+  const imageSrc = firstItem?.image_url?.trim();
   const paymentStatus = getOrderPaymentStatus(order);
   const customerSummary = getOrderCustomerSummary(order);
   const isAdmin = userRole === UserRole.ADMIN;

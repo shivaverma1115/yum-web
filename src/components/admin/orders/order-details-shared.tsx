@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import OrderSummary from "@/components/common/OrderSummary";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
 import {
-  feeConfigFromBusinessSettings,
+  feeConfigForFulfillment,
   getOrderBillSummary,
 } from "@/lib/cart/totals";
 import Badge from "@/components/ui/Badge";
@@ -24,7 +24,6 @@ import type {
 
 export { formatOrderIdShort };
 
-export const PLACEHOLDER_IMAGE = "/images/dishes/small/pizza.png";
 
 export const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
   delivery: "Delivery",
@@ -230,7 +229,7 @@ export function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
 }
 
 export function OrderLineItem({ item }: { item: IOrderItem }) {
-  const imageSrc = item.image_url?.trim() || PLACEHOLDER_IMAGE;
+  const imageSrc = item.image_url?.trim();
   const lineTotal = item.quantity * item.unit_price;
 
   return (
@@ -463,7 +462,7 @@ export function OrderDetailsPanel({ order, className = "" }: OrderDetailsPanelPr
     subtotal: order.subtotal,
     discountAmount: order.discount_amount ?? 0,
     couponCode: order.coupon_code,
-    fees: feeConfigFromBusinessSettings(settings),
+    fees: feeConfigForFulfillment(settings, order.fulfillment_type),
     lockedTotal: order.total,
   });
   const hasNotes = hasValue(order.additional_notes);
@@ -594,7 +593,12 @@ export function OrderDetailsPanel({ order, className = "" }: OrderDetailsPanelPr
           )}
         </div>
 
-        <OrderSummary bill={bill} className="h-fit" showHints />
+        <OrderSummary
+          bill={bill}
+          className="h-fit"
+          showHints
+          showDeliveryFee={order.fulfillment_type === "delivery"}
+        />
       </div>
     </div>
   );

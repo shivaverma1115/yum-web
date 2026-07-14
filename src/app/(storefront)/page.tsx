@@ -1,7 +1,9 @@
-import Home from "@/components/storefront/Home";
 import Preloader from "@/components/layout/Preloader";
 import { Suspense } from "react";
 import { createStorefrontMetadata } from "@/lib/seo/create-storefront-metadata";
+import dynamic from "next/dynamic";
+
+const Home = dynamic(() => import("@/components/storefront/Home"));
 
 export async function generateMetadata() {
   return createStorefrontMetadata("home");

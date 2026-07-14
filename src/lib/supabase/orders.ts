@@ -23,7 +23,7 @@ import {
 import { roundMoney } from "@/lib/coupons/discount";
 import {
   computePayableFromItemTotal,
-  feeConfigFromBusinessSettings,
+  feeConfigForFulfillment,
 } from "@/lib/cart/totals";
 import { allocateOrderNumber } from "@/lib/orders/order-number";
 import { getBusinessSettings } from "@/lib/business-settings";
@@ -131,7 +131,10 @@ export async function createOrderWithSupabase(
   const payable = computePayableFromItemTotal(
     subtotal,
     discountAmount,
-    feeConfigFromBusinessSettings(await getBusinessSettings()),
+    feeConfigForFulfillment(
+      await getBusinessSettings(),
+      payload.fulfillment_type,
+    ),
   );
   const total = payable.amountToPay;
 
