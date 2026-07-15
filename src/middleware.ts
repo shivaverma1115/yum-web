@@ -9,7 +9,9 @@ const AUTH_ROUTES = [
   "/register",
   "/recover-password",
   "/reset-password",
+  
 ] as const;
+
 
 /** (storefront) route group */
 const STOREFRONT_ROUTES = [
