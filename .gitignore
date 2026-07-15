@@ -44,3 +44,6 @@ firebase-service-account.json
 next-env.d.ts
 
 .vercel
+
+./package-lock.json
+/package-lock.json
