@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
-import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
+import { notifyOrderStatus } from "@/lib/notifications/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   deleteOrderWithSupabase,
   updateOrderStatusWithSupabase,
 } from "@/lib/supabase/orders";
-import type { IOrder, OrderStatus } from "@/types/order";
+import type { OrderStatus } from "@/types/order";
 
 type RouteContext = {
   params: Promise<{ orderId: string }>;
@@ -67,11 +67,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    notifyOrderUpdateInBackground({
-      kind: "status",
-      order: result.order,
-      previousStatus: existingOrder?.status as IOrder["status"] | undefined,
-    });
+    notifyOrderStatus(
+      result.order,
+      existingOrder?.status as OrderStatus | undefined,
+    );
 
     return NextResponse.json({
       success: true,

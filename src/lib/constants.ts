@@ -32,6 +32,8 @@ export const ALLOWED_PRODUCT_IMAGE_TYPES = [
     "image/webp",
 ] as const;
 
-export const CURRENCY_SYMBOL = process.env.CURRENCY_SYMBOL || "₹";
+// Use a Unicode escape so SSR and the client always agree (avoids .env encoding /
+// non-NEXT_PUBLIC env mismatches that hydrate as â‚¹ vs ₹).
+export const CURRENCY_SYMBOL = "\u20B9";
 
 export const DEFAULT_USER_IMAGE = "/images/avatars/images.png";

@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Order notifications enabled.",
+      message: "Notifications enabled.",
     });
   } catch (error) {
     logError(error, {
@@ -179,7 +179,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Order notifications disabled for this device.",
+      message: "Notifications disabled for this device.",
     });
   } catch (error) {
     logError(error, {

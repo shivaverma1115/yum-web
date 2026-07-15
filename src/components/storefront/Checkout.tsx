@@ -83,6 +83,10 @@ export default function Checkout() {
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [orderCompleted, setOrderCompleted] = useState(false);
+    /** Stays true through Razorpay + redirect (RHF isSubmitting ends before navigation). */
+    const [isPaying, setIsPaying] = useState(false);
+    // Keep button disabled after success until this page unmounts (isSubmitting ends before redirect).
+    const isCheckoutBusy = isSubmitting || isPaying || orderCompleted;
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const checkoutOtpRequired = isOtpRequiredFor(businessSettings, "checkout");
     const storeOpen = isStoreOpen(businessSettings);
@@ -170,12 +174,13 @@ export default function Checkout() {
     ) => {
         setOrderCompleted(true);
         toast.success("Order placed successfully.");
-        await refreshUser();
+        clearCart();
 
         const ordersPath = `/${role}/orders`;
         router.replace(redirectTo ?? ordersPath);
-        clearCart();
         router.refresh();
+        // Don't await — refresh can remount checkout and re-enable the button before redirect.
+        void refreshUser();
     };
 
     const placeOrder = async (
@@ -231,46 +236,53 @@ export default function Checkout() {
             await refreshUser();
 
             if (values.payment_method === "online") {
-                const paymentResult = await runCheckoutOnlinePayment({
-                    quote: buildPaymentQuote(values),
-                    prefill: {
-                        name: checkoutSession.displayName,
-                        email: checkoutSession.email ?? "",
-                        contact: values.phone ?? checkoutSession.phone,
-                    },
-                    createPendingOrder: async (razorpayOrderId) => {
-                        const pendingResponse = await fetch("/api/orders", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            credentials: "include",
-                            body: JSON.stringify(
-                                buildOrderBody(values, {
-                                    payment_phase: "pending",
-                                    razorpay_order_id: razorpayOrderId,
-                                }),
-                            ),
-                        });
-                        const pendingData = await pendingResponse.json().catch(() => ({}));
+                setIsPaying(true);
+                try {
+                    const paymentResult = await runCheckoutOnlinePayment({
+                        quote: buildPaymentQuote(values),
+                        prefill: {
+                            name: checkoutSession.displayName,
+                            email: checkoutSession.email ?? "",
+                            contact: values.phone ?? checkoutSession.phone,
+                        },
+                        createPendingOrder: async (razorpayOrderId) => {
+                            const pendingResponse = await fetch("/api/orders", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify(
+                                    buildOrderBody(values, {
+                                        payment_phase: "pending",
+                                        razorpay_order_id: razorpayOrderId,
+                                    }),
+                                ),
+                            });
+                            const pendingData = await pendingResponse.json().catch(() => ({}));
 
-                        if (!pendingResponse.ok || !pendingData.success) {
-                            throw new Error(
-                                pendingData.message ?? "Failed to create order.",
-                            );
-                        }
+                            if (!pendingResponse.ok || !pendingData.success) {
+                                throw new Error(
+                                    pendingData.message ?? "Failed to create order.",
+                                );
+                            }
 
-                        const orderId = pendingData.data?.order?.id as string | undefined;
-                        if (!orderId) {
-                            throw new Error("Order id missing from server response.");
-                        }
+                            const orderId = pendingData.data?.order?.id as string | undefined;
+                            if (!orderId) {
+                                throw new Error("Order id missing from server response.");
+                            }
 
-                        return { orderId };
-                    },
-                });
+                            return { orderId };
+                        },
+                    });
 
-                setOrderCompleted(true);
-                clearCart();
-                router.replace(paymentResult.redirectTo);
-                return;
+                    setOrderCompleted(true);
+                    clearCart();
+                    router.replace(paymentResult.redirectTo);
+                    // Keep isPaying true until this page unmounts after navigation.
+                    return;
+                } catch (error) {
+                    setIsPaying(false);
+                    throw error;
+                }
             }
 
             await placeOrder(values, checkoutSession);
@@ -281,17 +293,48 @@ export default function Checkout() {
         }
     });
 
-    if (items.length === 0) {
+    if (items.length === 0 || orderCompleted || isPaying) {
         return (
             <section className="lg:py-10 py-6">
                 <div className="container text-center py-16 text-sm text-default-500">
-                    {orderCompleted
-                        ? "Order placed! Redirecting..."
+                    {orderCompleted || isPaying
+                        ? "Order placed… Redirecting you to your orders."
                         : "Redirecting to cart..."}
                 </div>
             </section>
         );
     }
+
+    const submitLabel = !storeOpen
+        ? paymentMethod === "online"
+            ? "Pay & Place Order"
+            : "Place Order"
+        : isSendingOtp
+          ? "Sending OTP..."
+          : isCheckoutBusy
+            ? paymentMethod === "online" || isPaying
+                ? "Processing payment..."
+                : "Placing order..."
+            : showSendOtp
+              ? "Send OTP"
+              : paymentMethod === "online"
+                ? "Pay & Place Order"
+                : "Place Order";
+
+    const submitButton = (
+        <button
+            type={!storeOpen || showSendOtp ? "button" : "submit"}
+            onClick={storeOpen && showSendOtp ? () => void handleSendOtp() : undefined}
+            disabled={!storeOpen || isCheckoutBusy || isSendingOtp}
+            className={`w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm ${
+                storeOpen
+                    ? "transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
+                    : "pointer-events-none opacity-60"
+            }`}
+        >
+            {submitLabel}
+        </button>
+    );
 
     return (
         <section className="lg:py-10 py-6">
@@ -373,7 +416,7 @@ export default function Checkout() {
                                         }
                                         placeholder="Enter your phone number"
                                         variant="pill"
-                                        disabled={isSubmitting}
+                                        disabled={isCheckoutBusy}
                                         trustedPhone={trustedPhone}
                                         requireVerification={checkoutOtpRequired}
                                         onVerifiedChange={setPhoneVerified}
@@ -390,7 +433,7 @@ export default function Checkout() {
                                         <input
                                             id="address"
                                             type="text"
-                                            disabled={isSubmitting}
+                                            disabled={isCheckoutBusy}
                                             className={inputClass}
                                             placeholder="Enter your street address"
                                             {...register("address", {
@@ -423,7 +466,7 @@ export default function Checkout() {
                                         <input
                                             id="tableNumber"
                                             type="text"
-                                            disabled={isSubmitting}
+                                            disabled={isCheckoutBusy}
                                             className={inputClass}
                                             placeholder="Enter your table number"
                                             {...register("table_number", {
@@ -501,7 +544,7 @@ export default function Checkout() {
                                 <textarea
                                     id="additionalNotes"
                                     rows={4}
-                                    disabled={isSubmitting}
+                                    disabled={isCheckoutBusy}
                                     className="block w-full bg-transparent dark:bg-default-50 rounded-lg py-2.5 px-4 border border-default-200"
                                     placeholder="Notes about your order, e.g. special instructions for delivery"
                                     {...register("additional_notes")}
@@ -558,36 +601,11 @@ export default function Checkout() {
                                         side="top"
                                     >
                                         <span className="block w-full cursor-not-allowed">
-                                            <button
-                                                type="button"
-                                                disabled
-                                                className="pointer-events-none w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm opacity-60"
-                                            >
-                                                {paymentMethod === "online"
-                                                    ? "Pay & Place Order"
-                                                    : "Place Order"}
-                                            </button>
+                                            {submitButton}
                                         </span>
                                     </AppTooltip>
                                 ) : (
-                                    <button
-                                        type={showSendOtp ? "button" : "submit"}
-                                        onClick={showSendOtp ? () => void handleSendOtp() : undefined}
-                                        disabled={isSubmitting || isSendingOtp}
-                                        className="w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
-                                    >
-                                        {isSendingOtp
-                                            ? "Sending OTP..."
-                                            : isSubmitting
-                                                ? paymentMethod === "online"
-                                                    ? "Processing payment..."
-                                                    : "Placing order..."
-                                                : showSendOtp
-                                                    ? "Send OTP"
-                                                    : paymentMethod === "online"
-                                                        ? "Pay & Place Order"
-                                                        : "Place Order"}
-                                    </button>
+                                    submitButton
                                 )}
                             </div>
                         </div>

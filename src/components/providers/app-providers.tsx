@@ -12,7 +12,8 @@ import AuthCallbackAlerts from "@/components/auth/AuthCallbackAlerts";
 import AuthCodeExchange from "@/components/auth/AuthCodeExchange";
 import ThemeInit from "@/components/layout/ThemeInit";
 import ThemeToggle from "@/components/layout/ThemeToggle";
-import FloatingWhatsAppWidget from "@/components/layout/FloatingWhatsAppWidget";
+import DevelopmentModeBanner from "@/components/layout/DevelopmentModeBanner";
+import EnableNotificationButton from "@/components/layout/EnableNotificationButton";
 import type { BusinessSettings } from "@/types/business-settings";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -30,17 +31,20 @@ export default function AppProviders({
       <BusinessSettingsProvider initialSettings={initialBusinessSettings}>
         <ContextApiProvider>
           <OtpModalProvider>
-          <CartProvider>
-          <Suspense fallback={null}>
-            <AuthCodeExchange />
-            <AuthCallbackAlerts />
-          </Suspense>
-          <ThemeInit />
-          {children}
-          </CartProvider>
+            <CartProvider>
+              <div className="sticky top-0 z-[100]">
+                <DevelopmentModeBanner />
+                <EnableNotificationButton />
+              </div>
+              <Suspense fallback={null}>
+                <AuthCodeExchange />
+                <AuthCallbackAlerts />
+              </Suspense>
+              <ThemeInit />
+              {children}
+            </CartProvider>
           </OtpModalProvider>
         </ContextApiProvider>
-        {/* <FloatingWhatsAppWidget /> */}
         <ThemeToggle />
       </BusinessSettingsProvider>
       <ToastContainer

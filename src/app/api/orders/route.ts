@@ -11,6 +11,7 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
 import { phonesMatch } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
+import { notifyOrderPlaced } from "@/lib/notifications/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOrderWithSupabase } from "@/lib/supabase/orders";
 import type { CheckoutPayload } from "@/types/checkout";
@@ -103,6 +104,11 @@ export async function POST(request: NextRequest) {
     const isPendingOnline =
       body.payment_method === "online" && body.payment_phase === "pending";
 
+    // Skip push for unpaid online drafts — notify after payment / COD place.
+    // if (!isPendingOnline) {
+    // }
+    notifyOrderPlaced(result.order);
+
     return NextResponse.json({
       success: true,
       message: isPendingOnline
@@ -111,7 +117,7 @@ export async function POST(request: NextRequest) {
       data: {
         order: result.order,
         items: result.items,
-        redirectTo: `/${auth.profile?.role ?? "user"}/orders`,
+        redirectTo: `/${auth.profile?.role}/orders`,
       },
     });
   } catch (error) {
