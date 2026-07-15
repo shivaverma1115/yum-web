@@ -109,7 +109,7 @@ function parseNumber(
   return { ok: true, value: parsed };
 }
 
-function mapProductRow(row: Record<string, unknown>): IProduct {
+export function mapProductRow(row: Record<string, unknown>): IProduct {
   return {
     ...(row as IProduct),
     order_type: normalizeOrderTypes(row.order_type),

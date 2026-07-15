@@ -6,6 +6,10 @@ import {
 } from "@/lib/orders/payment-transitions";
 import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
 import {
+  fetchRazorpayPayment,
+  razorpayAmountMatchesOrderTotal,
+} from "@/lib/razorpay/server";
+import {
   failOrderPaymentWithSupabase,
   findOrderByRazorpayOrderId,
 } from "@/lib/supabase/orders";
@@ -18,8 +22,15 @@ export type RazorpayWebhookResult =
 export type RazorpayWebhookPayload = {
   event?: string;
   payload?: {
-    payment?: { entity?: { id?: string; order_id?: string; status?: string } };
-    order?: { entity?: { id?: string } };
+    payment?: {
+      entity?: {
+        id?: string;
+        order_id?: string;
+        status?: string;
+        amount?: number;
+      };
+    };
+    order?: { entity?: { id?: string; amount?: number } };
   };
 };
 
@@ -59,6 +70,33 @@ export async function handleRazorpayWebhook(
   if (event === "payment.captured" || event === "order.paid") {
     if (currentStatus === "paid") {
       return { success: true, handled: true, order };
+    }
+
+    let paidAmountPaise =
+      paymentEntity?.amount ?? body.payload?.order?.entity?.amount;
+
+    if (paidAmountPaise == null && razorpayPaymentId) {
+      try {
+        const payment = await fetchRazorpayPayment(razorpayPaymentId);
+        paidAmountPaise = Number(payment.amount);
+      } catch {
+        return {
+          success: false,
+          message: "Could not verify payment amount with Razorpay.",
+          status: 400,
+        };
+      }
+    }
+
+    if (
+      paidAmountPaise == null ||
+      !razorpayAmountMatchesOrderTotal(paidAmountPaise, Number(order.total))
+    ) {
+      return {
+        success: false,
+        message: "Paid amount does not match the order total.",
+        status: 400,
+      };
     }
 
     const transition = assertPaymentStatusTransition(

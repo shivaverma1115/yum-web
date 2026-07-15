@@ -10,7 +10,7 @@ import { OrderSummaryBreakdown } from "@/components/common/OrderSummary";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { ensureCheckoutSession, type CheckoutSessionUser } from "@/lib/auth/ensure-checkout-session";
-import { formatCartItemOptionsLabel, formatCartItemOrderName } from "@/lib/cart/line";
+import { formatCartItemOptionsLabel } from "@/lib/cart/line";
 import {
     computeCartBillSummary,
     feeConfigForFulfillment,
@@ -147,10 +147,20 @@ export default function Checkout() {
         ...extras,
         items: items.map((item) => ({
             productId: item.productId,
-            name: formatCartItemOrderName(item),
             quantity: item.quantity,
-            price: item.price,
-            imageUrl: item.image_url ?? null,
+            variantName: item.variant?.name ?? null,
+            customizationLabels: (item.customizations ?? []).map((c) => c.label),
+        })),
+    });
+
+    const buildPaymentQuote = (values: CheckoutFormValues) => ({
+        fulfillment_type: values.fulfillment_type,
+        coupon_code: appliedCoupon?.code ?? null,
+        items: items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            variantName: item.variant?.name ?? null,
+            customizationLabels: (item.customizations ?? []).map((c) => c.label),
         })),
     });
 
@@ -222,7 +232,7 @@ export default function Checkout() {
 
             if (values.payment_method === "online") {
                 const paymentResult = await runCheckoutOnlinePayment({
-                    subtotal: amountToPay,
+                    quote: buildPaymentQuote(values),
                     prefill: {
                         name: checkoutSession.displayName,
                         email: checkoutSession.email ?? "",

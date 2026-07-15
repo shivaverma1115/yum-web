@@ -6,7 +6,12 @@ import {
   normalizePaymentStatus,
   type PaymentTransitionActor,
 } from "@/lib/orders/payment-transitions";
-import { verifyRazorpayPaymentSignature } from "@/lib/razorpay/server";
+import {
+  fetchRazorpayOrder,
+  fetchRazorpayPayment,
+  razorpayAmountMatchesOrderTotal,
+  verifyRazorpayPaymentSignature,
+} from "@/lib/razorpay/server";
 import type {
   IOrder,
   IOrderItem,
@@ -18,14 +23,9 @@ import { getProfileByUserId } from "@/lib/supabase/account/profile";
 import {
   redeemCouponForOrder,
   releaseCouponRedemptionForOrder,
-  validateCouponForUser,
 } from "@/lib/supabase/coupons/coupons";
-import { roundMoney } from "@/lib/coupons/discount";
-import {
-  computePayableFromItemTotal,
-  feeConfigForFulfillment,
-} from "@/lib/cart/totals";
 import { allocateOrderNumber } from "@/lib/orders/order-number";
+import { buildServerOrderQuote } from "@/lib/orders/reprice-cart";
 import { getBusinessSettings } from "@/lib/business-settings";
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -98,45 +98,79 @@ export async function createOrderWithSupabase(
     };
   }
 
-  const subtotal = roundMoney(
-    payload.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-  );
-
-  let couponId: string | null = null;
-  let couponCode: string | null = null;
-  let discountAmount = 0;
-
-  const requestedCoupon = payload.coupon_code?.trim();
-  if (requestedCoupon) {
-    const couponResult = await validateCouponForUser(supabase, {
-      code: requestedCoupon,
-      subtotal,
-      userId,
-    });
-
-    if (!couponResult.success) {
-      return {
-        success: false,
-        message: couponResult.message,
-        status: couponResult.status,
-        errors: { coupon_code: couponResult.message },
-      };
-    }
-
-    couponId = couponResult.coupon.id;
-    couponCode = couponResult.coupon.code;
-    discountAmount = couponResult.discountAmount;
+  const settings = await getBusinessSettings();
+  if (
+    payload.payment_method === "cash_on_delivery" &&
+    !settings.order.cod_enabled
+  ) {
+    return {
+      success: false,
+      message: "Cash on delivery is not available.",
+      status: 400,
+      errors: { payment_method: "COD disabled." },
+    };
+  }
+  if (
+    payload.payment_method === "online" &&
+    !settings.order.online_payment_enabled
+  ) {
+    return {
+      success: false,
+      message: "Online payment is not available.",
+      status: 400,
+      errors: { payment_method: "Online payment disabled." },
+    };
   }
 
-  const payable = computePayableFromItemTotal(
+  const quote = await buildServerOrderQuote(supabase, {
+    items: payload.items,
+    fulfillment_type: payload.fulfillment_type,
+    coupon_code: payload.coupon_code,
+    userId,
+  });
+
+  if (!quote.success) {
+    return {
+      success: false,
+      message: quote.message,
+      status: quote.status,
+      errors: quote.errors,
+    };
+  }
+
+  const {
+    lines: pricedLines,
     subtotal,
     discountAmount,
-    feeConfigForFulfillment(
-      await getBusinessSettings(),
-      payload.fulfillment_type,
-    ),
-  );
-  const total = payable.amountToPay;
+    couponId,
+    couponCode,
+    total,
+  } = quote;
+
+  if (payload.payment_method === "online" && payload.razorpay_order_id?.trim()) {
+    try {
+      const razorpayOrder = await fetchRazorpayOrder(
+        payload.razorpay_order_id.trim(),
+      );
+      if (
+        !razorpayAmountMatchesOrderTotal(razorpayOrder.amount, total)
+      ) {
+        return {
+          success: false,
+          message: "Payment amount does not match the order total.",
+          status: 400,
+          errors: { payment_method: "Amount mismatch." },
+        };
+      }
+    } catch {
+      return {
+        success: false,
+        message: "Could not verify Razorpay order.",
+        status: 400,
+        errors: { razorpay_order_id: "Invalid Razorpay order." },
+      };
+    }
+  }
 
   let orderNumber: string;
   try {
@@ -195,13 +229,13 @@ export async function createOrderWithSupabase(
     };
   }
 
-  const itemRows = payload.items.map((item) => ({
+  const itemRows = pricedLines.map((item) => ({
     order_id: order.id,
     product_id: item.productId,
-    product_name: item.name,
+    product_name: item.product_name,
     quantity: item.quantity,
-    unit_price: item.price,
-    image_url: item.imageUrl ?? null,
+    unit_price: item.unit_price,
+    image_url: item.image_url,
   }));
 
   const { data: items, error: itemsError } = await supabase
@@ -312,6 +346,37 @@ export async function completeOrderPaymentWithSupabase(
     return {
       success: false,
       message: "Payment verification failed. Please try again.",
+      status: 400,
+    };
+  }
+
+  try {
+    const payment = await fetchRazorpayPayment(razorpayPaymentId);
+    const paymentOrderId =
+      typeof payment.order_id === "string" ? payment.order_id : "";
+    if (paymentOrderId && paymentOrderId !== razorpayOrderId) {
+      return {
+        success: false,
+        message: "Payment does not match this order.",
+        status: 400,
+      };
+    }
+    if (
+      !razorpayAmountMatchesOrderTotal(
+        payment.amount,
+        Number(order.total),
+      )
+    ) {
+      return {
+        success: false,
+        message: "Paid amount does not match the order total.",
+        status: 400,
+      };
+    }
+  } catch {
+    return {
+      success: false,
+      message: "Could not verify payment amount with Razorpay.",
       status: 400,
     };
   }

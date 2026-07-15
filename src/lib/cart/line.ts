@@ -117,7 +117,9 @@ export function getCartPriceBreakdown(
   };
 }
 
-export function formatCartItemOptionsLabel(item: ICartItem): string {
+export function formatCartItemOptionsLabel(
+  item: Pick<ICartItem, "variant" | "customizations">,
+): string {
   const parts: string[] = [];
 
   if (item.variant?.name) {
@@ -131,7 +133,9 @@ export function formatCartItemOptionsLabel(item: ICartItem): string {
   return parts.join(" · ");
 }
 
-export function formatCartItemOrderName(item: ICartItem): string {
+export function formatCartItemOrderName(
+  item: Pick<ICartItem, "name" | "variant" | "customizations">,
+): string {
   const options = formatCartItemOptionsLabel(item);
   return options ? `${item.name} (${options})` : item.name;
 }

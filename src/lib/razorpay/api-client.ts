@@ -1,4 +1,6 @@
 import type { RazorpayCheckoutResponse, RazorpayCreateOrderData } from "@/lib/razorpay/types";
+import type { CheckoutLinePayload } from "@/types/checkout";
+import type { FulfillmentType } from "@/types/order";
 import { waitForOrderPaymentStatus } from "./poll-payment";
 
 type ApiResult<T> =
@@ -9,19 +11,28 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json().catch(() => ({})) as Promise<T>;
 }
 
+export type CreateRazorpayPaymentQuoteInput = {
+  fulfillment_type: FulfillmentType;
+  coupon_code?: string | null;
+  items: CheckoutLinePayload[];
+};
+
 export async function createRazorpayPaymentOrder(
-  amount: number,
+  quote: CreateRazorpayPaymentQuoteInput,
 ): Promise<RazorpayCreateOrderData> {
   const response = await fetch("/api/payments/razorpay/create-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
+    credentials: "include",
+    body: JSON.stringify(quote),
   });
 
   const data = await parseJson<ApiResult<RazorpayCreateOrderData>>(response);
 
   if (!response.ok || !data.success) {
-    throw new Error(data.message ?? "Could not start online payment.");
+    throw new Error(
+      (data as { message?: string }).message ?? "Could not start online payment.",
+    );
   }
 
   return data.data;

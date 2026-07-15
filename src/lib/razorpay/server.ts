@@ -43,6 +43,26 @@ export async function createRazorpayOrder(amount: number, receipt: string) {
   });
 }
 
+export async function fetchRazorpayOrder(razorpayOrderId: string) {
+  const client = createRazorpayClient();
+  return client.orders.fetch(razorpayOrderId);
+}
+
+export async function fetchRazorpayPayment(razorpayPaymentId: string) {
+  const client = createRazorpayClient();
+  return client.payments.fetch(razorpayPaymentId);
+}
+
+/** True when Razorpay amount (paise) matches the trusted order total (rupees). */
+export function razorpayAmountMatchesOrderTotal(
+  razorpayAmountPaise: number | string | undefined | null,
+  orderTotalRupees: number,
+): boolean {
+  const paise = Number(razorpayAmountPaise);
+  if (!Number.isFinite(paise) || paise <= 0) return false;
+  return paise === toRazorpayAmount(orderTotalRupees);
+}
+
 function getRazorpayWebhookSecret(): string {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
   if (!secret) {
