@@ -11,6 +11,33 @@
   @apply bg-primary;
 }
 
+/* Product image carousel (ProductCard, details, etc.) */
+.product-image-carousel .swiper {
+  @apply h-full w-full overflow-hidden;
+}
+
+.product-image-carousel .swiper-wrapper {
+  @apply h-full;
+}
+
+.product-image-carousel .swiper-slide {
+  @apply h-full overflow-hidden;
+}
+
+.product-image-carousel .swiper-pagination {
+  @apply !bottom-2.5 !left-1/2 !w-auto !-translate-x-1/2;
+  @apply inline-flex items-center justify-center gap-1 rounded-full;
+  @apply bg-black/45 px-2.5 py-1.5 backdrop-blur-[2px];
+}
+
+.product-image-carousel .swiper-pagination-bullet {
+  @apply !m-0 bg-white/75 opacity-90 shadow-none;
+}
+
+.product-image-carousel .swiper-pagination-bullet-active {
+  @apply bg-primary opacity-100;
+}
+
 /* Clients */
 .clients-testimonial-pagination .swiper-slide {
   @apply scale-100 ring-2 ring-transparent rounded-full transition-all;

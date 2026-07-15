@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import AppProviders from "@/components/providers/app-providers";
+import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
+import { buildSiteMetadata } from "@/lib/business-settings/metadata";
 
 // Vendor CSS — import via JS so Turbopack resolves node_modules correctly
 import "swiper/swiper-bundle.css";
@@ -20,29 +22,29 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
-const themeInitScript = `(function(){try{var config=localStorage.getItem("__FOOD_CONFIG__");if(!config)return;var theme=JSON.parse(config).theme;if(theme==="dark")document.documentElement.classList.add("dark");}catch(e){}})();`;
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getCachedBusinessSettings();
+  return buildSiteMetadata(settings);
+}
 
-export const metadata: Metadata = {
-  title: "Yum - Food Delivery",
-  description: "Yum - Multipurpose Food Tailwind CSS Template",
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const businessSettings = await getCachedBusinessSettings();
+
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${poppins.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="min-h-full flex flex-col">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialBusinessSettings={businessSettings}>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

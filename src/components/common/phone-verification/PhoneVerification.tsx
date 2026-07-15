@@ -1,0 +1,254 @@
+"use client";
+
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  type ReactNode,
+} from "react";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+  type RegisterOptions,
+} from "react-hook-form";
+import PhoneInput, { type PhoneInputVariant } from "@/components/ui/PhoneInput";
+import { usePhoneVerification } from "@/components/common/phone-verification/usePhoneVerification";
+import { validatePhoneValue } from "@/lib/phone-otp/phone";
+
+export type PhoneVerificationHandle = {
+  isVerified: boolean;
+  isSending: boolean;
+  requestOtp: () => Promise<boolean>;
+};
+
+export { validatePhoneValue };
+
+type FieldProps = {
+  id?: string;
+  label?: ReactNode;
+  placeholder?: string;
+  disabled?: boolean;
+  variant?: PhoneInputVariant;
+  className?: string;
+  error?: string | boolean;
+  onVerifiedChange?: (verified: boolean) => void;
+  /** When false, hides the OTP helper text (e.g. profile forms). Default: true */
+  showOtpHint?: boolean;
+  /** Pre-verified phone from the signed-in account (skips OTP when it matches). */
+  trustedPhone?: string | null;
+  /** When false, phone input is shown without OTP verification. Default: true */
+  requireVerification?: boolean;
+  /** Custom helper text shown before verification. */
+  otpHint?: string;
+};
+
+type ControlledPhoneVerificationProps = FieldProps & {
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+};
+
+type RhfPhoneVerificationProps<T extends FieldValues> = FieldProps & {
+  control: Control<T>;
+  name: Path<T>;
+  rules?: RegisterOptions<T, Path<T>>;
+};
+
+export type PhoneVerificationProps<T extends FieldValues = FieldValues> =
+  | ControlledPhoneVerificationProps
+  | RhfPhoneVerificationProps<T>;
+
+function PhoneVerificationField(
+  {
+    phone,
+    onChange,
+    onBlur,
+    id = "phone",
+    label,
+    placeholder = "Enter phone number",
+    disabled = false,
+    variant = "default",
+    className = "",
+    error,
+    onVerifiedChange,
+    showOtpHint = true,
+    requireVerification = true,
+    otpHint = "Verify your phone with OTP before placing the order.",
+    verification,
+  }: {
+    phone: string;
+    onChange: (value: string) => void;
+    onBlur?: () => void;
+    id?: string;
+    label?: ReactNode;
+    placeholder?: string;
+    disabled?: boolean;
+    variant?: PhoneInputVariant;
+    className?: string;
+    error?: string | boolean;
+    onVerifiedChange?: (verified: boolean) => void;
+    showOtpHint?: boolean;
+    requireVerification?: boolean;
+    otpHint?: string;
+    verification: ReturnType<typeof usePhoneVerification>;
+  },
+) {
+  const { isVerified } = verification;
+
+  useEffect(() => {
+    onVerifiedChange?.(requireVerification ? isVerified : true);
+  }, [isVerified, onVerifiedChange, requireVerification]);
+
+  const errorMessage = typeof error === "string" ? error : undefined;
+  const hasError = Boolean(error);
+
+  return (
+    <>
+      {label ? (
+        <label htmlFor={id} className="mb-2 block text-sm text-default-700">
+          {label}
+        </label>
+      ) : null}
+
+      <div className="relative space-y-2 overflow-visible">
+        <PhoneInput
+          id={id}
+          value={phone}
+          onChange={onChange}
+          onBlur={onBlur}
+          disabled={disabled}
+          placeholder={placeholder}
+          variant={variant}
+          error={hasError}
+          className={className}
+        />
+
+        {showOtpHint && requireVerification ? (
+          isVerified ? (
+            <p className="text-xs font-medium text-green-600 dark:text-green-400">
+              Phone number verified
+            </p>
+          ) : (
+            <p className="text-xs text-default-500">{otpHint}</p>
+          )
+        ) : null}
+
+        {errorMessage ? (
+          <span className="block text-sm text-red-500">{errorMessage}</span>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+const PhoneVerificationControlled = forwardRef<
+  PhoneVerificationHandle,
+  ControlledPhoneVerificationProps
+>(function PhoneVerificationControlled(props, ref) {
+  const verification = usePhoneVerification(props.value, props.trustedPhone);
+
+  const requireVerification = props.requireVerification ?? true;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      isVerified: requireVerification ? verification.isVerified : true,
+      isSending: verification.isSending,
+      requestOtp: requireVerification ? verification.sendOtp : async () => true,
+    }),
+    [
+      requireVerification,
+      verification.isVerified,
+      verification.isSending,
+      verification.sendOtp,
+    ],
+  );
+
+  return (
+    <PhoneVerificationField
+      phone={props.value}
+      onChange={props.onChange}
+      onBlur={props.onBlur}
+      id={props.id}
+      label={props.label}
+      placeholder={props.placeholder}
+      disabled={props.disabled}
+      variant={props.variant}
+      className={props.className}
+      error={props.error}
+      onVerifiedChange={props.onVerifiedChange}
+      showOtpHint={props.showOtpHint}
+      requireVerification={requireVerification}
+      otpHint={props.otpHint}
+      verification={verification}
+    />
+  );
+});
+
+type RhfBridgeProps<T extends FieldValues> = RhfPhoneVerificationProps<T> & {
+  verificationRef?: React.Ref<PhoneVerificationHandle>;
+};
+
+function PhoneVerificationRhfBridge<T extends FieldValues>({
+  control,
+  name,
+  rules,
+  verificationRef,
+  error,
+  ...rest
+}: RhfBridgeProps<T>) {
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={{
+        validate: validatePhoneValue,
+        ...rules,
+      }}
+      render={({ field, fieldState }) => (
+        <PhoneVerificationControlled
+          ref={verificationRef}
+          value={field.value ?? ""}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          error={error ?? fieldState.error?.message}
+          {...rest}
+        />
+      )}
+    />
+  );
+}
+
+function PhoneVerificationRoot<T extends FieldValues>(
+  props: PhoneVerificationProps<T>,
+  ref: React.Ref<PhoneVerificationHandle>,
+) {
+  if ("control" in props && "name" in props) {
+    const rhfProps = props as RhfPhoneVerificationProps<T>;
+    return (
+      <PhoneVerificationRhfBridge
+        {...rhfProps}
+        verificationRef={ref}
+      />
+    );
+  }
+
+  return (
+    <PhoneVerificationControlled
+      ref={ref}
+      {...(props as ControlledPhoneVerificationProps)}
+    />
+  );
+}
+
+const PhoneVerification = forwardRef(PhoneVerificationRoot) as <
+  T extends FieldValues = FieldValues,
+>(
+  props: PhoneVerificationProps<T> & {
+    ref?: React.Ref<PhoneVerificationHandle>;
+  },
+) => React.ReactElement;
+
+export default PhoneVerification;

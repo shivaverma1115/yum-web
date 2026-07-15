@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import Preloader from "@/components/layout/Preloader";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import BackToTop from "@/components/layout/BackToTop";
+import dynamic from 'next/dynamic';
+const Navbar = dynamic(() => import('@/components/layout/Navbar'));
+const Footer = dynamic(() => import('@/components/layout/Footer'));
+const BackToTop = dynamic(() => import('@/components/layout/BackToTop'));
 
 export default function StorefrontLayout({
   children,
@@ -11,9 +11,8 @@ export default function StorefrontLayout({
 }) {
   return (
     <>
-      <Preloader />
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pb-16 lg:pb-0">{children}</main>
       <Footer />
       <BackToTop />
     </>

@@ -1,0 +1,93 @@
+.skel {
+	background-color: var(--color-default-200);
+}
+
+.skel-tone-default {
+	background-color: var(--color-default-200);
+}
+
+.skel-tone-soft {
+	background-color: var(--color-default-150);
+}
+
+.skel-tone-inverse {
+	background-color: var(--color-default-100);
+}
+
+.skel-animated {
+	animation: skel-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skel-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.55;
+	}
+}
+
+.skel-line {
+	height: 0.875rem;
+	width: 100%;
+}
+
+.skel-line-sm {
+	height: 0.75rem;
+}
+
+.skel-avatar-xs {
+	height: 1.5rem;
+	width: 1.5rem;
+}
+
+.skel-avatar-sm {
+	height: 2rem;
+	width: 2rem;
+}
+
+.skel-avatar-md {
+	height: 2.5rem;
+	width: 2.5rem;
+}
+
+.skel-avatar-lg {
+	height: 3rem;
+	width: 3rem;
+}
+
+.skel-avatar-xl {
+	height: 4rem;
+	width: 4rem;
+}
+
+.skel-card {
+	border: 1px solid var(--color-default-200);
+	border-radius: 0.5rem;
+	background-color: var(--color-default-50);
+}
+
+.skel-card-banner {
+	border: 1px solid var(--color-default-200);
+	border-radius: 0.5rem;
+	background-color: var(--color-default-100);
+	min-height: 17.5rem;
+}
+
+.skel-card-list {
+	border: 1px solid var(--color-default-200);
+	border-radius: 0.5rem;
+	background-color: var(--color-default-50);
+}
+
+.skel-table-cell-text {
+	height: 0.875rem;
+}
+
+.skel-table-cell-check {
+	height: 1.25rem;
+	width: 1.25rem;
+	border-radius: 0.25rem;
+}

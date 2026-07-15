@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function NotFound() {
     return (
         <section className="py-10">
@@ -13,13 +15,13 @@ export default function NotFound() {
                             <h3 className="text-2xl font-medium text-default-800 mb-4">It’s look like you’re lost...</h3>
                             <p className="text-base text-default-600 max-w-xl mx-auto mb-8">Something went wrong. It’s look that your requested could not be found. It’s look like the link is broken or the page is removed.</p>
                             <div className="flex items-center justify-center flex-wrap gap-4">
-                                <a href="javascript:void(0)" className="w-1/2 lg:w-2/6 px-6 py-3 rounded-full text-base font-medium bg-primary text-white capitalize transition-all hover:bg-primary-500">
+                                <Link href="/" className="w-1/2 lg:w-2/6 px-6 py-3 rounded-full text-base font-medium bg-primary text-white capitalize transition-all hover:bg-primary-500">
                                     Go Back
-                                </a>
+                                </Link>
 
-                                <a href="home.html" className="w-1/2 lg:w-2/6 relative inline-flex items-center justify-center font-medium px-6 py-3 rounded-full text-base border border-primary text-primary capitalize transition-all hover:bg-primary hover:text-white">
+                                <Link href="home.html" className="w-1/2 lg:w-2/6 relative inline-flex items-center justify-center font-medium px-6 py-3 rounded-full text-base border border-primary text-primary capitalize transition-all hover:bg-primary hover:text-white">
                                     Go To home
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </div>

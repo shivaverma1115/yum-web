@@ -80,6 +80,7 @@ File: style Css File
 @import "../styles/custom/_reboot.css";
 @import "../styles/custom/_navbar.css";
 @import "../styles/custom/_helper.css";
+@import "../styles/custom/_skeleton.css";
 
 /* Custom Plugin css */
 @import "../styles/custom/_swiper.css";
@@ -87,3 +88,9 @@ File: style Css File
 @import "../styles/custom/_flatpickr.css";
 @import "../styles/custom/_quill.css";
 @import "../styles/custom/_rangeslider.css";
+@import "react-phone-input-2/lib/style.css";
+@import "../styles/custom/_phone-input.css";
+
+.text-required {
+    color: red;
+}
