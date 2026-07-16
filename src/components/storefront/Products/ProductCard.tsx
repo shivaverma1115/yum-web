@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Leaf, Star } from "lucide-react";
+import Image from "next/image";
+import { Star } from "lucide-react";
 import AddToCartButton from "@/components/storefront/AddToCartButton";
 import ProductImageCarousel from "@/components/storefront/Products/ProductImageCarousel";
 import ProductCustomizeModal from "@/components/storefront/Products/ProductCustomizeModal";
@@ -27,6 +28,39 @@ type ProductCardProps = {
 function isVegDiet(dietType: IProduct["diet_type"]) {
   return (
     dietType === "veg" || dietType === "jain" || dietType === "vegan"
+  );
+}
+
+function DietTypeBadge({ dietType }: { dietType: NonNullable<IProduct["diet_type"]> }) {
+  const label = getDietTypeLabel(dietType);
+  const veg = isVegDiet(dietType);
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      title={label}
+      aria-label={label}
+    >
+      <Image
+        src={veg ? "/images/icons/veg.svg" : "/images/icons/non-veg.svg"}
+        alt=""
+        width={16}
+        height={16}
+        className="h-4 w-4 shrink-0"
+        aria-hidden
+      />
+      <span
+        className={`text-xs font-semibold ${
+          veg
+            ? "text-green-700"
+            : dietType === "egg"
+              ? "text-amber-700"
+              : "text-red-700"
+        }`}
+      >
+        {label}
+      </span>
+    </span>
   );
 }
 
@@ -109,6 +143,27 @@ export default function ProductCard({ product }: ProductCardProps) {
             variant="card"
           />
 
+          {product.diet_type ? (
+            <span
+              className="absolute left-3 top-3 z-10 rounded-md bg-white/95 p-1 shadow-sm"
+              title={getDietTypeLabel(product.diet_type)}
+              aria-label={getDietTypeLabel(product.diet_type)}
+            >
+              <Image
+                src={
+                  isVegDiet(product.diet_type)
+                    ? "/images/icons/veg.svg"
+                    : "/images/icons/non-veg.svg"
+                }
+                alt=""
+                width={18}
+                height={18}
+                className="h-[18px] w-[18px]"
+                aria-hidden
+              />
+            </span>
+          ) : null}
+
           {hasDiscount ? (
             <span className="absolute right-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
               {product.discount_percent}% off
@@ -128,19 +183,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="mb-2 flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {product.diet_type ? (
-                <span
-                  className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${
-                    isVegDiet(product.diet_type)
-                      ? "border-green-600 text-green-600"
-                      : product.diet_type === "egg"
-                        ? "border-amber-600 text-amber-600"
-                        : "border-red-600 text-red-600"
-                  }`}
-                  title={getDietTypeLabel(product.diet_type)}
-                  aria-label={getDietTypeLabel(product.diet_type)}
-                >
-                  <Leaf className="h-3 w-3" />
-                </span>
+                <DietTypeBadge dietType={product.diet_type} />
               ) : null}
 
               {highlightTag ? (
