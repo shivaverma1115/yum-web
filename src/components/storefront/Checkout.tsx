@@ -29,6 +29,7 @@ import type { CheckoutFormValues } from "@/types/checkout";
 import { FulfillmentType, OnlinePaymentPhase } from "@/types/order";
 import { UserRole } from "@/types/user";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
+import { useActiveTableNumbers } from "@/hooks/use-active-table-numbers";
 
 const inputClass = "block w-full bg-transparent dark:bg-default-50 rounded-full py-2.5 px-4 border border-default-200 focus:ring-transparent focus:border-default-200";
 
@@ -37,6 +38,7 @@ export default function Checkout() {
     const { user, verification, loading: userLoading, refresh: refreshUser } = useContextApi();
     const { items, appliedCoupon, subtotal, couponDiscount, clearCart } = useCart();
     const { settings: businessSettings } = useBusinessSettings();
+    const { tableNumbers, loading: tableNumbersLoading } = useActiveTableNumbers();
     const {
         register,
         control,
@@ -53,6 +55,16 @@ export default function Checkout() {
     const fulfillmentType = watch("fulfillment_type");
     const paymentMethod = watch("payment_method");
     const phone = watch("phone");
+    const selectedTableNumber = watch("table_number");
+
+    const tableNumberOptions = useMemo(() => {
+        const options = [...tableNumbers];
+        const selected = selectedTableNumber?.trim();
+        if (selected && !options.includes(selected)) {
+            options.unshift(selected);
+        }
+        return options;
+    }, [tableNumbers, selectedTableNumber]);
 
     const checkoutBill = useMemo(
         () =>
@@ -82,11 +94,13 @@ export default function Checkout() {
     const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isSubmitLocked, setIsSubmitLocked] = useState(false);
     const [orderCompleted, setOrderCompleted] = useState(false);
+    const [orderSuccessRedirectTo, setOrderSuccessRedirectTo] = useState<string | null>(null);
     /** Stays true through Razorpay + redirect (RHF isSubmitting ends before navigation). */
     const [isPaying, setIsPaying] = useState(false);
     // Keep button disabled after success until this page unmounts (isSubmitting ends before redirect).
-    const isCheckoutBusy = isSubmitting || isPaying || orderCompleted;
+    const isCheckoutBusy = isSubmitting || isSubmitLocked || isPaying || orderCompleted;
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const checkoutOtpRequired = isOtpRequiredFor(businessSettings, "checkout");
     const storeOpen = isStoreOpen(businessSettings);
@@ -113,12 +127,12 @@ export default function Checkout() {
         reset(defaults);
     }, [user, userLoading, reset]);
 
-    useEffect(() => {
-        if (orderCompleted) return;
-        // if (items.length === 0 && !isSubmitting) {
-        //     router.replace("/cart");
-        // }
-    }, [items.length, isSubmitting, orderCompleted, router]);
+    // useEffect(() => {
+    //     if (orderCompleted) return;
+    //     if (items.length === 0 && !isSubmitting) {
+    //         router.replace("/cart");
+    //     }
+    // }, [items.length, isSubmitting, orderCompleted, router]);
 
     useEffect(() => {
         if (!paymentOptions.some((option) => option.value === paymentMethod)) {
@@ -172,15 +186,19 @@ export default function Checkout() {
         redirectTo?: string,
         role: UserRole = user?.role ?? UserRole.USER,
     ) => {
-        setOrderCompleted(true);
-        toast.success("Order placed successfully.");
-        clearCart();
-
         const ordersPath = `/${role}/orders`;
-        router.replace(redirectTo ?? ordersPath);
-        router.refresh();
-        // Don't await — refresh can remount checkout and re-enable the button before redirect.
+
+        setIsPaying(false);
+        setOrderCompleted(true);
+        clearCart();
+        setOrderSuccessRedirectTo(redirectTo ?? ordersPath);
         void refreshUser();
+    };
+
+    const handleOrderSuccessContinue = () => {
+        if (!orderSuccessRedirectTo) return;
+        router.replace(orderSuccessRedirectTo);
+        router.refresh();
     };
 
     const placeOrder = async (
@@ -221,17 +239,18 @@ export default function Checkout() {
     };
 
     const onSubmit = handleSubmit(async (values) => {
-        if (showSendOtp) {
-            await handleSendOtp();
-            return;
-        }
-        if (items.length === 0) {
-            toast.error("Your cart is empty.");
-            router.push("/cart");
-            return;
-        }
-
+        setIsSubmitLocked(true);
         try {
+            if (showSendOtp) {
+                await handleSendOtp();
+                return;
+            }
+            if (items.length === 0) {
+                toast.error("Your cart is empty.");
+                router.push("/cart");
+                return;
+            }
+
             const checkoutSession = await ensureCheckoutSession();
             await refreshUser();
 
@@ -274,10 +293,7 @@ export default function Checkout() {
                         },
                     });
 
-                    setOrderCompleted(true);
-                    clearCart();
-                    router.replace(paymentResult.redirectTo);
-                    // Keep isPaying true until this page unmounts after navigation.
+                    await finishOrderSuccess(paymentResult.redirectTo, checkoutSession.role);
                     return;
                 } catch (error) {
                     setIsPaying(false);
@@ -290,16 +306,16 @@ export default function Checkout() {
             toast.error(
                 error instanceof Error ? error.message : "Failed to place order.",
             );
+        } finally {
+            setIsSubmitLocked(false);
         }
     });
 
-    if (items.length === 0 || orderCompleted || isPaying) {
+    if (items.length === 0 && !orderCompleted) {
         return (
             <section className="lg:py-10 py-6">
                 <div className="container text-center py-16 text-sm text-default-500">
-                    {orderCompleted || isPaying
-                        ? "Order placed… Redirecting you to your orders."
-                        : "Redirecting to cart..."}
+                    Redirecting to cart...
                 </div>
             </section>
         );
@@ -310,27 +326,26 @@ export default function Checkout() {
             ? "Pay & Place Order"
             : "Place Order"
         : isSendingOtp
-          ? "Sending OTP..."
-          : isCheckoutBusy
-            ? paymentMethod === "online" || isPaying
-                ? "Processing payment..."
-                : "Placing order..."
-            : showSendOtp
-              ? "Send OTP"
-              : paymentMethod === "online"
-                ? "Pay & Place Order"
-                : "Place Order";
+            ? "Sending OTP..."
+            : isCheckoutBusy
+                ? paymentMethod === "online" || isPaying
+                    ? "Processing payment..."
+                    : "Placing order..."
+                : showSendOtp
+                    ? "Send OTP"
+                    : paymentMethod === "online"
+                        ? "Pay & Place Order"
+                        : "Place Order";
 
     const submitButton = (
         <button
             type={!storeOpen || showSendOtp ? "button" : "submit"}
             onClick={storeOpen && showSendOtp ? () => void handleSendOtp() : undefined}
             disabled={!storeOpen || isCheckoutBusy || isSendingOtp}
-            className={`w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm ${
-                storeOpen
+            className={`w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm ${storeOpen
                     ? "transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
                     : "pointer-events-none opacity-60"
-            }`}
+                }`}
         >
             {submitLabel}
         </button>
@@ -461,14 +476,15 @@ export default function Checkout() {
                                     </h4>
                                     <div>
                                         <label htmlFor="tableNumber" className="block text-sm text-default-700 mb-2">
-                                            Table number
+                                            Table number <span className="text-required">*</span>
                                         </label>
-                                        <input
+                                        <select
                                             id="tableNumber"
-                                            type="text"
-                                            disabled={isCheckoutBusy}
+                                            disabled={
+                                                isCheckoutBusy ||
+                                                (tableNumbersLoading && tableNumberOptions.length === 0)
+                                            }
                                             className={inputClass}
-                                            placeholder="Enter your table number"
                                             {...register("table_number", {
                                                 validate: (value, formValues) => {
                                                     if (formValues.fulfillment_type !== "dine_in") {
@@ -476,12 +492,30 @@ export default function Checkout() {
                                                     }
                                                     return value?.trim()
                                                         ? true
-                                                        : "Table number is required.";
+                                                        : "Please select a table number.";
                                                 },
                                             })}
-                                        />
+                                        >
+                                            <option value="">
+                                                {tableNumbersLoading && tableNumberOptions.length === 0
+                                                    ? "Loading tables..."
+                                                    : tableNumberOptions.length === 0
+                                                      ? "No tables available"
+                                                      : "Select table number"}
+                                            </option>
+                                            {tableNumberOptions.map((tableNumber) => (
+                                                <option key={tableNumber} value={tableNumber}>
+                                                    {tableNumber}
+                                                </option>
+                                            ))}
+                                        </select>
                                         {errors.table_number?.message ? (
                                             <span className="text-red-500 text-sm">{errors.table_number.message}</span>
+                                        ) : null}
+                                        {!tableNumbersLoading && tableNumberOptions.length === 0 ? (
+                                            <p className="mt-2 text-xs text-default-500">
+                                                No active table QR codes are set up yet. Ask staff for help.
+                                            </p>
                                         ) : null}
                                     </div>
                                 </div>
@@ -562,27 +596,27 @@ export default function Checkout() {
                                     const optionsLabel = formatCartItemOptionsLabel(item);
 
                                     return (
-                                    <div key={item.lineId} className="flex items-center mb-4">
-                                        <img
-                                            src={item.image_url ?? "/images/dishes/pizza.png"}
-                                            alt={item.name}
-                                            className="h-20 w-20 me-2 object-cover rounded"
-                                        />
-                                        <div>
-                                            <h4 className="text-sm text-default-600 mb-1">{item.name}</h4>
-                                            {optionsLabel ? (
-                                                <p className="mb-1 text-xs text-default-400">
-                                                    {optionsLabel}
-                                                </p>
-                                            ) : null}
-                                            <h4 className="text-sm text-default-400">
-                                                {item.quantity} x{" "}
-                                                <span className="text-primary font-semibold">
-                                                    {formatCurrency(item.price)}
-                                                </span>
-                                            </h4>
+                                        <div key={item.lineId} className="flex items-center mb-4">
+                                            <img
+                                                src={item.image_url ?? "/images/dishes/pizza.png"}
+                                                alt={item.name}
+                                                className="h-20 w-20 me-2 object-cover rounded"
+                                            />
+                                            <div>
+                                                <h4 className="text-sm text-default-600 mb-1">{item.name}</h4>
+                                                {optionsLabel ? (
+                                                    <p className="mb-1 text-xs text-default-400">
+                                                        {optionsLabel}
+                                                    </p>
+                                                ) : null}
+                                                <h4 className="text-sm text-default-400">
+                                                    {item.quantity} x{" "}
+                                                    <span className="text-primary font-semibold">
+                                                        {formatCurrency(item.price)}
+                                                    </span>
+                                                </h4>
+                                            </div>
                                         </div>
-                                    </div>
                                     );
                                 })}
 
@@ -612,6 +646,34 @@ export default function Checkout() {
                     </div>
                 </form>
             </div>
+            {orderCompleted ? (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="order-success-title"
+                >
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-xl dark:bg-default-50">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl">
+                            {"🎉"}
+                        </div>
+                        <h3 id="order-success-title" className="text-xl font-semibold text-default-900">
+                            Congratulations!
+                        </h3>
+                        <p className="mt-2 text-sm text-default-600">
+                            Your order has been placed successfully. You can view live updates in
+                            your orders page.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleOrderSuccessContinue}
+                            className="mt-6 w-full rounded-full border border-primary bg-primary px-6 py-3 text-sm font-medium text-white transition-all duration-500 hover:bg-primary-500"
+                        >
+                            View My Orders
+                        </button>
+                    </div>
+                </div>
+            ) : null}
         </section>
     );
 }

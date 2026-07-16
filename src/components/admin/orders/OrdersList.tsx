@@ -1,29 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { Banknote, ChevronDown, ShoppingBag, Wallet } from "lucide-react";
+import { Banknote, Filter, ShoppingBag, Wallet } from "lucide-react";
 import OrderExpandableTableRow from "@/components/admin/orders/OrderExpandableTableRow";
+import OrderFiltersModal from "@/components/admin/orders/OrderFiltersModal";
 import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { StatsCardsSkeleton, TableSkeleton } from "@/components/skeleton";
 import { formatCurrency } from "@/lib/constants";
 import { formatOrderIdShort } from "@/lib/orders/order-number";
-import { type CustomerOrdersFilter } from "@/lib/supabase/orders";
+import {
+  countActiveOrderListFilters,
+  DEFAULT_ORDER_LIST_FILTERS,
+  formatOrderListFiltersLabel,
+  type OrderListFilters,
+} from "@/lib/supabase/orders";
+
 import { UserRole } from "@/types/user";
 import { useOrders } from "@/hooks/orders/use-orders";
 import type { IOrderWithItems } from "@/types/order";
 
-const FILTER_OPTIONS: { value: CustomerOrdersFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "failed", label: "Failed" },
-  { value: "paid", label: "Paid" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
 const DEFAULT_LIMIT = 10;
 
 export default function OrdersList({ userRole }: { userRole: UserRole }) {
-  const [filter, setFilter] = useState<CustomerOrdersFilter>("all");
+  const [filters, setFilters] = useState<OrderListFilters>(DEFAULT_ORDER_LIST_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const isAdmin = userRole === UserRole.ADMIN;
@@ -33,18 +34,18 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     error,
     total,
     totalPages,
+    stats,
     updateOrderStatus,
     refreshOrders,
     recentRealtimeOrderIds,
-  } = useOrders(filter, userRole, page, DEFAULT_LIMIT);
+  } = useOrders(filters, userRole, page, DEFAULT_LIMIT);
 
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filters]);
 
   const handleDeleteOrder = async (order: IOrderWithItems) => {
     if (!isAdmin || !order.id) return;
-
     const confirmed = window.confirm(
       `Delete order ${formatOrderIdShort(order)}…? This cannot be undone.`,
     );
@@ -62,9 +63,7 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
         toast.error(data.message ?? "Failed to delete order.");
         return;
       }
-
       toast.success(data.message ?? "Order deleted.");
-
       if (orders.length === 1 && page > 1) {
         setPage((current) => current - 1);
       } else {
@@ -79,81 +78,76 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
     }
   };
 
-  const activeLabel =
-    FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? "All";
+  const activeFilterLabel = formatOrderListFiltersLabel(filters);
+  const activeFilterCount = countActiveOrderListFilters(filters);
 
   const startItem = total === 0 ? 0 : (page - 1) * DEFAULT_LIMIT + 1;
   const endItem = Math.min(page * DEFAULT_LIMIT, total);
 
-  const stats = useMemo(() => {
-    const totalOrders = total;
-    const paidRevenue = orders
-      .filter((order) => order.payment_status === "paid")
-      .reduce((sum, order) => sum + order.total, 0);
-    const pendingCount = orders.filter(
-      (order) => order.payment_status === "pending" && order.status !== "cancelled",
-    ).length;
-
-    return { totalOrders, paidRevenue, pendingCount };
-  }, [orders, total]);
+  const displayStats = stats ?? {
+    totalOrders: total,
+    paidRevenue: 0,
+    pendingCount: 0,
+  };
 
   return (
     <div className="space-y-6">
       {!isAdmin ? <AnonymousUpgradeBanner /> : null}
-
-      {loading ? (
-        <StatsCardsSkeleton />
-      ) : (
-        <div className="grid lg:grid-cols-3 sm:grid-cols-2 gap-6">
-          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-            <div className="flex items-center gap-4">
-              <div className="inline-flex items-center justify-center rounded-full bg-primary/20 text-primary h-16 w-16">
-                <ShoppingBag className="h-8 w-8" aria-hidden />
+      {isAdmin ? (
+        loading ? (
+          <StatsCardsSkeleton />
+        ) : (
+          <div className="grid lg:grid-cols-3 sm:grid-cols-2 gap-6">
+            <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center justify-center rounded-full bg-primary/20 text-primary h-16 w-16">
+                  <ShoppingBag className="h-8 w-8" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-base text-default-500 font-medium mb-1">
+                    Total Orders
+                  </p>
+                  <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                    {displayStats.totalOrders}
+                  </h4>
+                </div>
               </div>
-              <div>
-                <p className="text-base text-default-500 font-medium mb-1">
-                  Total Orders
-                </p>
-                <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                  {stats.totalOrders}
-                </h4>
+            </div>
+
+            <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center justify-center rounded-full bg-yellow-500/20 text-yellow-500 h-16 w-16">
+                  <Wallet className="h-8 w-8" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-base text-default-500 font-medium mb-1">
+                    Paid Revenue
+                  </p>
+                  <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                    {formatCurrency(displayStats.paidRevenue)}
+                  </h4>
+                </div>
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-6 overflow-hidden border-default-200">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center justify-center rounded-full bg-green-500/20 text-green-500 h-16 w-16">
+                  <Banknote className="h-8 w-8" aria-hidden />
+                </div>
+                <div>
+                  <p className="text-base text-default-500 font-medium mb-1">
+                    Pending Payment
+                  </p>
+                  <h4 className="text-2xl text-default-950 font-semibold mb-2">
+                    {displayStats.pendingCount}
+                  </h4>
+                </div>
               </div>
             </div>
           </div>
-
-          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-            <div className="flex items-center gap-4">
-              <div className="inline-flex items-center justify-center rounded-full bg-yellow-500/20 text-yellow-500 h-16 w-16">
-                <Wallet className="h-8 w-8" aria-hidden />
-              </div>
-              <div>
-                <p className="text-base text-default-500 font-medium mb-1">
-                  Paid Revenue
-                </p>
-                <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                  {formatCurrency(stats.paidRevenue)}
-                </h4>
-              </div>
-            </div>
-          </div>
-
-          <div className="border rounded-lg p-6 overflow-hidden border-default-200">
-            <div className="flex items-center gap-4">
-              <div className="inline-flex items-center justify-center rounded-full bg-green-500/20 text-green-500 h-16 w-16">
-                <Banknote className="h-8 w-8" aria-hidden />
-              </div>
-              <div>
-                <p className="text-base text-default-500 font-medium mb-1">
-                  Pending Payment
-                </p>
-                <h4 className="text-2xl text-default-950 font-semibold mb-2">
-                  {stats.pendingCount}
-                </h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      ) : null}
 
       <div className="border rounded-lg border-default-200">
         <div className="p-6 overflow-hidden">
@@ -162,34 +156,19 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
 
             <div className="flex items-center">
               <span className="text-base text-default-950 me-3">Filter :</span>
-              <div className="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                <button
-                  type="button"
-                  className="hs-dropdown-toggle flex items-center gap-2 font-medium text-default-950 text-sm py-2.5 px-4 xl:px-5 rounded-full border border-default-200 transition-all"
-                >
-                  {activeLabel}
-                  <ChevronDown className="h-4 w-4" aria-hidden />
-                </button>
-
-                <div className="hs-dropdown-menu hs-dropdown-open:opacity-100 min-w-[200px] transition-[opacity,margin] mt-4 opacity-0 hidden z-20 bg-white dark:bg-default-50 shadow-[rgba(17,_17,_26,_0.1)_0px_0px_16px] rounded-lg border border-default-100 p-1.5">
-                  <ul className="flex flex-col gap-1">
-                    {FILTER_OPTIONS.map((option) => (
-                      <li key={option.value}>
-                        <button
-                          type="button"
-                          onClick={() => setFilter(option.value)}
-                          className={`w-full text-start flex items-center gap-3 font-normal py-2 px-3 transition-all rounded ${filter === option.value
-                            ? "text-default-700 bg-default-400/20"
-                            : "text-default-600 hover:text-default-700 hover:bg-default-400/20"
-                            }`}
-                        >
-                          {option.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="inline-flex items-center gap-2 font-medium text-default-950 text-sm py-2.5 px-4 xl:px-5 rounded-full border border-default-200 transition-all hover:border-primary/40 hover:bg-primary/5"
+              >
+                <Filter className="h-4 w-4" aria-hidden />
+                {activeFilterLabel}
+                {activeFilterCount > 0 ? (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </button>
             </div>
           </div>
         </div>
@@ -239,12 +218,13 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
               </thead>
 
               <tbody className="divide-y divide-default-200">
-                {orders.map((order) => (
+                {orders.map((order, index) => (
                   <OrderExpandableTableRow
                     key={order.id}
                     order={order}
                     columnCount={isAdmin ? 8 : 7}
                     userRole={userRole}
+                    defaultExpanded={index === 0}
                     isRealtimeNew={
                       order.id ? recentRealtimeOrderIds.has(order.id) : false
                     }
@@ -289,6 +269,12 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
           </div>
         ) : null}
       </div>
+      <OrderFiltersModal
+        open={filtersOpen}
+        filters={filters}
+        onClose={() => setFiltersOpen(false)}
+        onApply={setFilters}
+      />
     </div>
   );
 }

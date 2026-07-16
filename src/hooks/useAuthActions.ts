@@ -77,18 +77,10 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
         return false;
       }
 
-      if (result.data.needsEmailConfirmation) {
-        toast.success(result.message);
-        router.push(
-          `/login${options.redirectTo ? `?redirectTo=${encodeURIComponent(options.redirectTo)}` : ""}`,
-        );
-        return true;
-      }
-
       await finishAuth(result.data.user, result.message);
       return true;
     },
-    [finishAuth, options.redirectTo, router],
+    [finishAuth],
   );
 
   const sendAuthPhoneOtp = useCallback(async (phone: string) => {

@@ -55,7 +55,7 @@ export type RegisterEmailPayload = {
 
 export async function registerWithEmailClient(
   payload: RegisterEmailPayload,
-): Promise<ApiResult<{ user: IUser; needsEmailConfirmation: boolean }>> {
+): Promise<ApiResult<{ user: IUser }>> {
   const response = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -63,9 +63,7 @@ export async function registerWithEmailClient(
     body: JSON.stringify(payload),
   });
 
-  return parseApiResponse<{ user: IUser; needsEmailConfirmation: boolean }>(
-    response,
-  );
+  return parseApiResponse<{ user: IUser }>(response);
 }
 
 export async function sendAuthPhoneOtpClient(

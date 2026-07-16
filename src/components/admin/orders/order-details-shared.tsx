@@ -102,7 +102,7 @@ export function getOrderCustomerSummary(order: IOrderWithItems): {
   }
 
   const table = hasValue(order.table_number)
-    ? `Table ${order.table_number!.trim()}`
+    ? `${order.table_number!.trim()}`
     : null;
 
   if (!table && !phone) return null;

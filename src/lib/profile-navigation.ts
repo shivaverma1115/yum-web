@@ -127,3 +127,26 @@ export const USER_NAV_ITEMS: ProfileNavItem[] = [
     icon: "list-ordered",
   },
 ];
+
+/** Guest checkout accounts may only access orders. */
+export const ANONYMOUS_USER_NAV_ITEMS: ProfileNavItem[] = [
+  {
+    type: "link",
+    href: "/user/orders",
+    label: "My Orders",
+    icon: "list-ordered",
+  },
+];
+
+export function getProfileNavItems(options: {
+  isAdmin: boolean;
+  isAnonymous?: boolean;
+}): ProfileNavItem[] {
+  if (options.isAdmin) return ADMIN_NAV_ITEMS;
+  if (options.isAnonymous) return ANONYMOUS_USER_NAV_ITEMS;
+  return USER_NAV_ITEMS;
+}
+
+export function isAnonymousAllowedAccountPath(pathname: string): boolean {
+  return pathname === "/user/orders" || pathname.startsWith("/user/orders/");
+}

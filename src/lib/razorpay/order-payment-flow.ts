@@ -1,4 +1,4 @@
-import { retryOrderPaymentSession } from "@/lib/razorpay/api-client";
+import { confirmOrderPayment, retryOrderPaymentSession } from "@/lib/razorpay/api-client";
 import { openRazorpayCheckout } from "@/lib/razorpay/checkout-browser";
 import {
   RAZORPAY_CHECKOUT_DESCRIPTION,
@@ -22,7 +22,7 @@ export async function runRetryOrderPayment(
   const razorpayOrder = await retryOrderPaymentSession(input.orderId);
 
   try {
-    await openRazorpayCheckout({
+    const paymentResponse = await openRazorpayCheckout({
       keyId: razorpayOrder.keyId,
       orderId: razorpayOrder.orderId,
       amount: razorpayOrder.amount,
@@ -31,6 +31,8 @@ export async function runRetryOrderPayment(
       description: RAZORPAY_CHECKOUT_DESCRIPTION,
       prefill: input.prefill,
     });
+
+    await confirmOrderPayment(input.orderId, paymentResponse);
 
     return {
       status: "processing",

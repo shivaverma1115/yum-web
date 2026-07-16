@@ -104,10 +104,10 @@ export async function POST(request: NextRequest) {
     const isPendingOnline =
       body.payment_method === "online" && body.payment_phase === "pending";
 
-    // Skip push for unpaid online drafts — notify after payment / COD place.
-    // if (!isPendingOnline) {
-    // }
-    notifyOrderPlaced(result.order);
+    // Skip push for unpaid online drafts — notify after payment confirms.
+    if (!isPendingOnline) {
+      await notifyOrderPlaced(result.order);
+    }
 
     return NextResponse.json({
       success: true,

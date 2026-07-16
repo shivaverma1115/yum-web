@@ -65,7 +65,7 @@ export default function AuthCallbackPage() {
         router.replace(
           `/login?error=auth_callback&message=${encodeURIComponent(
             isPkceVerifierError
-              ? "Open the confirmation link in the same browser you used to register, or register again to receive a new email."
+              ? "Open the link in the same browser where you started this action, or request a new email and try again."
               : error.message,
           )}`,
         );

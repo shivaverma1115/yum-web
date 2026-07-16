@@ -21,14 +21,12 @@ import {
 } from "lucide-react";
 import { useLogout } from "@/lib/auth/useLogout";
 import {
-  ADMIN_NAV_ITEMS,
   getOpenSectionForPath,
-  USER_NAV_ITEMS,
+  getProfileNavItems,
 } from "@/lib/profile-navigation";
 import { useContextApi } from "@/context-api/use-context";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
 import { ProfileNavSkeleton } from "@/components/skeleton";
-import ThemeToggle from "./ThemeToggle";
 
 const navLinkClass =
   "flex items-center gap-x-3.5 py-3 px-4 text-sm text-default-700 rounded-md hover:bg-default-100";
@@ -168,10 +166,16 @@ type AdminNavMenuProps = {
   openSectionId: string | null;
   onToggle: (sectionId: string) => void;
   isAdmin: boolean;
+  isAnonymous: boolean;
 };
 
-function AdminNavMenu({ openSectionId, onToggle, isAdmin }: AdminNavMenuProps) {
-  const navItems = isAdmin ? ADMIN_NAV_ITEMS : USER_NAV_ITEMS;
+function AdminNavMenu({
+  openSectionId,
+  onToggle,
+  isAdmin,
+  isAnonymous,
+}: AdminNavMenuProps) {
+  const navItems = getProfileNavItems({ isAdmin, isAnonymous });
   return (
     <>
       {navItems.map((item) => {
@@ -216,12 +220,15 @@ export default function ProfileSidebar({
   mobileOpen = false,
   onMobileClose,
 }: ProfileSidebarProps) {
-  const { user, loading } = useContextApi();
+  const { user, loading, isAnonymous } = useContextApi();
   const { settings: businessSettings } = useBusinessSettings();
   const isSessionLoading = loading && !user;
   const isAdmin = user?.role === "admin";
   const pathname = usePathname();
   const handleLogout = useLogout();
+  const homeHref = isAnonymous
+    ? "/user/orders"
+    : `/${user?.role ?? "user"}/dashboard`;
   const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
     getOpenSectionForPath(pathname),
   );
@@ -253,7 +260,7 @@ export default function ProfileSidebar({
           }`}
       >
         <div className="sticky top-0 flex h-18 items-center justify-between border-b border-dashed border-default-200 px-6">
-          <Link href={`/${user?.role}/dashboard`} className="inline-flex shrink-0 items-center gap-2">
+          <Link href={homeHref} className="inline-flex shrink-0 items-center gap-2">
             <img
               src="/images/logo-dark(1).png"
               alt="logo"
@@ -289,6 +296,7 @@ export default function ProfileSidebar({
                 openSectionId={openSectionId}
                 onToggle={handleToggle}
                 isAdmin={isAdmin}
+                isAnonymous={isAnonymous}
               />
             </ul>
           )}
@@ -299,21 +307,23 @@ export default function ProfileSidebar({
             <ProfileNavSkeleton rows={2} />
           ) : (
             <>
-          <NavLink href={isAdmin ? "/admin/settings" : "/user/settings"}>
-            <NavIcon name="settings" />
-            Settings
-          </NavLink>
+              {!isAnonymous ? (
+                <NavLink href={isAdmin ? "/admin/settings" : "/user/settings"}>
+                  <NavIcon name="settings" />
+                  Settings
+                </NavLink>
+              ) : null}
 
-          <li className="menu-item">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
-            >
-              <NavIcon name="log-out" />
-              Logout
-            </button>
-          </li>
+              <li className="menu-item">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
+                >
+                  <NavIcon name="log-out" />
+                  Logout
+                </button>
+              </li>
             </>
           )}
         </ul>

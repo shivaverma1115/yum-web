@@ -17,8 +17,9 @@ import {
   isGoogleAuthEnabled,
   isPhoneAuthEnabled,
 } from "@/lib/business-settings/auth-methods";
-import { createAuthPhoneOtpModalSession } from "@/lib/otp/modal-options";
-import { verifyAuthPhoneOtpClient } from "@/lib/auth/client";
+import { createAuthPhoneOtpModalSession, createAuthEmailRegisterOtpModalSession } from "@/lib/otp/modal-options";
+import { registerWithEmailClient, verifyAuthPhoneOtpClient } from "@/lib/auth/client";
+import { sendEmailOtp, verifyEmailOtp } from "@/lib/email-otp/client";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
 import type { IUser } from "@/types/user";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
@@ -67,7 +68,6 @@ export default function AuthForm({
 
   const {
     loginWithEmail,
-    registerWithEmail,
     sendAuthPhoneOtp,
     signInWithGoogle,
     finishAuth,
@@ -113,7 +113,54 @@ export default function AuthForm({
       return;
     }
 
-    await registerWithEmail(email, password);
+    const sent = await sendEmailOtp(email);
+    if (!sent.success) {
+      toast.error(sent.message);
+      return;
+    }
+
+    toast.success(sent.message);
+
+    await openOtpModal(
+      createAuthEmailRegisterOtpModalSession(
+        email,
+        async (verifiedEmail, otp) => {
+          const otpResult = await verifyEmailOtp(verifiedEmail, otp);
+          if (!otpResult.success) {
+            return {
+              success: false,
+              message: otpResult.message,
+              error: otpResult.errors?.otp ?? otpResult.message,
+            };
+          }
+
+          const registerResult = await registerWithEmailClient({
+            email: verifiedEmail,
+            password,
+          });
+
+          if (!registerResult.success) {
+            const detail = registerResult.errors
+              ? Object.values(registerResult.errors).join(" ")
+              : null;
+            return {
+              success: false,
+              message: detail
+                ? `${registerResult.message} ${detail}`
+                : registerResult.message,
+              error: registerResult.errors?.email ?? registerResult.message,
+            };
+          }
+
+          await finishAuth(
+            registerResult.data.user,
+            registerResult.message || "Registered successfully.",
+          );
+
+          return { success: true };
+        },
+      ),
+    );
   });
 
   const handleSendPhoneOtp = async () => {
@@ -215,7 +262,7 @@ export default function AuthForm({
   const title = isLogin ? "Sign in to continue" : "Create an account";
   const subtitle = isLogin
     ? "Use an available sign-in method below."
-    : "Register using an available method below.";
+    : "We'll send a verification code to your email before creating your account.";
 
   if (!canSignIn) {
     return (
@@ -388,7 +435,7 @@ export default function AuthForm({
             {isSubmitting
               ? isLogin
                 ? "Signing in..."
-                : "Creating account..."
+                : "Sending OTP..."
               : isLogin
                 ? "Log in"
                 : "Register"}

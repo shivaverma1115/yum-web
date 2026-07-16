@@ -4,7 +4,7 @@ import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import {
   listCustomerOrdersWithSupabase,
-  parseOrderListFilter,
+  parseOrderListFilters,
 } from "@/lib/supabase/orders";
 
 export async function GET(request: NextRequest) {
@@ -18,9 +18,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const filter = parseOrderListFilter(
-      request.nextUrl.searchParams.get("filter"),
-    );
+    const filters = parseOrderListFilters(request.nextUrl.searchParams);
     const page = Number(request.nextUrl.searchParams.get("page") ?? "1");
     const limit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
 
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest) {
       auth.supabase,
       auth.user.id,
       {
-        filter,
+        filters,
         page,
         limit,
       },

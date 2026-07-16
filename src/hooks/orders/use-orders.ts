@@ -7,7 +7,12 @@ import {
   handleRealtimeOrderUpdate,
 } from "@/hooks/orders/order-realtime-helpers";
 import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
-import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
+import {
+  buildOrderListSearchParams,
+  DEFAULT_ORDER_LIST_FILTERS,
+  type OrderListFilters,
+  type OrderListStats,
+} from "@/lib/supabase/orders";
 import type { IOrderWithItems, OrderStatus } from "@/types/order";
 import { UserRole } from "@/types/user";
 
@@ -20,25 +25,17 @@ type OrdersResponse = {
     page?: number;
     limit?: number;
     totalPages?: number;
+    stats?: OrderListStats;
   };
 };
 
 function buildOrdersUrl(
   userRole: UserRole,
-  filter: CustomerOrdersFilter,
+  filters: OrderListFilters,
   page?: number,
   limit?: number,
 ) {
-  const params = new URLSearchParams();
-  if (filter !== "all") {
-    params.set("filter", filter);
-  }
-
-  if (page != null && limit != null) {
-    params.set("page", String(page));
-    params.set("limit", String(limit));
-  }
-
+  const params = buildOrderListSearchParams(filters, page, limit);
   const query = params.toString();
   return `/api/${userRole === UserRole.ADMIN ? "admin" : "account"}/orders${query ? `?${query}` : ""}`;
 }
@@ -46,7 +43,7 @@ function buildOrdersUrl(
 const REALTIME_ORDER_HIGHLIGHT_MS = 10_000;
 
 export function useOrders(
-  filter: CustomerOrdersFilter = "all",
+  filters: OrderListFilters = DEFAULT_ORDER_LIST_FILTERS,
   userRole: UserRole,
   page = 1,
   limit = 10,
@@ -54,6 +51,7 @@ export function useOrders(
   const [orders, setOrders] = useState<IOrderWithItems[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState<OrderListStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recentRealtimeOrderIds, setRecentRealtimeOrderIds] = useState<
@@ -93,8 +91,8 @@ export function useOrders(
   );
 
   const realtimeContext = useMemo(
-    () => ({ filter, page, limit }),
-    [filter, page, limit],
+    () => ({ filters, page, limit }),
+    [filters, page, limit],
   );
 
   const applyRealtimeInsert = useCallback(
@@ -153,7 +151,7 @@ export function useOrders(
       setError(null);
 
       try {
-        const url = buildOrdersUrl(userRole, filter, page, limit);
+        const url = buildOrdersUrl(userRole, filters, page, limit);
 
         const response = await fetch(url, { signal: controller.signal });
         const data = (await response.json().catch(
@@ -167,12 +165,14 @@ export function useOrders(
           setOrders([]);
           setTotal(0);
           setTotalPages(1);
+          setStats(null);
           return;
         }
 
         setOrders(data.data?.orders ?? []);
         setTotal(data.data?.total ?? 0);
         setTotalPages(data.data?.totalPages ?? 1);
+        setStats(data.data?.stats ?? null);
       } catch (err) {
         if (!active || controller.signal.aborted) return;
         setError(
@@ -181,6 +181,7 @@ export function useOrders(
         setOrders([]);
         setTotal(0);
         setTotalPages(1);
+        setStats(null);
       } finally {
         if (active) {
           setLoading(false);
@@ -194,7 +195,7 @@ export function useOrders(
       active = false;
       controller.abort();
     };
-  }, [filter, userRole, page, limit]);
+  }, [filters, userRole, page, limit]);
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders((current) =>
@@ -221,7 +222,7 @@ export function useOrders(
     setLoading(true);
     setError(null);
 
-    const url = buildOrdersUrl(userRole, filter, page, limit);
+    const url = buildOrdersUrl(userRole, filters, page, limit);
 
     void fetch(url)
       .then((response) => response.json().catch(() => ({})))
@@ -230,10 +231,11 @@ export function useOrders(
           setOrders(data.data?.orders ?? []);
           setTotal(data.data?.total ?? 0);
           setTotalPages(data.data?.totalPages ?? 1);
+          setStats(data.data?.stats ?? null);
         }
       })
       .finally(() => setLoading(false));
-  }, [userRole, filter, page, limit]);
+  }, [userRole, filters, page, limit]);
 
   return {
     orders,
@@ -243,6 +245,7 @@ export function useOrders(
     totalPages,
     page,
     limit,
+    stats,
     updateOrderStatus,
     updateOrderPaymentStatus,
     refreshOrders,
