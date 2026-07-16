@@ -19,8 +19,8 @@ function loginWithError(origin: string, message?: string) {
 }
 
 /**
- * Cross-browser email confirmation (token_hash).
- * Does not require the PKCE code verifier from the signup browser.
+ * Cross-browser auth email links (token_hash), e.g. password recovery.
+ * Does not require the PKCE code verifier from the originating browser.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;

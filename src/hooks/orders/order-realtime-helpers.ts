@@ -1,29 +1,16 @@
 import type { Dispatch, SetStateAction } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
+import {
+  orderMatchesListFilters,
+  type OrderListFilters,
+} from "@/lib/supabase/orders";
 import type { IOrder, IOrderItem, IOrderWithItems } from "@/types/order";
 
 export type RealtimeOrdersListContext = {
-  filter: CustomerOrdersFilter;
+  filters: OrderListFilters;
   page: number;
   limit: number;
 };
-
-export function orderMatchesFilter(
-  order: IOrder,
-  filter: CustomerOrdersFilter,
-): boolean {
-  if (filter === "paid") {
-    return order.payment_status === "paid";
-  }
-  if (filter === "failed") {
-    return order.payment_status === "failed";
-  }
-  if (filter === "cancelled") {
-    return order.status === "cancelled";
-  }
-  return true;
-}
 
 function setTotalWithPages(
   setTotal: Dispatch<SetStateAction<number>>,
@@ -82,7 +69,10 @@ export async function handleRealtimeOrderInsert(
   setTotalPages: Dispatch<SetStateAction<number>>,
   onVisibleInsert?: (orderId: string) => void,
 ) {
-  if (!inserted.id || !orderMatchesFilter(inserted, ctx.filter)) {
+  if (
+    !inserted.id ||
+    !orderMatchesListFilters(inserted, ctx.filters)
+  ) {
     return;
   }
 
@@ -134,10 +124,10 @@ export function handleRealtimeOrderUpdate(
   }
 
   const orderId = updated.id;
+  const matches = orderMatchesListFilters(updated, ctx.filters);
 
   setOrders((current) => {
     const exists = current.some((order) => order.id === orderId);
-    const matches = orderMatchesFilter(updated, ctx.filter);
 
     if (exists && !matches) {
       setTotalWithPages(setTotal, setTotalPages, ctx.limit, (total) =>

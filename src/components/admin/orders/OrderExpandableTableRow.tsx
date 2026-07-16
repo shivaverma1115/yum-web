@@ -26,6 +26,7 @@ type OrderExpandableTableRowProps = {
   columnCount: number;
   userRole: UserRole;
   isRealtimeNew?: boolean;
+  defaultExpanded?: boolean;
   onStatusUpdated?: (orderId: string, status: OrderStatus) => void;
   onPaymentUpdated?: () => void;
   onDelete?: (order: IOrderWithItems) => void;
@@ -37,12 +38,13 @@ export default function OrderExpandableTableRow({
   columnCount,
   userRole,
   isRealtimeNew = false,
+  defaultExpanded = false,
   onStatusUpdated,
   onPaymentUpdated,
   onDelete,
   isDeleting = false,
 }: OrderExpandableTableRowProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const items = order.items ?? [];
   const firstItem = items[0];
   const imageSrc = firstItem?.image_url?.trim();
@@ -174,13 +176,6 @@ export default function OrderExpandableTableRow({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="inline-flex items-center justify-end gap-1">
-              <Link
-                href={`/admin/orders/${order.id}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-default-500 transition-colors hover:bg-primary/10 hover:text-primary"
-                aria-label={`View order ${formatOrderIdShort(order)}`}
-              >
-                <Eye className="h-4 w-4" aria-hidden />
-              </Link>
               {onDelete ? (
                 <button
                   type="button"

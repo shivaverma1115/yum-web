@@ -110,6 +110,42 @@ export async function listTableQrCodesWithSupabase(
   };
 }
 
+export type ListActiveTableNumbersResult =
+  | { success: true; tableNumbers: string[] }
+  | { success: false; message: string; status: number };
+
+/** Unique active table labels for checkout / filter dropdowns. */
+export async function listActiveTableNumbersWithSupabase(
+  supabase: SupabaseClient,
+): Promise<ListActiveTableNumbersResult> {
+  const { data, error } = await supabase
+    .from("table_qr_codes")
+    .select("table_number")
+    .eq("is_active", true)
+    .order("table_number", { ascending: true });
+
+  if (error) {
+    return {
+      success: false,
+      message: error.message ?? ERROR_MESSAGE_GENERIC,
+      status: 400,
+    };
+  }
+
+  const unique = new Set<string>();
+  for (const row of data ?? []) {
+    const value = String(row.table_number ?? "").trim();
+    if (value) unique.add(value);
+  }
+
+  return {
+    success: true,
+    tableNumbers: [...unique].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+    ),
+  };
+}
+
 export async function createTableQrBatchWithSupabase(
   supabase: SupabaseClient,
   tableNumbers: string[],

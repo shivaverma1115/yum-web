@@ -6,7 +6,10 @@ import {
   handleRealtimeOrderUpdate,
 } from "@/hooks/orders/order-realtime-helpers";
 import { useOrdersRealtime } from "@/hooks/orders/use-orders-realtime";
-import type { CustomerOrdersFilter } from "@/lib/supabase/orders";
+import {
+  parseOrderListFilters,
+  type CustomerOrdersFilter,
+} from "@/lib/supabase/orders";
 import type { IOrderWithItems } from "@/types/order";
 
 type OrdersResponse = {
@@ -33,9 +36,17 @@ export function useAdminCustomerOrders(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const filters = useMemo(
+    () =>
+      parseOrderListFilters({
+        get: (key) => (key === "filter" ? filter : null),
+      }),
+    [filter],
+  );
+
   const realtimeContext = useMemo(
-    () => ({ filter, page, limit }),
-    [filter, page, limit],
+    () => ({ filters, page, limit }),
+    [filters, page, limit],
   );
 
   const applyRealtimeInsert = useCallback(

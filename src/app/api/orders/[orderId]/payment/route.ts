@@ -3,7 +3,10 @@ import { assertOrderOwner } from "@/lib/auth/order-access";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
-import { notifyPaymentUpdate } from "@/lib/notifications/notify";
+import {
+  notifyOrderPlaced,
+  notifyPaymentUpdate,
+} from "@/lib/notifications/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   completeOrderPaymentWithSupabase,
@@ -74,7 +77,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
 
       if (result.order) {
-        notifyPaymentUpdate(result.order, previousPaymentStatus);
+        await notifyPaymentUpdate(result.order, previousPaymentStatus);
       }
 
       return NextResponse.json({
@@ -115,8 +118,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    if (result.order) {
-      notifyPaymentUpdate(result.order, previousPaymentStatus);
+    if (result.order && previousPaymentStatus !== "paid") {
+      await notifyOrderPlaced(result.order);
     }
 
     return NextResponse.json({

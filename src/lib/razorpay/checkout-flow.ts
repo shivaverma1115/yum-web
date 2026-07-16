@@ -1,4 +1,5 @@
 import {
+  confirmOrderPayment,
   createRazorpayPaymentOrder,
   type CreateRazorpayPaymentQuoteInput,
 } from "@/lib/razorpay/api-client";
@@ -42,7 +43,7 @@ export async function runCheckoutOnlinePayment(
   const pending = await input.createPendingOrder(razorpayOrder.orderId);
 
   try {
-    await openRazorpayCheckout({
+    const paymentResponse = await openRazorpayCheckout({
       keyId: razorpayOrder.keyId,
       orderId: razorpayOrder.orderId,
       amount: razorpayOrder.amount,
@@ -51,6 +52,8 @@ export async function runCheckoutOnlinePayment(
       description: RAZORPAY_CHECKOUT_DESCRIPTION,
       prefill: input.prefill,
     });
+
+    await confirmOrderPayment(pending.orderId, paymentResponse);
 
     return toProcessingResult(pending.orderId);
   } catch (error) {

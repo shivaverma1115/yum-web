@@ -12,11 +12,3 @@ export async function getPasswordResetCallbackUrl(
   const siteUrl = await getSiteUrl(request);
   return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/reset-password")}`;
 }
-
-/** Used by signUp; confirmation emails use token_hash templates (Supabase Dashboard → Email Templates). */
-export async function getEmailConfirmRedirectUrl(
-  request?: NextRequest,
-): Promise<string> {
-  const siteUrl = await getSiteUrl(request);
-  return `${siteUrl}/auth/confirm?next=${encodeURIComponent("/home")}`;
-}

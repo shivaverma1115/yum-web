@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDefaultPathForRole } from "@/lib/auth/redirect";
+import { isAnonymousAllowedAccountPath } from "@/lib/profile-navigation";
 import { updateSession } from "@/lib/supabase/middleware";
 import { UserRole } from "@/types/user";
 
@@ -76,12 +77,17 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(new URL("/", request.url), sessionResponse);
   }
 
-  // if (role === UserRole.ADMIN && pathname === "/") {
-  //   return redirectWithCookies(
-  //     new URL(getDefaultPathForRole(role), request.url),
-  //     sessionResponse,
-  //   );
-  // }
+  // Guest checkout accounts may only use /user/orders in the account area.
+  if (
+    isAnonymous &&
+    (pathname === "/user" || pathname.startsWith("/user/")) &&
+    !isAnonymousAllowedAccountPath(pathname)
+  ) {
+    return redirectWithCookies(
+      new URL("/user/orders", request.url),
+      sessionResponse,
+    );
+  }
 
   return sessionResponse;
 }

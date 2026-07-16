@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    notifyOrderStatus(
+    await notifyOrderStatus(
       result.order,
       existingOrder?.status as OrderStatus | undefined,
     );

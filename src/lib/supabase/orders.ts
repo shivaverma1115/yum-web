@@ -17,6 +17,7 @@ import type {
   IOrderItem,
   IOrderWithItems,
   OrderStatus,
+  PaymentStatus,
 } from "@/types/order";
 import type { CheckoutPayload } from "@/types/checkout";
 import { getProfileByUserId } from "@/lib/supabase/account/profile";
@@ -557,6 +558,74 @@ export const ORDER_LIST_FILTERS: CustomerOrdersFilter[] = [
   "cancelled",
 ];
 
+export type OrderListFilters = {
+  dateFrom?: string;
+  dateTo?: string;
+  orderStatus?: OrderStatus | "all";
+  paymentStatus?: PaymentStatus | "all";
+  /** Exact table number from QR codes. */
+  tableNumber?: string;
+  /** Search phone number or delivery address. */
+  search?: string;
+};
+
+export const DEFAULT_ORDER_LIST_FILTERS: OrderListFilters = {
+  orderStatus: "all",
+  paymentStatus: "all",
+};
+
+const ORDER_LIST_PAYMENT_STATUSES: PaymentStatus[] = [
+  "pending",
+  "paid",
+  "failed",
+];
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+function applyOrderListFilters<
+  T extends {
+    gte: Function;
+    lte: Function;
+    eq: Function;
+    or: Function;
+  },
+>(query: T, filters: OrderListFilters): T {
+  let nextQuery = query;
+
+  if (filters.dateFrom) {
+    nextQuery = nextQuery.gte("created_at", `${filters.dateFrom}T00:00:00.000Z`);
+  }
+
+  if (filters.dateTo) {
+    nextQuery = nextQuery.lte("created_at", `${filters.dateTo}T23:59:59.999Z`);
+  }
+
+  if (filters.orderStatus && filters.orderStatus !== "all") {
+    nextQuery = nextQuery.eq("status", filters.orderStatus);
+  }
+
+  if (filters.paymentStatus && filters.paymentStatus !== "all") {
+    nextQuery = nextQuery.eq("payment_status", filters.paymentStatus);
+  }
+
+  const tableNumber = filters.tableNumber?.trim();
+  if (tableNumber) {
+    nextQuery = nextQuery.eq("table_number", tableNumber);
+  }
+
+  const search = filters.search?.trim();
+  if (search) {
+    const term = escapeIlikePattern(search);
+    nextQuery = nextQuery.or(
+      `customer_phone.ilike.%${term}%,delivery_address.ilike.%${term}%`,
+    );
+  }
+
+  return nextQuery;
+}
+
 export function parseOrderListFilter(
   value: string | null,
 ): CustomerOrdersFilter {
@@ -566,6 +635,150 @@ export function parseOrderListFilter(
   return "all";
 }
 
+export function parseOrderListFilters(
+  searchParams: Pick<URLSearchParams, "get">,
+): OrderListFilters {
+  const filters: OrderListFilters = { ...DEFAULT_ORDER_LIST_FILTERS };
+
+  const legacyFilter = parseOrderListFilter(searchParams.get("filter"));
+  if (legacyFilter === "paid") {
+    filters.paymentStatus = "paid";
+  } else if (legacyFilter === "failed") {
+    filters.paymentStatus = "failed";
+  } else if (legacyFilter === "cancelled") {
+    filters.orderStatus = "cancelled";
+  }
+
+  const dateFrom = searchParams.get("dateFrom")?.trim();
+  const dateTo = searchParams.get("dateTo")?.trim();
+  const orderStatus = searchParams.get("orderStatus")?.trim();
+  const paymentStatus = searchParams.get("paymentStatus")?.trim();
+  const tableNumber = searchParams.get("tableNumber")?.trim();
+  const search =
+    searchParams.get("search")?.trim() ||
+    searchParams.get("customerName")?.trim();
+
+  if (dateFrom) filters.dateFrom = dateFrom;
+  if (dateTo) filters.dateTo = dateTo;
+
+  if (orderStatus && ORDER_STATUSES.includes(orderStatus as OrderStatus)) {
+    filters.orderStatus = orderStatus as OrderStatus;
+  }
+
+  if (
+    paymentStatus &&
+    ORDER_LIST_PAYMENT_STATUSES.includes(paymentStatus as PaymentStatus)
+  ) {
+    filters.paymentStatus = paymentStatus as PaymentStatus;
+  }
+
+  if (tableNumber) filters.tableNumber = tableNumber;
+  if (search) filters.search = search;
+
+  return filters;
+}
+
+export function buildOrderListSearchParams(
+  filters: OrderListFilters,
+  page?: number,
+  limit?: number,
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters.orderStatus && filters.orderStatus !== "all") {
+    params.set("orderStatus", filters.orderStatus);
+  }
+  if (filters.paymentStatus && filters.paymentStatus !== "all") {
+    params.set("paymentStatus", filters.paymentStatus);
+  }
+  if (filters.tableNumber?.trim()) {
+    params.set("tableNumber", filters.tableNumber.trim());
+  }
+  if (filters.search?.trim()) {
+    params.set("search", filters.search.trim());
+  }
+
+  if (page != null && limit != null) {
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+  }
+
+  return params;
+}
+
+export function countActiveOrderListFilters(filters: OrderListFilters): number {
+  let count = 0;
+  if (filters.dateFrom) count += 1;
+  if (filters.dateTo) count += 1;
+  if (filters.orderStatus && filters.orderStatus !== "all") count += 1;
+  if (filters.paymentStatus && filters.paymentStatus !== "all") count += 1;
+  if (filters.tableNumber?.trim()) count += 1;
+  if (filters.search?.trim()) count += 1;
+  return count;
+}
+
+export function formatOrderListFiltersLabel(filters: OrderListFilters): string {
+  const count = countActiveOrderListFilters(filters);
+  if (count === 0) return "All";
+  return `${count} active`;
+}
+
+export function orderMatchesListFilters(
+  order: IOrder,
+  filters: OrderListFilters,
+): boolean {
+  if (filters.dateFrom && order.created_at) {
+    if (order.created_at < `${filters.dateFrom}T00:00:00.000Z`) return false;
+  }
+
+  if (filters.dateTo && order.created_at) {
+    if (order.created_at > `${filters.dateTo}T23:59:59.999Z`) return false;
+  }
+
+  if (
+    filters.orderStatus &&
+    filters.orderStatus !== "all" &&
+    order.status !== filters.orderStatus
+  ) {
+    return false;
+  }
+
+  if (
+    filters.paymentStatus &&
+    filters.paymentStatus !== "all" &&
+    order.payment_status !== filters.paymentStatus
+  ) {
+    return false;
+  }
+
+  const tableNumber = filters.tableNumber?.trim();
+  if (tableNumber && order.table_number?.trim() !== tableNumber) {
+    return false;
+  }
+
+  const search = filters.search?.trim().toLowerCase();
+  if (search) {
+    const haystack = [order.customer_phone, order.delivery_address]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (!haystack.includes(search)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export type OrderListStats = {
+  totalOrders: number;
+  paidRevenue: number;
+  pendingCount: number;
+};
+
 export type ListCustomerOrdersResult =
   | {
       success: true;
@@ -574,6 +787,7 @@ export type ListCustomerOrdersResult =
       page?: number;
       limit?: number;
       totalPages?: number;
+      stats?: OrderListStats;
     }
   | { success: false; message: string; status: number };
 
@@ -593,15 +807,70 @@ function mapOrderRowsWithItems(data: OrderRowWithItems[] | null): IOrderWithItem
   });
 }
 
+function computeOrderListStats(
+  rows: Array<{
+    total?: number | null;
+    payment_status?: string | null;
+    status?: string | null;
+  }>,
+  totalOrders: number,
+): OrderListStats {
+  let paidRevenue = 0;
+  let pendingCount = 0;
+
+  for (const row of rows) {
+    if (row.payment_status === "paid") {
+      paidRevenue += Number(row.total) || 0;
+    }
+    if (row.payment_status === "pending" && row.status !== "cancelled") {
+      pendingCount += 1;
+    }
+  }
+
+  return { totalOrders, paidRevenue, pendingCount };
+}
+
+async function fetchOrderListStatsWithSupabase(
+  supabase: SupabaseClient,
+  filters: OrderListFilters,
+  totalOrders: number,
+): Promise<OrderListStats> {
+  let query = supabase
+    .from("orders")
+    .select("total, payment_status, status");
+
+  query = applyOrderListFilters(query, filters);
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    return {
+      totalOrders,
+      paidRevenue: 0,
+      pendingCount: 0,
+    };
+  }
+
+  return computeOrderListStats(data, totalOrders);
+}
+
 export async function listAllOrdersWithSupabase(
   supabase: SupabaseClient,
   options?: {
     filter?: CustomerOrdersFilter;
+    filters?: OrderListFilters;
     page?: number;
     limit?: number;
+    includeStats?: boolean;
   },
 ): Promise<ListAllOrdersResult> {
-  const filter = options?.filter ?? "all";
+  const filters =
+    options?.filters ??
+    (options?.filter && options.filter !== "all"
+      ? parseOrderListFilters({
+          get: (key) => (key === "filter" ? options.filter ?? null : null),
+        })
+      : DEFAULT_ORDER_LIST_FILTERS);
   const shouldPaginate =
     options?.page !== undefined || options?.limit !== undefined;
   const page = Math.max(1, options?.page ?? 1);
@@ -613,13 +882,7 @@ export async function listAllOrdersWithSupabase(
     .select("*, order_items(*)", shouldPaginate ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false });
 
-  if (filter === "paid") {
-    query = query.eq("payment_status", "paid");
-  } else if (filter === "failed") {
-    query = query.eq("payment_status", "failed");
-  } else if (filter === "cancelled") {
-    query = query.eq("status", "cancelled");
-  }
+  query = applyOrderListFilters(query, filters);
 
   const { data, error, count } = shouldPaginate
     ? await query.range(offset, offset + limit - 1)
@@ -636,10 +899,16 @@ export async function listAllOrdersWithSupabase(
   const orders = mapOrderRowsWithItems(data as OrderRowWithItems[]);
 
   if (!shouldPaginate) {
-    return { success: true, orders };
+    const stats = options?.includeStats
+      ? computeOrderListStats(orders, orders.length)
+      : undefined;
+    return { success: true, orders, stats };
   }
 
   const total = count ?? 0;
+  const stats = options?.includeStats
+    ? await fetchOrderListStatsWithSupabase(supabase, filters, total)
+    : undefined;
 
   return {
     success: true,
@@ -648,6 +917,7 @@ export async function listAllOrdersWithSupabase(
     page,
     limit,
     totalPages: Math.max(1, Math.ceil(total / limit)),
+    stats,
   };
 }
 
@@ -656,11 +926,18 @@ export async function listCustomerOrdersWithSupabase(
   userId: string,
   options?: {
     filter?: CustomerOrdersFilter;
+    filters?: OrderListFilters;
     page?: number;
     limit?: number;
   },
 ): Promise<ListCustomerOrdersResult> {
-  const filter = options?.filter ?? "all";
+  const filters =
+    options?.filters ??
+    (options?.filter && options.filter !== "all"
+      ? parseOrderListFilters({
+          get: (key) => (key === "filter" ? options.filter ?? null : null),
+        })
+      : DEFAULT_ORDER_LIST_FILTERS);
   const shouldPaginate =
     options?.page !== undefined || options?.limit !== undefined;
   const page = Math.max(1, options?.page ?? 1);
@@ -680,13 +957,7 @@ export async function listCustomerOrdersWithSupabase(
       : { success: true, orders: [] };
   }
 
-  if (filter === "paid") {
-    query = query.eq("payment_status", "paid");
-  } else if (filter === "failed") {
-    query = query.eq("payment_status", "failed");
-  } else if (filter === "cancelled") {
-    query = query.eq("status", "cancelled");
-  }
+  query = applyOrderListFilters(query, filters);
 
   const { data, error, count } = shouldPaginate
     ? await query.range(offset, offset + limit - 1)

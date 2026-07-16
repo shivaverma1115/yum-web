@@ -100,7 +100,6 @@ export type RegisterResult =
   | {
     success: true;
     user: IUser;
-    needsEmailConfirmation: boolean;
   }
   | {
     success: false;
@@ -113,11 +112,11 @@ export function mapAuthErrorMessage(message: string): string {
   const lower = message.toLowerCase();
 
   if (lower.includes("email not confirmed")) {
-    return "Please verify your email. We sent a confirmation link to your inbox — check spam/junk if you don't see it.";
+    return "Please verify your email with the OTP sent to your inbox, then try again.";
   }
 
   if (lower.includes("rate limit")) {
-    return "Too many emails sent. Wait an hour, use custom SMTP in Supabase, or disable email confirmation for development.";
+    return "Too many emails sent. Please wait a bit and try again.";
   }
   if (lower.includes("already registered") || lower.includes("already been registered")) {
     return "This email is already registered. Sign in or use forgot password.";
@@ -190,7 +189,6 @@ export type RegisterPayload = Pick<IUser, "email"> & {
 
 export type RegisterOptions = {
   adminClient: SupabaseClient;
-  emailRedirectTo: string;
 };
 
 export async function registerWithSupabase(
@@ -239,32 +237,41 @@ export async function registerWithSupabase(
       };
     }
 
-    const { data, error } = await supabase.auth.updateUser({
-      email,
-      password,
-    });
+    const { error: updateError } = await options.adminClient.auth.admin.updateUserById(
+      currentUser.id,
+      {
+        email,
+        password,
+        email_confirm: true,
+      },
+    );
 
-    if (error) {
+    if (updateError) {
       return {
         success: false,
-        message: mapAuthErrorMessage(error.message),
-        status: normalizeHttpStatus(error.status),
+        message: mapAuthErrorMessage(updateError.message),
+        status: normalizeHttpStatus(updateError.status),
         errors: {},
       };
     }
 
-    if (!data.user?.id) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
       return {
         success: false,
-        message: ERROR_MESSAGE_GENERIC,
-        status: 400,
+        message: mapAuthErrorMessage(signInError.message),
+        status: normalizeHttpStatus(signInError.status),
         errors: {},
       };
     }
 
     const profileError = await upsertProfileWithAdmin(
       options.adminClient,
-      data.user.id,
+      currentUser.id,
       profileEmailFromAuth(email) ?? email,
       "",
       "",
@@ -284,7 +291,7 @@ export async function registerWithSupabase(
       const { error: phoneUpdateError } = await options.adminClient
         .from("profiles")
         .update({ phone })
-        .eq("id", data.user.id);
+        .eq("id", currentUser.id);
 
       if (phoneUpdateError) {
         return {
@@ -296,37 +303,48 @@ export async function registerWithSupabase(
       }
     }
 
-    const needsEmailConfirmation = !data.user.email_confirmed_at;
     const profile =
-      (await getProfileByUserId(supabase, data.user.id)) ??
-      (await getProfileByUserIdAdmin(options.adminClient, data.user.id)) ??
-      buildRegisterUserStub(data.user.id, email, "", "");
+      (await getProfileByUserId(supabase, currentUser.id)) ??
+      (await getProfileByUserIdAdmin(options.adminClient, currentUser.id)) ??
+      buildRegisterUserStub(currentUser.id, email, "", "");
 
     return {
       success: true,
       user: profile,
-      needsEmailConfirmation,
     };
   }
 
-  const { data, error } = await supabase.auth.signUp({
+  const existingProfileId = await findProfileIdByEmail(
+    options.adminClient,
     email,
-    password,
-    options: {
-      emailRedirectTo: options.emailRedirectTo,
-    },
-  });
+  );
 
-  if (error) {
+  if (existingProfileId) {
     return {
       success: false,
-      message: mapAuthErrorMessage(error.message),
-      status: normalizeHttpStatus(error.status),
+      message: "This email is already registered. Sign in or use forgot password.",
+      status: 400,
+      errors: { email: "Email already in use." },
+    };
+  }
+
+  const { data: created, error: createError } =
+    await options.adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+  if (createError) {
+    return {
+      success: false,
+      message: mapAuthErrorMessage(createError.message),
+      status: normalizeHttpStatus(createError.status),
       errors: {},
     };
   }
 
-  if (!data.user?.id) {
+  if (!created.user?.id) {
     return {
       success: false,
       message: ERROR_MESSAGE_GENERIC,
@@ -335,22 +353,12 @@ export async function registerWithSupabase(
     };
   }
 
-  const identities = data.user.identities ?? [];
-  if (identities.length === 0) {
-    return {
-      success: false,
-      message:
-        "This email is already registered. Sign in, or check your inbox for a confirmation link.",
-      status: 400,
-      errors: { email: "Email already in use." },
-    };
-  }
-
+  const userId = created.user.id;
   const phone = input.phone?.trim() ?? "";
 
   const profileError = await upsertProfileWithAdmin(
     options.adminClient,
-    data.user.id,
+    userId,
     email,
     "",
     "",
@@ -369,7 +377,7 @@ export async function registerWithSupabase(
     const { error: phoneUpdateError } = await options.adminClient
       .from("profiles")
       .update({ phone })
-      .eq("id", data.user.id);
+      .eq("id", userId);
 
     if (phoneUpdateError) {
       return {
@@ -381,16 +389,38 @@ export async function registerWithSupabase(
     }
   }
 
-  const needsEmailConfirmation = !data.session;
+  const anonymousId = await getAnonymousUserId(supabase);
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    return {
+      success: false,
+      message: mapAuthErrorMessage(signInError.message),
+      status: normalizeHttpStatus(signInError.status),
+      errors: {},
+    };
+  }
+
+  if (anonymousId && anonymousId !== userId) {
+    await mergeAnonymousUserIntoAccount(
+      options.adminClient,
+      anonymousId,
+      userId,
+    );
+  }
+
   const profile =
-    (await getProfileByUserId(supabase, data.user.id)) ??
-    (await getProfileByUserIdAdmin(options.adminClient, data.user.id)) ??
-    buildRegisterUserStub(data.user.id, email, "", "");
+    (await getProfileByUserId(supabase, userId)) ??
+    (await getProfileByUserIdAdmin(options.adminClient, userId)) ??
+    buildRegisterUserStub(userId, email, "", "");
 
   return {
     success: true,
     user: profile,
-    needsEmailConfirmation,
   };
 }
 

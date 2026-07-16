@@ -34,10 +34,22 @@ export async function notifyUser(
     link: message.link,
     data: message.data,
   });
-  console.log("result", result);
 
   if (!result.success && result.skippedReason) {
     console.info("[notify] skipped", { userId: id, reason: result.skippedReason });
+    return;
+  }
+
+  if (!result.success && result.failureCount > 0) {
+    logError(new Error("Push notification failed"), {
+      context: "notifyUser",
+      userId: id,
+      meta: {
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        errors: result.errors,
+      },
+    });
     return;
   }
 
@@ -83,7 +95,7 @@ function orderData(
 }
 
 /** New order placed (COD or confirmed). */
-export function notifyOrderPlaced(order: IOrder): void {
+export async function notifyOrderPlaced(order: IOrder): Promise<void> {
   try {
     const ref = formatOrderIdShort(order);
     const statusLabel = getOrderStatusLabel(
@@ -92,7 +104,7 @@ export function notifyOrderPlaced(order: IOrder): void {
     );
     const payLabel = paymentLabel(order.payment_status);
 
-    notifyUserInBackground(order.user_id, {
+    await notifyUser(order.user_id, {
       title: "Order placed",
       body: `Order ${ref}: ${statusLabel} · Payment ${payLabel}.`,
       link: ORDERS_LINK,
@@ -107,10 +119,10 @@ export function notifyOrderPlaced(order: IOrder): void {
 }
 
 /** Order status changed (e.g. admin update). */
-export function notifyOrderStatus(
+export async function notifyOrderStatus(
   order: IOrder,
   previousStatus?: IOrder["status"],
-): void {
+): Promise<void> {
   try {
     const next = order.status;
     if (!next || next === previousStatus) return;
@@ -118,7 +130,7 @@ export function notifyOrderStatus(
     const ref = formatOrderIdShort(order);
     const label = getOrderStatusLabel(next, order.fulfillment_type);
 
-    notifyUserInBackground(order.user_id, {
+    await notifyUser(order.user_id, {
       title: "Order status updated",
       body: `Order ${ref} is now ${label}.`,
       link: ORDERS_LINK,
@@ -133,17 +145,17 @@ export function notifyOrderStatus(
 }
 
 /** Payment status changed (webhook / client confirm). */
-export function notifyPaymentUpdate(
+export async function notifyPaymentUpdate(
   order: IOrder,
   previousPaymentStatus?: PaymentStatus,
-): void {
+): Promise<void> {
   try {
     const next = order.payment_status ?? "pending";
     if (next === previousPaymentStatus) return;
 
     const ref = formatOrderIdShort(order);
 
-    notifyUserInBackground(order.user_id, {
+    await notifyUser(order.user_id, {
       title: "Payment update",
       body: `Payment for order ${ref} is now ${paymentLabel(next)}.`,
       link: ORDERS_LINK,

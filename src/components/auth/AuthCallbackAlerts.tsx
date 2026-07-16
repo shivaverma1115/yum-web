@@ -29,7 +29,7 @@ export default function AuthCallbackAlerts() {
           : "Google sign-in failed. Please try again.",
       );
     } else if (error === "missing_code") {
-      toast.error("Invalid confirmation link. Try signing up again or contact support.");
+      toast.error("Invalid or expired link. Please try again or contact support.");
     }
 
     if (confirmed || error || searchParams.get("merged") === "1") {

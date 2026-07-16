@@ -5,7 +5,7 @@ import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   listAllOrdersWithSupabase,
-  parseOrderListFilter,
+  parseOrderListFilters,
 } from "@/lib/supabase/orders";
 
 export async function GET(request: NextRequest) {
@@ -19,16 +19,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const filter = parseOrderListFilter(
-      request.nextUrl.searchParams.get("filter"),
-    );
+    const filters = parseOrderListFilters(request.nextUrl.searchParams);
     const page = Number(request.nextUrl.searchParams.get("page") ?? "1");
     const limit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
     const adminClient = createAdminClient();
     const result = await listAllOrdersWithSupabase(adminClient, {
-      filter,
+      filters,
       page,
       limit,
+      includeStats: true,
     });
 
     if (!result.success) {
@@ -46,6 +45,7 @@ export async function GET(request: NextRequest) {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages,
+        stats: result.stats,
       },
     });
   } catch (error) {
