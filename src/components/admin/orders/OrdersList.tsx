@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { Banknote, ChevronDown, ShoppingBag, Wallet } from "lucide-react";
 import OrderExpandableTableRow from "@/components/admin/orders/OrderExpandableTableRow";
-import EnableOrderNotificationsButton from "@/components/storefront/EnableOrderNotificationsButton";
 import AnonymousUpgradeBanner from "@/components/storefront/AnonymousUpgradeBanner";
 import { StatsCardsSkeleton, TableSkeleton } from "@/components/skeleton";
 import { formatCurrency } from "@/lib/constants";
@@ -101,20 +100,6 @@ export default function OrdersList({ userRole }: { userRole: UserRole }) {
   return (
     <div className="space-y-6">
       {!isAdmin ? <AnonymousUpgradeBanner /> : null}
-
-      {!isAdmin ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default-200 bg-default-50/60 px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-default-900">
-              Order notifications
-            </p>
-            <p className="text-xs text-default-500">
-              Get browser alerts when your order status or payment changes.
-            </p>
-          </div>
-          <EnableOrderNotificationsButton />
-        </div>
-      ) : null}
 
       {loading ? (
         <StatsCardsSkeleton />

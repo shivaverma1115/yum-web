@@ -10,6 +10,7 @@ import {
   subscribeForegroundMessages,
 } from "@/lib/firebase/client";
 import { isFirebaseClientConfigured } from "@/lib/firebase/config";
+import { useContextApi } from "@/context-api/use-context";
 
 type PushDiagnostics = {
   clientConfigured: boolean;
@@ -37,13 +38,14 @@ const INITIAL_STATE: PushTokenState = {
 };
 
 export function useOrderNotifications() {
+  const { isAuthenticated, loading: authLoading } = useContextApi();
   const [state, setState] = useState<PushTokenState>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [currentToken, setCurrentToken] = useState<string | null>(null);
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    "default",
-  );
+  const [permission, setPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("default");
   const syncedTokenRef = useRef<string | null>(null);
 
   const registerTokenWithServer = useCallback(async (token: string) => {
@@ -72,10 +74,19 @@ export function useOrderNotifications() {
       if (!isBrowserPushSupported()) {
         setPermission("unsupported");
         setState(INITIAL_STATE);
+        syncedTokenRef.current = null;
+        setCurrentToken(null);
         return;
       }
 
       setPermission(Notification.permission);
+
+      if (!isAuthenticated) {
+        setState(INITIAL_STATE);
+        syncedTokenRef.current = null;
+        setCurrentToken(null);
+        return;
+      }
 
       const response = await fetch("/api/account/push-tokens", {
         credentials: "include",
@@ -88,21 +99,31 @@ export function useOrderNotifications() {
 
       if (response.ok && data.success && data.data) {
         setState(data.data);
+        // Server says no tokens — clear local sync so we don't re-upsert.
+        if (!data.data.enabled) {
+          syncedTokenRef.current = null;
+          setCurrentToken(null);
+        }
       } else {
         setState(INITIAL_STATE);
+        syncedTokenRef.current = null;
+        setCurrentToken(null);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (authLoading) return;
     void refresh();
-  }, [refresh]);
+  }, [authLoading, refresh]);
 
   useEffect(() => {
     if (
       loading ||
+      authLoading ||
+      !isAuthenticated ||
       !isBrowserPushSupported() ||
       !isFirebaseClientConfigured() ||
       permission !== "granted" ||
@@ -125,7 +146,14 @@ export function useOrderNotifications() {
         console.warn("[fcm] token re-sync failed", error);
       }
     })();
-  }, [loading, permission, registerTokenWithServer, state.enabled]);
+  }, [
+    loading,
+    authLoading,
+    isAuthenticated,
+    permission,
+    registerTokenWithServer,
+    state.enabled,
+  ]);
 
   useEffect(() => {
     if (
@@ -185,7 +213,7 @@ export function useOrderNotifications() {
 
       syncedTokenRef.current = token;
       setCurrentToken(token);
-      toast.success("Order notifications enabled.");
+      toast.success("Notifications enabled.");
       await refresh();
     } catch (error) {
       toast.error(
@@ -224,7 +252,7 @@ export function useOrderNotifications() {
         setCurrentToken(null);
       }
 
-      toast.success("Order notifications disabled for this device.");
+      toast.success("Notifications disabled for this device.");
       await refresh();
     } catch (error) {
       toast.error(
@@ -282,10 +310,12 @@ export function useOrderNotifications() {
 
   return {
     ...state,
-    loading,
+    loading: loading || authLoading,
     busy,
     permission,
     supported: isBrowserPushSupported() && isFirebaseClientConfigured(),
+    browserSupported: isBrowserPushSupported(),
+    firebaseConfigured: isFirebaseClientConfigured(),
     enable,
     disable,
     sendTest,

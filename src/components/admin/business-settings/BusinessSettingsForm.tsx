@@ -6,6 +6,7 @@ import { Loader2, Save } from "lucide-react";
 import { toast } from "react-toastify";
 import Input from "@/components/ui/Input";
 import PhoneInput from "@/components/ui/PhoneInput";
+import { AppTooltip } from "@/components/common/AppTooltip";
 import { SettingsFormSkeleton } from "@/components/skeleton";
 import {
   BusinessSettings,
@@ -13,6 +14,8 @@ import {
 } from "@/types/business-settings";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
 import { getPhoneDigits, validatePhoneValue } from "@/lib/phone-otp/phone";
+import { deepMergeBusinessSettings } from "@/lib/business-settings/validate";
+import { getAuthMethodDisabledMessage } from "@/lib/business-settings/auth-methods";
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
@@ -31,6 +34,8 @@ type ToggleFieldProps = {
   description?: string;
   checked: boolean;
   disabled?: boolean;
+  /** Shown via AppTooltip on the switch (e.g. permission / off message). */
+  tooltip?: string;
   onChange: (checked: boolean) => void;
 };
 
@@ -83,8 +88,22 @@ function ToggleField({
   description,
   checked,
   disabled,
+  tooltip,
   onChange,
 }: ToggleFieldProps) {
+  const switchControl = (
+    <input
+      type="checkbox"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={toggleClassName}
+      checked={Boolean(checked)}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.checked)}
+    />
+  );
+
   return (
     <div className="flex items-start justify-between gap-4 rounded-lg border border-default-200 p-4 md:col-span-2">
       <div>
@@ -93,13 +112,22 @@ function ToggleField({
           <p className="mt-1 text-sm text-default-600">{description}</p>
         ) : null}
       </div>
-      <input
-        type="checkbox"
-        className={toggleClassName}
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-      />
+      <div className="flex shrink-0 items-center gap-2">
+        <span
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            checked ? "text-primary" : "text-default-400"
+          }`}
+        >
+          {checked ? "On" : "Off"}
+        </span>
+        {tooltip ? (
+          <AppTooltip content={tooltip} isMobile side="top">
+            <span className="inline-flex">{switchControl}</span>
+          </AppTooltip>
+        ) : (
+          switchControl
+        )}
+      </div>
     </div>
   );
 }
@@ -144,7 +172,12 @@ export default function BusinessSettingsForm() {
           return;
         }
 
-        reset(data.data.settings);
+        reset(
+          deepMergeBusinessSettings(
+            DEFAULT_BUSINESS_SETTINGS,
+            data.data.settings,
+          ),
+        );
       } catch (error) {
         if (!active || controller.signal.aborted) return;
         toast.error(
@@ -199,8 +232,12 @@ export default function BusinessSettingsForm() {
       }
 
       if (data.data?.settings) {
-        reset(data.data.settings);
-        setGlobalBusinessSettings(data.data.settings);
+        const next = deepMergeBusinessSettings(
+          DEFAULT_BUSINESS_SETTINGS,
+          data.data.settings,
+        );
+        reset(next);
+        setGlobalBusinessSettings(next);
       }
 
       toast.success(data.message ?? "Business settings saved successfully.");
@@ -259,6 +296,50 @@ export default function BusinessSettingsForm() {
             placeholder="₹"
           />
         </FieldGroup>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Authentication"
+        description="Choose which sign-in methods customers can use on login and register pages."
+      >
+        <ToggleField
+          label="Email login & register"
+          description="Allow customers to sign in or register with email and password."
+          checked={watch("auth.email_login_register")}
+          disabled={isSubmitting}
+          tooltip={
+            watch("auth.email_login_register")
+              ? "Customers can sign in and register with email."
+              : getAuthMethodDisabledMessage("email")
+          }
+          onChange={(checked) => setValue("auth.email_login_register", checked)}
+        />
+
+        <ToggleField
+          label="Google login & register"
+          description="Allow customers to sign in or register with Google."
+          checked={watch("auth.google_login_register")}
+          disabled={isSubmitting}
+          tooltip={
+            watch("auth.google_login_register")
+              ? "Customers can sign in and register with Google."
+              : getAuthMethodDisabledMessage("google")
+          }
+          onChange={(checked) => setValue("auth.google_login_register", checked)}
+        />
+
+        <ToggleField
+          label="Phone login & register"
+          description="Allow customers to sign in or register with mobile OTP. Requires OTP mode to be enabled."
+          checked={watch("auth.phone_login_register")}
+          disabled={isSubmitting}
+          tooltip={
+            watch("auth.phone_login_register")
+              ? "Customers can sign in and register with phone OTP."
+              : getAuthMethodDisabledMessage("phone")
+          }
+          onChange={(checked) => setValue("auth.phone_login_register", checked)}
+        />
       </SettingsSection>
 
       <SettingsSection
@@ -372,35 +453,6 @@ export default function BusinessSettingsForm() {
             disabled={isSubmitting || !watch("order.store_hours_enabled")}
           />
         </FieldGroup>
-      </SettingsSection>
-
-      <SettingsSection
-        title="Authentication"
-        description="Choose which sign-in methods customers can use on login and register pages."
-      >
-        <ToggleField
-          label="Email login & register"
-          description="Allow customers to sign in or register with email and password."
-          checked={watch("auth.email_login_register")}
-          disabled={isSubmitting}
-          onChange={(checked) => setValue("auth.email_login_register", checked)}
-        />
-
-        <ToggleField
-          label="Google login & register"
-          description="Allow customers to sign in or register with Google."
-          checked={watch("auth.google_login_register")}
-          disabled={isSubmitting}
-          onChange={(checked) => setValue("auth.google_login_register", checked)}
-        />
-
-        <ToggleField
-          label="Phone login & register"
-          description="Allow customers to sign in or register with mobile OTP. Requires OTP mode to be enabled."
-          checked={watch("auth.phone_login_register")}
-          disabled={isSubmitting}
-          onChange={(checked) => setValue("auth.phone_login_register", checked)}
-        />
       </SettingsSection>
 
       <SettingsSection

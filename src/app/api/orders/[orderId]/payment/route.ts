@@ -3,7 +3,7 @@ import { assertOrderOwner } from "@/lib/auth/order-access";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
-import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
+import { notifyPaymentUpdate } from "@/lib/notifications/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   completeOrderPaymentWithSupabase,
@@ -74,11 +74,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
 
       if (result.order) {
-        notifyOrderUpdateInBackground({
-          kind: "payment",
-          order: result.order,
-          previousPaymentStatus,
-        });
+        notifyPaymentUpdate(result.order, previousPaymentStatus);
       }
 
       return NextResponse.json({
@@ -120,11 +116,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     if (result.order) {
-      notifyOrderUpdateInBackground({
-        kind: "payment",
-        order: result.order,
-        previousPaymentStatus,
-      });
+      notifyPaymentUpdate(result.order, previousPaymentStatus);
     }
 
     return NextResponse.json({

@@ -30,16 +30,11 @@ async function canFetchUrl(url: string): Promise<boolean> {
 export async function resolveOgBackgroundSrc(): Promise<string | undefined> {
   const settings = await getCachedBusinessSettings();
   const origin = resolvePublicSiteOrigin(settings.general.site_url);
-  const publicUrl = `${origin}${OG_BACKGROUND_PUBLIC_PATH}`;
 
-  if (await canFetchUrl(publicUrl)) {
-    return publicUrl;
-  }
-
-  for (const port of ["3001", "3000"]) {
-    const localUrl = `http://localhost:${port}${OG_BACKGROUND_PUBLIC_PATH}`;
-    if (await canFetchUrl(localUrl)) {
-      return localUrl;
+  if (origin) {
+    const publicUrl = `${origin}${OG_BACKGROUND_PUBLIC_PATH}`;
+    if (await canFetchUrl(publicUrl)) {
+      return publicUrl;
     }
   }
 

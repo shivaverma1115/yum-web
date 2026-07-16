@@ -4,7 +4,7 @@ import {
   assertPaymentStatusTransition,
   normalizePaymentStatus,
 } from "@/lib/orders/payment-transitions";
-import { notifyOrderUpdateInBackground } from "@/lib/notifications/send-order-update";
+import { notifyPaymentUpdate } from "@/lib/notifications/notify";
 import {
   fetchRazorpayPayment,
   razorpayAmountMatchesOrderTotal,
@@ -126,11 +126,7 @@ export async function handleRazorpayWebhook(
       };
     }
 
-    notifyOrderUpdateInBackground({
-      kind: "payment",
-      order: updated as IOrder,
-      previousPaymentStatus: order.payment_status,
-    });
+    notifyPaymentUpdate(updated as IOrder, order.payment_status);
 
     return { success: true, handled: true, order: updated as IOrder };
   }
@@ -149,6 +145,10 @@ export async function handleRazorpayWebhook(
         message: result.message,
         status: result.status,
       };
+    }
+
+    if (result.order) {
+      notifyPaymentUpdate(result.order, currentStatus);
     }
 
     return { success: true, handled: true, order: result.order };
@@ -186,11 +186,7 @@ export async function handleRazorpayWebhook(
       };
     }
 
-    notifyOrderUpdateInBackground({
-      kind: "payment",
-      order: updated as IOrder,
-      previousPaymentStatus: order.payment_status,
-    });
+    notifyPaymentUpdate(updated as IOrder, order.payment_status);
 
     return { success: true, handled: true, order: updated as IOrder };
   }

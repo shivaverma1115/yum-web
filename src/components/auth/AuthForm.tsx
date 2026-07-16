@@ -6,10 +6,12 @@ import { useForm } from "react-hook-form";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import PhoneInput from "@/components/ui/PhoneInput";
+import { AppTooltip } from "@/components/common/AppTooltip";
 import { useOtpModal } from "@/context-api/otp-modal-context";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { isOtpEnabled } from "@/lib/business-settings/phone-verification";
 import {
+  getAuthMethodDisabledMessage,
   hasUsableAuthMethod,
   isEmailAuthEnabled,
   isGoogleAuthEnabled,
@@ -101,8 +103,10 @@ export default function AuthForm({
   const showMethodTabs = emailAuthEnabled && phoneAuthEnabled;
   const showEmailForm = emailAuthEnabled && authMethod === "email";
   const showPhoneForm = phoneAuthEnabled && authMethod === "phone";
+  // Always show Google when email/phone UI is up (or Google-only); disable if setting is off.
   const showGoogleButton =
-    googleAuthEnabled && (showEmailForm || showPhoneForm || !emailAuthEnabled);
+    showEmailForm || showPhoneForm || (!emailAuthEnabled && !phoneAuthEnabled);
+  const googleButtonDisabled = !googleAuthEnabled || googleBusy || isSubmitting;
   const onEmailSubmit = handleSubmit(async ({ email, password }) => {
     if (isLogin) {
       await loginWithEmail(email, password);
@@ -165,6 +169,8 @@ export default function AuthForm({
   };
 
   const handleGoogleAuth = async () => {
+    if (!googleAuthEnabled || googleBusy || isSubmitting) return;
+
     setGoogleBusy(true);
     try {
       await signInWithGoogle();
@@ -172,6 +178,39 @@ export default function AuthForm({
       setGoogleBusy(false);
     }
   };
+
+  const googleButtonLabel = googleBusy
+    ? "Redirecting to Google..."
+    : isLogin
+      ? "Continue with Google"
+      : "Sign up with Google";
+
+  const googleButton = (
+    <button
+      type="button"
+      disabled={googleButtonDisabled}
+      onClick={() => void handleGoogleAuth()}
+      className={`w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50 ${
+        !googleAuthEnabled ? "pointer-events-none" : ""
+      }`}
+    >
+      <span
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
+        aria-hidden
+      >
+        G
+      </span>
+      {googleButtonLabel}
+    </button>
+  );
+
+  const googleButtonWithTooltip = !googleAuthEnabled ? (
+    <AppTooltip content={getAuthMethodDisabledMessage("google")} isMobile side="top">
+      <span className="block w-full cursor-not-allowed">{googleButton}</span>
+    </AppTooltip>
+  ) : (
+    googleButton
+  );
 
   const title = isLogin ? "Sign in to continue" : "Create an account";
   const subtitle = isLogin
@@ -368,24 +407,7 @@ export default function AuthForm({
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={googleBusy || isSubmitting}
-                onClick={() => void handleGoogleAuth()}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50"
-              >
-                <span
-                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
-                  aria-hidden
-                >
-                  G
-                </span>
-                {googleBusy
-                  ? "Redirecting to Google..."
-                  : isLogin
-                    ? "Continue with Google"
-                    : "Sign up with Google"}
-              </button>
+              {googleButtonWithTooltip}
             </>
           ) : null}
         </form>
@@ -424,26 +446,7 @@ export default function AuthForm({
         </div>
       ) : null}
 
-      {showGoogleButton && !showEmailForm ? (
-        <button
-          type="button"
-          disabled={googleBusy}
-          onClick={() => void handleGoogleAuth()}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-default-200 bg-white px-6 py-3 text-sm font-medium text-default-800 hover:bg-default-50 disabled:opacity-60 dark:bg-default-50"
-        >
-          <span
-            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-default-300 text-[10px] font-semibold"
-            aria-hidden
-          >
-            G
-          </span>
-          {googleBusy
-            ? "Redirecting to Google..."
-            : isLogin
-              ? "Continue with Google"
-              : "Sign up with Google"}
-        </button>
-      ) : null}
+      {showGoogleButton && !showEmailForm ? googleButtonWithTooltip : null}
 
       <p className="mt-6 text-center text-sm text-default-600">
         {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}

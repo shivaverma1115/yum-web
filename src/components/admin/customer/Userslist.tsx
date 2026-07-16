@@ -8,7 +8,7 @@ import { formatCustomerSince } from "@/lib/constants";
 import { getUserDisplayName } from "@/lib/user/display-name";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import { TableSkeleton } from "@/components/skeleton";
-import { Eye, Pencil, Trash, TriangleAlert } from "lucide-react";
+import { Eye, Pencil, Trash } from "lucide-react";
 import HtmlContent from "@/components/common/HtmlContent";
 
 const DEFAULT_LIMIT = 10;
@@ -108,28 +108,22 @@ export default function Userslist() {
     }
   };
 
-  const handleDelete = async (user: IUserWithVerification, force = false) => {
+  const handleDelete = async (user: IUserWithVerification) => {
     if (!user.id) return;
 
     const name = getUserDisplayName(user);
-    const confirmed = force
-      ? window.confirm(
-        `FORCE DELETE "${name}"?\n\nThis permanently removes:\n- All orders linked to this customer\n- All products they created (including storage images)\n- Their account and profile\n\nThis cannot be undone.`,
-      )
-      : window.confirm(
-        `Delete customer "${name}"? This cannot be undone.`,
-      );
+    const confirmed = window.confirm(
+      `Delete "${name}"?\n\nThis permanently removes:\n- Their orders and order items\n- Products they created (including images)\n- Addresses, push tokens, and coupon redemptions\n- Their account and profile\n\nThis cannot be undone.`,
+    );
 
     if (!confirmed) return;
 
     setDeletingId(user.id);
 
     try {
-      const url = force
-        ? `/api/admin/customers/${user.id}?force=true`
-        : `/api/admin/customers/${user.id}`;
-
-      const response = await fetch(url, { method: "DELETE" });
+      const response = await fetch(`/api/admin/customers/${user.id}`, {
+        method: "DELETE",
+      });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
@@ -346,19 +340,10 @@ export default function Userslist() {
                             disabled={deletingId === user.id}
                             onClick={() => void handleDelete(user)}
                             className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-red-700 bg-red-500/10 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                            title="Delete customer and all associated data"
                           >
                             <Trash className="size-3.5" />
                             {deletingId === user.id ? "..." : "Delete"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deletingId === user.id}
-                            onClick={() => void handleDelete(user, true)}
-                            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
-                            title="Delete customer with all orders, products, and images"
-                          >
-                            <TriangleAlert className="size-3.5" />
-                            {deletingId === user.id ? "..." : "Force"}
                           </button>
                         </div>
                       </td>

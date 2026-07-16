@@ -71,10 +71,10 @@ export type BusinessSettings = {
 
 export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   general: {
-    site_name: "Yum",
-    site_url: "https://yum-web.vercel.app",
-    currency: "INR",
-    currency_symbol: "₹",
+    site_name: "",
+    site_url: "",
+    currency: "",
+    currency_symbol: "",
   },
   order: {
     cod_enabled: true,
@@ -83,8 +83,8 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
     delivery_charge: 0,
     miscellaneous_fee: 8,
     store_hours_enabled: true,
-    open_time: "09:00",
-    close_time: "22:00",
+    open_time: "",
+    close_time: "",
     timezone: "Asia/Kolkata",
   },
   phone_verification: {
@@ -104,8 +104,8 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
     razorpay_enabled: true,
   },
   support: {
-    email: "support@yum.com",
-    phone: "9876543210",
+    email: "",
+    phone: "",
   },
   social: {
     instagram: "",
