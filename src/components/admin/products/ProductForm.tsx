@@ -5,7 +5,7 @@ import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Loader2, Package, Plus, Save, Trash2, X } from "lucide-react";
-import { fetchProductCategories } from "@/lib/api/categories";
+import { fetchAdminProductCategories } from "@/lib/api/categories";
 import { formatCurrency, MAX_PRODUCT_IMAGE_SIZE_BYTES } from "@/lib/constants";
 import { getPrimaryVariant } from "@/lib/cart/line";
 import { calculateDiscountedPrice } from "@/lib/products/discount";
@@ -203,7 +203,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
     useEffect(() => {
         const controller = new AbortController();
 
-        fetchProductCategories(controller.signal)
+        fetchAdminProductCategories(controller.signal)
             .then(setCategories)
             .catch((error) => {
                 if (controller.signal.aborted) return;

@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * Dev-only banner + masked public env inspector.
+ * Non-production banner + masked public env inspector.
+ * Driven by NEXT_PUBLIC_APP_ENV (not NODE_ENV — Next forces that under `next dev`).
  * To remove later: delete this file and its import in app-providers.tsx.
  */
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { getAppEnv, shouldShowDevModeBanner } from "@/lib/app-env";
 
 const PUBLIC_ENV_KEYS = [
+  "NEXT_PUBLIC_APP_ENV",
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_FIREBASE_API_KEY",
@@ -46,6 +49,7 @@ function supabaseProjectRef(url: string): string {
 
 function readPublicEnvRows() {
   const env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV ?? getAppEnv(),
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -58,7 +62,7 @@ function readPublicEnvRows() {
     NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
   };
 
-  const keys = ["NODE_ENV", ...PUBLIC_ENV_KEYS] as const;
+  const keys = ["NEXT_PUBLIC_APP_ENV", "NODE_ENV", ...PUBLIC_ENV_KEYS.slice(1)] as const;
   const supabaseKeys = new Set([
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -72,7 +76,9 @@ function readPublicEnvRows() {
         ? "(empty)"
         : supabaseKeys.has(key)
           ? prefixValue(raw, 10)
-          : maskValue(raw),
+          : key === "NEXT_PUBLIC_APP_ENV" || key === "NODE_ENV"
+            ? raw
+            : maskValue(raw),
       set: Boolean(raw),
     };
   });
@@ -81,6 +87,7 @@ function readPublicEnvRows() {
 export default function DevelopmentModeBanner() {
   const titleId = useId();
   const [open, setOpen] = useState(false);
+  const appEnv = useMemo(() => getAppEnv(), []);
   const rows = useMemo(() => readPublicEnvRows(), []);
   const projectRef = useMemo(
     () => supabaseProjectRef(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
@@ -96,9 +103,14 @@ export default function DevelopmentModeBanner() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  if (process.env.NODE_ENV !== "development") {
+  if (!shouldShowDevModeBanner()) {
     return null;
   }
+
+  const bannerLabel =
+    appEnv === "staging"
+      ? "Staging mode — not production (click for env)"
+      : "Development / test mode — not production (click for env)";
 
   return (
     <>
@@ -112,7 +124,7 @@ export default function DevelopmentModeBanner() {
           className="inline-block size-1.5 shrink-0 animate-pulse rounded-full bg-amber-950"
           aria-hidden
         />
-        Development / test mode — not production (click for env)
+        {bannerLabel}
       </button>
 
       {open ? (
@@ -134,10 +146,12 @@ export default function DevelopmentModeBanner() {
                   id={titleId}
                   className="text-sm font-semibold text-default-900"
                 >
-                  Dev env (public, masked)
+                  App env (public, masked)
                 </h2>
                 <p className="mt-0.5 text-xs text-default-500">
-                  NEXT_PUBLIC_* only. Secrets are never shown. Supabase URL/anon
+                  Banner uses NEXT_PUBLIC_APP_ENV (NODE_ENV stays{" "}
+                  <span className="font-mono">{process.env.NODE_ENV}</span> under{" "}
+                  <span className="font-mono">next dev</span>). Supabase URL/anon
                   show first 10 chars; others first/last 4. Project ref:{" "}
                   <span className="font-mono font-medium text-default-800">
                     {projectRef}
