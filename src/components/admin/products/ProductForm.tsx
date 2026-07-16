@@ -478,7 +478,7 @@ export default function ProductForm({ product }: { product?: IProduct | null }) 
                                 >
                                     <option value="">
                                         {categories.length === 0
-                                            ? "Loading categories..."
+                                            ? "No category found..."
                                             : "Select Product Category"}
                                     </option>
                                     {categories.map((category) => (
