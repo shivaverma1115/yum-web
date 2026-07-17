@@ -14,6 +14,7 @@ import { formatCartItemOptionsLabel } from "@/lib/cart/line";
 import {
     computeCartBillSummary,
     feeConfigForFulfillment,
+    type CartBillSummary,
 } from "@/lib/cart/totals";
 import { getDefaultPaymentMethod, getPaymentOptionsForFulfillment } from "@/lib/payment/payment-options";
 import { runCheckoutOnlinePayment } from "@/lib/razorpay/checkout-flow";
@@ -25,6 +26,7 @@ import {
 import { formatCurrency } from "@/lib/constants";
 import { loadTableQrContext } from "@/lib/table-qr/context";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
+import type { ICartItem } from "@/types/cart";
 import type { CheckoutFormValues } from "@/types/checkout";
 import { FulfillmentType, OnlinePaymentPhase } from "@/types/order";
 import { UserRole } from "@/types/user";
@@ -66,41 +68,48 @@ export default function Checkout() {
         return options;
     }, [tableNumbers, selectedTableNumber]);
 
-    const checkoutBill = useMemo(
-        () =>
-            computeCartBillSummary({
-                items,
-                subtotal,
-                couponDiscount,
-                couponCode: appliedCoupon?.code ?? null,
-                fees: feeConfigForFulfillment(businessSettings, fulfillmentType),
-            }),
-        [
-            items,
-            subtotal,
-            couponDiscount,
-            appliedCoupon?.code,
-            businessSettings,
-            fulfillmentType,
-        ],
-    );
-    const amountToPay = checkoutBill.amountToPay;
-    const isDelivery = fulfillmentType === "delivery";
-
-    const paymentOptions = getPaymentOptionsForFulfillment(fulfillmentType);
-    const fulfillmentLabel = FULFILLMENT_OPTIONS.find((o) => o.value === fulfillmentType)?.label;
-    const needsContact = fulfillmentType === "delivery" || fulfillmentType === "pickup";
-
     const phoneVerificationRef = useRef<PhoneVerificationHandle>(null);
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isSubmitLocked, setIsSubmitLocked] = useState(false);
     const [orderCompleted, setOrderCompleted] = useState(false);
     const [orderSuccessRedirectTo, setOrderSuccessRedirectTo] = useState<string | null>(null);
+    /** Frozen checkout summary after place-order so UI does not jump to empty totals. */
+    const [placedItems, setPlacedItems] = useState<ICartItem[] | null>(null);
+    const [placedBill, setPlacedBill] = useState<CartBillSummary | null>(null);
+    const [placedIsDelivery, setPlacedIsDelivery] = useState(false);
     /** Stays true through Razorpay + redirect (RHF isSubmitting ends before navigation). */
     const [isPaying, setIsPaying] = useState(false);
     // Keep button disabled after success until this page unmounts (isSubmitting ends before redirect).
     const isCheckoutBusy = isSubmitting || isSubmitLocked || isPaying || orderCompleted;
+
+    const checkoutBill = useMemo(() => {
+        if (items.length === 0) return null;
+
+        return computeCartBillSummary({
+            items,
+            subtotal,
+            couponDiscount,
+            couponCode: appliedCoupon?.code ?? null,
+            fees: feeConfigForFulfillment(businessSettings, fulfillmentType),
+        });
+    }, [
+        items,
+        subtotal,
+        couponDiscount,
+        appliedCoupon?.code,
+        businessSettings,
+        fulfillmentType,
+    ]);
+    const isDelivery = fulfillmentType === "delivery";
+    const summaryItems = orderCompleted && placedItems ? placedItems : items;
+    const summaryBill =
+        orderCompleted && placedBill ? placedBill : checkoutBill;
+    const summaryIsDelivery = orderCompleted ? placedIsDelivery : isDelivery;
+
+    const paymentOptions = getPaymentOptionsForFulfillment(fulfillmentType);
+    const fulfillmentLabel = FULFILLMENT_OPTIONS.find((o) => o.value === fulfillmentType)?.label;
+    const needsContact = fulfillmentType === "delivery" || fulfillmentType === "pickup";
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const checkoutOtpRequired = isOtpRequiredFor(businessSettings, "checkout");
     const storeOpen = isStoreOpen(businessSettings);
@@ -114,7 +123,7 @@ export default function Checkout() {
         hasPhoneEntered;
 
     useEffect(() => {
-        if (userLoading) return;
+        if (userLoading || orderCompleted) return;
 
         const defaults = buildCheckoutDefaults(user);
         const tableContext = loadTableQrContext();
@@ -125,26 +134,21 @@ export default function Checkout() {
         }
 
         reset(defaults);
-    }, [user, userLoading, reset]);
-
-    // useEffect(() => {
-    //     if (orderCompleted) return;
-    //     if (items.length === 0 && !isSubmitting) {
-    //         router.replace("/cart");
-    //     }
-    // }, [items.length, isSubmitting, orderCompleted, router]);
+    }, [user, userLoading, reset, orderCompleted]);
 
     useEffect(() => {
+        if (orderCompleted) return;
         if (!paymentOptions.some((option) => option.value === paymentMethod)) {
             setValue("payment_method", paymentOptions[0].value);
         }
-    }, [fulfillmentType, paymentMethod, paymentOptions, setValue]);
+    }, [fulfillmentType, paymentMethod, paymentOptions, setValue, orderCompleted]);
 
     useEffect(() => {
+        if (orderCompleted) return;
         if (!needsContact) {
             setPhoneVerified(false);
         }
-    }, [needsContact]);
+    }, [needsContact, orderCompleted]);
 
     const buildOrderBody = (
         values: CheckoutFormValues,
@@ -187,6 +191,13 @@ export default function Checkout() {
         role: UserRole = user?.role ?? UserRole.USER,
     ) => {
         const ordersPath = `/${role}/orders`;
+
+        // Snapshot before clearCart so the success modal still shows the placed order.
+        if (checkoutBill && items.length > 0) {
+            setPlacedItems(items);
+            setPlacedBill(checkoutBill);
+            setPlacedIsDelivery(isDelivery);
+        }
 
         setIsPaying(false);
         setOrderCompleted(true);
@@ -293,7 +304,10 @@ export default function Checkout() {
                         },
                     });
 
-                    await finishOrderSuccess(paymentResult.redirectTo, checkoutSession.role);
+                    // Online payment is not final on this page — confirm on processing,
+                    // then show success there (do not open the checkout success modal).
+                    router.replace(paymentResult.redirectTo);
+                    router.refresh();
                     return;
                 } catch (error) {
                     setIsPaying(false);
@@ -547,9 +561,9 @@ export default function Checkout() {
                                                             required: "Select a payment option.",
                                                         })}
                                                     />
-                                                    <i
-                                                        data-lucide={option.icon}
-                                                        className="text-primary size-5 shrink-0"
+                                                    <option.Icon
+                                                        className="size-5 shrink-0 text-primary"
+                                                        aria-hidden
                                                     />
                                                     <span className="text-sm font-medium text-default-700">
                                                         {option.label}
@@ -592,7 +606,7 @@ export default function Checkout() {
                                     Order summary
                                 </h4>
 
-                                {items.map((item) => {
+                                {summaryItems.map((item) => {
                                     const optionsLabel = formatCartItemOptionsLabel(item);
 
                                     return (
@@ -620,13 +634,15 @@ export default function Checkout() {
                                     );
                                 })}
 
-                                <div className="mb-6">
-                                    <OrderSummaryBreakdown
-                                        bill={checkoutBill}
-                                        mode="final"
-                                        showDeliveryFee={isDelivery}
-                                    />
-                                </div>
+                                {summaryBill ? (
+                                    <div className="mb-6">
+                                        <OrderSummaryBreakdown
+                                            bill={summaryBill}
+                                            mode="final"
+                                            showDeliveryFee={summaryIsDelivery}
+                                        />
+                                    </div>
+                                ) : null}
 
                                 {!storeOpen ? (
                                     <AppTooltip

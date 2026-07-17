@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useContextApi } from "@/context-api/use-context";
+import { useOtpModal } from "@/context-api/otp-modal-context";
 import { getSafeRedirect } from "@/lib/auth/redirect";
 import {
   loginWithEmailClient,
@@ -12,6 +13,8 @@ import {
   signInWithGoogleClient,
   verifyAuthPhoneOtpClient,
 } from "@/lib/auth/client";
+import { sendEmailOtp, verifyEmailOtp } from "@/lib/email-otp/client";
+import { createAuthEmailOtpModalSession } from "@/lib/otp/modal-options";
 import type { IUser } from "@/types/user";
 
 type UseAuthActionsOptions = {
@@ -19,9 +22,29 @@ type UseAuthActionsOptions = {
   onSuccess?: (user: IUser) => void | Promise<void>;
 };
 
+type EmailAuthMode = "login" | "register";
+
+function authApiFailureToOtpResult(result: {
+  success: false;
+  message: string;
+  errors?: Record<string, string>;
+}) {
+  const detail = result.errors ? Object.values(result.errors).join(" ") : null;
+  return {
+    success: false as const,
+    message: detail ? `${result.message} ${detail}` : result.message,
+    error:
+      result.errors?.email ??
+      result.errors?.otp ??
+      result.errors?.password ??
+      result.message,
+  };
+}
+
 export function useAuthActions(options: UseAuthActionsOptions = {}) {
   const router = useRouter();
   const { setUser, refresh, isAnonymous } = useContextApi();
+  const { openOtpModal } = useOtpModal();
 
   const finishAuth = useCallback(
     async (user: IUser, message?: string) => {
@@ -37,50 +60,90 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
         return;
       }
 
-      router.push(
-        getSafeRedirect(options.redirectTo ?? null, user.role),
-      );
+      router.push(getSafeRedirect(options.redirectTo ?? null, user.role));
       router.refresh();
     },
     [options.onSuccess, options.redirectTo, refresh, router, setUser],
   );
 
-  const loginWithEmail = useCallback(
-    async (email: string, password: string) => {
-      const result = await loginWithEmailClient(email, password);
-
-      if (!result.success) {
-        toast.error(result.message);
+  /**
+   * Shared email auth: send OTP → verify modal → login or register.
+   * Uses the same /api/email-otp/* endpoints for both modes.
+   */
+  const authenticateWithEmail = useCallback(
+    async (mode: EmailAuthMode, email: string, password: string) => {
+      const sent = await sendEmailOtp(email);
+      if (!sent.success) {
+        toast.error(sent.message);
         return false;
       }
 
-      await finishAuth(
-        result.data.user,
-        result.data.mergeMessage
-          ? `Logged in successfully. ${result.data.mergeMessage}`
-          : "Logged in successfully.",
+      toast.success(sent.message);
+
+      const verified = await openOtpModal(
+        createAuthEmailOtpModalSession(
+          email,
+          async (verifiedEmail, otp) => {
+            const otpResult = await verifyEmailOtp(verifiedEmail, otp);
+            if (!otpResult.success) {
+              return {
+                success: false,
+                message: otpResult.message,
+                error: otpResult.errors?.otp ?? otpResult.message,
+              };
+            }
+
+            if (mode === "login") {
+              const loginResult = await loginWithEmailClient(
+                verifiedEmail,
+                password,
+              );
+              if (!loginResult.success) {
+                return authApiFailureToOtpResult(loginResult);
+              }
+
+              await finishAuth(
+                loginResult.data.user,
+                loginResult.data.mergeMessage
+                  ? `Logged in successfully. ${loginResult.data.mergeMessage}`
+                  : "Logged in successfully.",
+              );
+              return { success: true };
+            }
+
+            const registerResult = await registerWithEmailClient({
+              email: verifiedEmail,
+              password,
+            });
+            if (!registerResult.success) {
+              return authApiFailureToOtpResult(registerResult);
+            }
+
+            await finishAuth(
+              registerResult.data.user,
+              registerResult.message || "Registered successfully.",
+            );
+            return { success: true };
+          },
+          mode === "login" ? "Verify & login" : "Verify & register",
+        ),
       );
-      return true;
+
+      return verified;
     },
-    [finishAuth],
+    [finishAuth, openOtpModal],
+  );
+
+  const loginWithEmail = useCallback(
+    async (email: string, password: string) =>
+      authenticateWithEmail("login", email, password),
+    [authenticateWithEmail],
   );
 
   const registerWithEmail = useCallback(
-    async (email: string, password: string, phone?: string) => {
-      const result = await registerWithEmailClient({ email, password, phone });
-
-      if (!result.success) {
-        const detail = result.errors
-          ? Object.values(result.errors).join(" ")
-          : null;
-        toast.error(detail ? `${result.message} ${detail}` : result.message);
-        return false;
-      }
-
-      await finishAuth(result.data.user, result.message);
-      return true;
-    },
-    [finishAuth],
+    async (email: string, password: string) =>
+      authenticateWithEmail("register", email, password),
+    [authenticateWithEmail],
   );
 
   const sendAuthPhoneOtp = useCallback(async (phone: string) => {
@@ -132,6 +195,7 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
   }, [isAnonymous, options.redirectTo]);
 
   return {
+    authenticateWithEmail,
     loginWithEmail,
     registerWithEmail,
     sendAuthPhoneOtp,

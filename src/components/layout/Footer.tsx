@@ -3,6 +3,7 @@
 import { useBusinessSettings } from '@/context-api/business-settings-context';
 import Link from 'next/link';
 import React from 'react'
+import RunningTruncate from '../ui/RunningTruncate';
 
 export default function Footer() {
     const { settings: businessSettings } = useBusinessSettings();
@@ -42,7 +43,11 @@ export default function Footer() {
                                 <div className="flex flex-col gap-3">
                                     <h5 className="mb-3 font-semibold text-default-950">Get in touch</h5>
                                     <div className="text-default-600"><Link href={`tel:${businessSettings.support.phone}`}>{businessSettings.support.phone}</Link></div>
-                                    <div className="text-default-600"><Link href={`mailto:${businessSettings.support.email}`}>{businessSettings.support.email}</Link></div>
+                                    <div className="text-default-600">
+                                        <Link href={`mailto:${businessSettings.support.email}`}>
+                                            <RunningTruncate text={businessSettings.support.email} maxWidthClassName="max-w-[10rem]" />
+                                        </Link>
+                                    </div>
                                     <div className="flex items-center gap-4">
                                         <Link href={`tel:${businessSettings.support.phone}`} className="cursor-pointer">
                                             <i data-lucide="phone" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
@@ -51,14 +56,14 @@ export default function Footer() {
                                             <i data-lucide="globe" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
                                         </Link>
                                         {businessSettings.social.instagram ? (
-                                        <Link href={`https://www.instagram.com/${businessSettings.social.instagram}`} className="cursor-pointer" target="_blank" rel="noopener noreferrer">
-                                            <i data-lucide="instagram" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
-                                        </Link>
+                                            <Link href={`https://www.instagram.com/${businessSettings.social.instagram}`} className="cursor-pointer" target="_blank" rel="noopener noreferrer">
+                                                <i data-lucide="instagram" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
+                                            </Link>
                                         ) : null}
                                         {businessSettings.social.twitter ? (
-                                        <Link href={`https://www.twitter.com/${businessSettings.social.twitter}`} className="cursor-pointer" target="_blank" rel="noopener noreferrer">
-                                            <i data-lucide="twitter" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
-                                        </Link>
+                                            <Link href={`https://www.twitter.com/${businessSettings.social.twitter}`} className="cursor-pointer" target="_blank" rel="noopener noreferrer">
+                                                <i data-lucide="twitter" className="h-6 w-6 transition-all text-default-600 hover:text-primary"></i>
+                                            </Link>
                                         ) : null}
                                     </div>
                                 </div>

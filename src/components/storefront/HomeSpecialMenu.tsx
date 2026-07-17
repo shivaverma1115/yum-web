@@ -8,7 +8,8 @@ import { ProductGridSkeleton } from "@/components/skeleton";
 import { useStorefrontCatalog } from "@/hooks/use-storefront-catalog";
 import { cn } from "@/lib/utils/helpers";
 
-const HOME_MENU_LIMIT = 60;
+// Keep the homepage section compact. The full catalog remains available at /products.
+const HOME_MENU_LIMIT = 6;
 
 /**
  * Home “Special Menu” — category rail + product grid.
@@ -46,15 +47,18 @@ export default function HomeSpecialMenu() {
   );
 
   return (
-    <section id="special-menu" className="scroll-mt-28 lg:py-16 py-6">
-      <div className="container">
-        <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
-          <aside className="lg:col-span-3">
-            <div className="mb-6 lg:mb-8">
+    <section
+      id="special-menu"
+      className="max-w-full overflow-hidden scroll-mt-28 py-6 lg:py-16"
+    >
+      <div className="container min-w-0">
+        <div className="grid min-w-0 gap-5 sm:gap-8 lg:grid-cols-12 lg:gap-12">
+          <aside className="min-w-0 lg:col-span-3">
+            <div className="mb-4 sm:mb-6 lg:mb-8">
               <span className="mb-3 inline-flex rounded-full bg-primary/15 px-3 py-1 text-xs font-medium uppercase tracking-wide text-primary">
                 Menu
               </span>
-              <h2 className="text-3xl font-semibold tracking-tight text-default-900">
+              <h2 className="text-2xl font-semibold tracking-tight text-default-900 sm:text-3xl">
                 Special Menu for you
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-default-500">
@@ -71,7 +75,6 @@ export default function HomeSpecialMenu() {
                 <div className="flex gap-2 lg:flex-col" aria-busy="true">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <div
-                      // eslint-disable-next-line react/no-array-index-key
                       key={index}
                       className="h-11 w-28 animate-pulse rounded-lg bg-default-100 lg:w-full"
                     />
@@ -83,7 +86,7 @@ export default function HomeSpecialMenu() {
                 </p>
               ) : (
                 <nav
-                  className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:overflow-visible lg:px-0"
+                  className="-mx-4 max-w-[calc(100vw)] overflow-x-auto px-4 pb-1 lg:mx-0 lg:max-w-none lg:overflow-visible lg:px-0 lg:pb-0"
                   aria-label="Menu categories"
                 >
                   <ul className="flex min-w-max gap-2 lg:min-w-0 lg:flex-col lg:gap-1">
@@ -128,9 +131,9 @@ export default function HomeSpecialMenu() {
             </div>
           </aside>
 
-          <div className="lg:col-span-9">
-            <div className="rounded-2xl border border-default-200/80 bg-gradient-to-b from-primary/[0.07] to-transparent p-4 sm:p-6 lg:p-8">
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-default-200/70 pb-5">
+          <div className="min-w-0 lg:col-span-9">
+            <div className="min-w-0 rounded-xl border border-default-200/80 bg-gradient-to-b from-primary/[0.07] to-transparent p-3 sm:rounded-2xl sm:p-6 lg:p-8">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-default-200/70 pb-4 sm:mb-6 sm:pb-5">
                 <div>
                   <h3 className="text-xl font-semibold text-default-900">
                     {isAllCategoriesSelected
@@ -170,9 +173,12 @@ export default function HomeSpecialMenu() {
                   </Link>
                 </div>
               ) : (
-                <ul className="grid list-none gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <ul className="grid min-w-0 list-none gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
                   {products.map((product) => (
-                    <li key={product.id ?? product.slug}>
+                    <li
+                      key={product.id ?? product.slug}
+                      className="min-w-0"
+                    >
                       <ProductCard
                         product={product}
                         categoryName={

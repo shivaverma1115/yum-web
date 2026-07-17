@@ -74,10 +74,11 @@ type AuthEmailVerifyHandler = (
   otp: string,
 ) => Promise<OtpVerifyResult>;
 
-export function createAuthEmailRegisterOtpModalSession(
+/** Shared email OTP modal for login and register (same send/verify APIs). */
+export function createAuthEmailOtpModalSession(
   email: string,
   verify: AuthEmailVerifyHandler,
-  verifyButtonLabel = "Verify & register",
+  verifyButtonLabel = "Verify & continue",
 ): OtpModalSession {
   return {
     title: "Verify email address",
