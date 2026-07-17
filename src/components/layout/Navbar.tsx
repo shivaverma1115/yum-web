@@ -30,11 +30,12 @@ function isActivePath(pathname: string, href: string) {
 export default function Navbar() {
     const pathname = usePathname();
     const handleLogout = useLogout();
-    const { user, isAuthenticated, loading } = useContextApi();
+    const { user, isAuthenticated, isAnonymous, loading } = useContextApi();
     const { settings: businessSettings } = useBusinessSettings();
     const { itemCount } = useCart();
     const isSessionLoading = loading && !user;
     const isAdmin = user?.role === UserRole.ADMIN;
+    const canLogout = isAuthenticated && !isAnonymous;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
 
@@ -143,7 +144,7 @@ export default function Navbar() {
                                         <Link className="inline-flex items-center text-sm lg:text-base font-medium text-default-700 py-2 px-4 rounded-full hover:text-primary" href="/admin/dashboard">Admin</Link>
                                     </li>
                                 ) : null}
-                                {isAuthenticated && (
+                                {canLogout && (
                                     <li className="menu-item">
                                         <button
                                             type="button"
@@ -219,7 +220,7 @@ export default function Navbar() {
                                                             Wishlist
                                                         </Link>
                                                     </li>
-                                                    {isAuthenticated ? (
+                                                    {canLogout ? (
                                                         <li>
                                                             <button
                                                                 type="button"
@@ -384,7 +385,7 @@ export default function Navbar() {
                                 <li className="px-2.5 py-2" aria-busy="true">
                                     <SkeletonBox className="skel-line-sm h-4 w-20" />
                                 </li>
-                            ) : isAuthenticated ? (
+                            ) : canLogout ? (
                                 <li>
                                     <button
                                         type="button"

@@ -25,7 +25,7 @@ type ProfileTopbarProps = {
 };
 
 export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
-    const { user, loading } = useContextApi();
+    const { user, loading, isAnonymous } = useContextApi();
     const handleLogout = useLogout();
     const isSessionLoading = loading && !user;
 
@@ -192,14 +192,16 @@ export default function ProfileTopbar({ onMenuClick }: ProfileTopbarProps) {
 
                                 <hr className="-mx-2 my-2 border-default-200" />
 
-                                <button
-                                    type="button"
-                                    onClick={() => void handleLogout()}
-                                    className="flex w-full items-center gap-x-3.5 rounded-md px-3 py-2 text-start text-sm text-red-400 transition-all hover:bg-red-400/10"
-                                >
-                                    <LogOut className="h-4 w-4 shrink-0" aria-hidden />
-                                    Log out
-                                </button>
+                                {!isAnonymous ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleLogout()}
+                                        className="flex w-full items-center gap-x-3.5 rounded-md px-3 py-2 text-start text-sm text-red-400 transition-all hover:bg-red-400/10"
+                                    >
+                                        <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+                                        Log out
+                                    </button>
+                                ) : null}
                             </div>
                         </div>
                         )}

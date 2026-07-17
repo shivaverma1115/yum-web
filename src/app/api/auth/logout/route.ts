@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAnonymousUser } from "@/lib/auth/anonymous-user";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { logoutWithSupabase } from "@/lib/supabase/auth";
@@ -7,6 +8,20 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST() {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user && isAnonymousUser(user)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Guest sessions cannot log out. Please register or sign in.",
+        },
+        { status: 403 },
+      );
+    }
+
     const result = await logoutWithSupabase(supabase);
 
     if (!result.success) {
