@@ -549,6 +549,53 @@ export async function getOrderByIdWithSupabase(
   return { success: true, order: data as IOrder };
 }
 
+/**
+ * Customer-facing order lookup. Accepts either the internal UUID or the
+ * public order number and includes line items for the tracking screen.
+ */
+export async function getOrderByReferenceWithSupabase(
+  supabase: SupabaseClient,
+  reference: string,
+): Promise<
+  | { success: true; order: IOrderWithItems }
+  | { success: false; message: string; status: number }
+> {
+  const normalizedReference = reference.trim();
+  if (!normalizedReference) {
+    return {
+      success: false,
+      message: "Enter an order number.",
+      status: 400,
+    };
+  }
+
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      normalizedReference,
+    );
+
+  let query = supabase.from("orders").select("*, order_items(*)");
+  query = isUuid
+    ? query.eq("id", normalizedReference)
+    : query.eq("order_number", normalizedReference.toUpperCase());
+
+  const { data, error } = await query.maybeSingle();
+  if (error || !data) {
+    return { success: false, message: "Order not found.", status: 404 };
+  }
+
+  const row = data as OrderRowWithItems;
+  const { order_items, ...order } = row;
+
+  return {
+    success: true,
+    order: {
+      ...(order as IOrder),
+      items: (order_items ?? []) as IOrderItem[],
+    },
+  };
+}
+
 export type CustomerOrdersFilter = "all" | "paid" | "failed" | "cancelled";
 
 export const ORDER_LIST_FILTERS: CustomerOrdersFilter[] = [

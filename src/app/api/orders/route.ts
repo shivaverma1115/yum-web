@@ -117,7 +117,9 @@ export async function POST(request: NextRequest) {
       data: {
         order: result.order,
         items: result.items,
-        redirectTo: `/${auth.profile?.role}/orders`,
+        redirectTo: result.order.id
+          ? `/track-order?orderId=${encodeURIComponent(result.order.id)}`
+          : `/${auth.profile?.role ?? "user"}/orders`,
       },
     });
   } catch (error) {

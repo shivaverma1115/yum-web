@@ -677,15 +677,15 @@ export default function Checkout() {
                             Congratulations!
                         </h3>
                         <p className="mt-2 text-sm text-default-600">
-                            Your order has been placed successfully. You can view live updates in
-                            your orders page.
+                            Your order has been placed successfully. Continue to track live
+                            updates.
                         </p>
                         <button
                             type="button"
                             onClick={handleOrderSuccessContinue}
                             className="mt-6 w-full rounded-full border border-primary bg-primary px-6 py-3 text-sm font-medium text-white transition-all duration-500 hover:bg-primary-500"
                         >
-                            View My Orders
+                            Track Order
                         </button>
                     </div>
                 </div>

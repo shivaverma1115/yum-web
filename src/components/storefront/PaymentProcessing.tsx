@@ -17,12 +17,17 @@ export default function PaymentProcessing() {
   const orderId = searchParams.get("orderId")?.trim() ?? "";
   const { clearCart } = useCart();
   const { user, refresh: refreshUser } = useContextApi();
-  const [state, setState] = useState<ProcessingState>("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [state, setState] = useState<ProcessingState>(
+    orderId ? "loading" : "error",
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    orderId ? null : "Order reference is missing.",
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const [isManualRefresh, setIsManualRefresh] = useState(false);
 
   const ordersPath = `/${user?.role ?? "user"}/orders`;
+  const trackOrderPath = `/track-order?orderId=${encodeURIComponent(orderId)}`;
 
   const handleRefreshStatus = useCallback(() => {
     setIsManualRefresh(true);
@@ -32,11 +37,7 @@ export default function PaymentProcessing() {
   }, []);
 
   useEffect(() => {
-    if (!orderId) {
-      setState("error");
-      setErrorMessage("Order reference is missing.");
-      return;
-    }
+    if (!orderId) return;
 
     const controller = new AbortController();
     let active = true;
@@ -79,12 +80,12 @@ export default function PaymentProcessing() {
     if (state !== "paid") return;
 
     const timer = window.setTimeout(() => {
-      router.replace(ordersPath);
+      router.replace(trackOrderPath);
       router.refresh();
     }, 2500);
 
     return () => window.clearTimeout(timer);
-  }, [state, router, ordersPath]);
+  }, [state, router, trackOrderPath]);
 
   const refreshButton = (
     <button
@@ -146,10 +147,10 @@ export default function PaymentProcessing() {
           description="Your payment was successful and your order has been placed. You can view live updates in your orders page."
           action={
             <Link
-              href={ordersPath}
+              href={trackOrderPath}
               className="inline-flex rounded-full border border-primary bg-primary px-6 py-2.5 text-sm font-medium text-white hover:bg-primary-500"
             >
-              View My Orders
+              Track Order
             </Link>
           }
         />
