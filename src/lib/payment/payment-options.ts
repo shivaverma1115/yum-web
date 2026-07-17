@@ -1,23 +1,30 @@
+import {
+  Banknote,
+  CreditCard,
+  Store,
+  Utensils,
+  type LucideIcon,
+} from "lucide-react";
 import type { FulfillmentType, PaymentMethod } from "@/types/order";
 
 export type PaymentOption = {
   value: PaymentMethod;
   label: string;
-  icon: string;
+  Icon: LucideIcon;
 };
 
 export const PAYMENT_OPTIONS_BY_FULFILLMENT: Record<FulfillmentType, PaymentOption[]> = {
   delivery: [
-    { value: "cash_on_delivery", label: "Cash on Delivery", icon: "banknote" },
-    { value: "online", label: "Pay Online", icon: "credit-card" },
+    { value: "cash_on_delivery", label: "Cash on Delivery", Icon: Banknote },
+    { value: "online", label: "Pay Online", Icon: CreditCard },
   ],
   pickup: [
-    { value: "pay_at_counter", label: "Pay at Counter", icon: "store" },
-    { value: "online", label: "Pay Online", icon: "credit-card" },
+    { value: "pay_at_counter", label: "Pay at Counter", Icon: Store },
+    { value: "online", label: "Pay Online", Icon: CreditCard },
   ],
   dine_in: [
-    { value: "pay_at_table", label: "Pay at Table", icon: "utensils" },
-    { value: "online", label: "Pay Online", icon: "credit-card" },
+    { value: "pay_at_table", label: "Pay at Table", Icon: Utensils },
+    { value: "online", label: "Pay Online", Icon: CreditCard },
   ],
 };
 

@@ -17,9 +17,8 @@ import {
   isGoogleAuthEnabled,
   isPhoneAuthEnabled,
 } from "@/lib/business-settings/auth-methods";
-import { createAuthPhoneOtpModalSession, createAuthEmailRegisterOtpModalSession } from "@/lib/otp/modal-options";
-import { registerWithEmailClient, verifyAuthPhoneOtpClient } from "@/lib/auth/client";
-import { sendEmailOtp, verifyEmailOtp } from "@/lib/email-otp/client";
+import { createAuthPhoneOtpModalSession } from "@/lib/otp/modal-options";
+import { verifyAuthPhoneOtpClient } from "@/lib/auth/client";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
 import type { IUser } from "@/types/user";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
@@ -67,7 +66,7 @@ export default function AuthForm({
   const [googleBusy, setGoogleBusy] = useState(false);
 
   const {
-    loginWithEmail,
+    authenticateWithEmail,
     sendAuthPhoneOtp,
     signInWithGoogle,
     finishAuth,
@@ -108,59 +107,7 @@ export default function AuthForm({
     showEmailForm || showPhoneForm || (!emailAuthEnabled && !phoneAuthEnabled);
   const googleButtonDisabled = !googleAuthEnabled || googleBusy || isSubmitting;
   const onEmailSubmit = handleSubmit(async ({ email, password }) => {
-    if (isLogin) {
-      await loginWithEmail(email, password);
-      return;
-    }
-
-    const sent = await sendEmailOtp(email);
-    if (!sent.success) {
-      toast.error(sent.message);
-      return;
-    }
-
-    toast.success(sent.message);
-
-    await openOtpModal(
-      createAuthEmailRegisterOtpModalSession(
-        email,
-        async (verifiedEmail, otp) => {
-          const otpResult = await verifyEmailOtp(verifiedEmail, otp);
-          if (!otpResult.success) {
-            return {
-              success: false,
-              message: otpResult.message,
-              error: otpResult.errors?.otp ?? otpResult.message,
-            };
-          }
-
-          const registerResult = await registerWithEmailClient({
-            email: verifiedEmail,
-            password,
-          });
-
-          if (!registerResult.success) {
-            const detail = registerResult.errors
-              ? Object.values(registerResult.errors).join(" ")
-              : null;
-            return {
-              success: false,
-              message: detail
-                ? `${registerResult.message} ${detail}`
-                : registerResult.message,
-              error: registerResult.errors?.email ?? registerResult.message,
-            };
-          }
-
-          await finishAuth(
-            registerResult.data.user,
-            registerResult.message || "Registered successfully.",
-          );
-
-          return { success: true };
-        },
-      ),
-    );
+    await authenticateWithEmail(isLogin ? "login" : "register", email, password);
   });
 
   const handleSendPhoneOtp = async () => {

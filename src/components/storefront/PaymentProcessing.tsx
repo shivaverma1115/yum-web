@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
+import { Loader2, XCircle, Clock, RefreshCw } from "lucide-react";
 import { useCart } from "@/context-api/cart-context";
 import { useContextApi } from "@/context-api/use-context";
 import { watchOrderPaymentStatus } from "@/lib/razorpay/poll-payment";
@@ -137,9 +137,13 @@ export default function PaymentProcessing() {
     return (
       <ProcessingShell orderId={orderId}>
         <StatusCard
-          icon={<CheckCircle2 className="h-12 w-12 text-green-500" aria-hidden />}
-          title="Payment successful"
-          description="Your order is confirmed. Redirecting you to your orders…"
+          icon={
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl">
+              {"🎉"}
+            </div>
+          }
+          title="Congratulations!"
+          description="Your payment was successful and your order has been placed. You can view live updates in your orders page."
           action={
             <Link
               href={ordersPath}
