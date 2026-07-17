@@ -314,16 +314,18 @@ export default function ProfileSidebar({
                 </NavLink>
               ) : null}
 
-              <li className="menu-item">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
-                >
-                  <NavIcon name="log-out" />
-                  Logout
-                </button>
-              </li>
+              {!isAnonymous ? (
+                <li className="menu-item">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-x-3.5 rounded-md px-4 py-3 text-sm text-red-700 hover:bg-red-400/10 hover:text-red-800"
+                  >
+                    <NavIcon name="log-out" />
+                    Logout
+                  </button>
+                </li>
+              ) : null}
             </>
           )}
         </ul>

@@ -4,11 +4,16 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useContextApi } from "@/context-api/use-context";
+
 export function useLogout() {
   const router = useRouter();
-  const { setUser } = useContextApi();
+  const { setUser, isAnonymous } = useContextApi();
 
   return useCallback(async () => {
+    if (isAnonymous) {
+      return;
+    }
+
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
@@ -30,5 +35,5 @@ export function useLogout() {
         error instanceof Error ? error.message : "Failed to log out.",
       );
     }
-  }, [router, setUser]);
+  }, [isAnonymous, router, setUser]);
 }
