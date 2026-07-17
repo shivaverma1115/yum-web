@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BadgeColor } from "@/lib/badge-colors";
-import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { ERROR_MESSAGE_GENERIC, FULFILLMENT_TYPE } from "@/lib/constants";
 import {
   assertPaymentStatusTransition,
   normalizePaymentStatus,
@@ -211,8 +211,8 @@ export async function createOrderWithSupabase(
         : profilePhone && profilePhone !== "-"
           ? profilePhone
           : "-",
-    delivery_address: payload.fulfillment_type === "delivery" ? payload.address?.trim() ?? null : null,
-    table_number: payload.fulfillment_type === "dine_in" ? payload.table_number?.trim() ?? null : null,
+    delivery_address: payload.fulfillment_type === FULFILLMENT_TYPE.DELIVERY ? payload.address?.trim() ?? null : null,
+    table_number: payload.fulfillment_type === FULFILLMENT_TYPE.DINE_IN ? payload.table_number?.trim() ?? null : null,
     additional_notes: payload.additional_notes?.trim() ?? null,
   };
 

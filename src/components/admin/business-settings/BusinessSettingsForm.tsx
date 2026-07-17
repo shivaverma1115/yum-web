@@ -114,9 +114,8 @@ function ToggleField({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <span
-          className={`text-xs font-semibold uppercase tracking-wide ${
-            checked ? "text-primary" : "text-default-400"
-          }`}
+          className={`text-xs font-semibold uppercase tracking-wide ${checked ? "text-primary" : "text-default-400"
+            }`}
         >
           {checked ? "On" : "Off"}
         </span>
@@ -272,7 +271,7 @@ export default function BusinessSettingsForm() {
           <Input
             {...register("general.site_url", { required: "Site URL is required." })}
             disabled={isSubmitting}
-            placeholder="https://yum.com"
+            placeholder={`Enter your site URL`}
           />
         </FieldGroup>
 

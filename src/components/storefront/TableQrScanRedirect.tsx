@@ -18,7 +18,7 @@ export default function TableQrScanRedirect({
 
   useEffect(() => {
     saveTableQrContext({ table_number: tableNumber, code });
-    router.replace("/home");
+    router.replace("/products");
   }, [tableNumber, code, router]);
 
   return <Preloader />;

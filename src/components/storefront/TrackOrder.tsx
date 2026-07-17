@@ -24,7 +24,7 @@ import {
   feeConfigForFulfillment,
   getOrderBillSummary,
 } from "@/lib/cart/totals";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, FULFILLMENT_TYPE } from "@/lib/constants";
 import { getTimelineLabels } from "@/lib/orders/status-label";
 import type {
   FulfillmentType,
@@ -48,9 +48,9 @@ const ORDER_STEP_INDEX: Record<Exclude<OrderStatus, "cancelled">, number> = {
 };
 
 const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
-  delivery: "Delivery",
-  pickup: "Pickup / Takeaway",
-  dine_in: "Dine in / On table",
+  [FULFILLMENT_TYPE.DELIVERY]: "Delivery",
+  [FULFILLMENT_TYPE.PICKUP]: "Pickup / Takeaway",
+  [FULFILLMENT_TYPE.DINE_IN]: "Dine in / On table",
 };
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -436,19 +436,19 @@ export default function TrackOrder() {
 
               <DetailCard
                 icon={
-                  order.fulfillment_type === "delivery"
+                  order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY
                     ? MapPin
-                    : order.fulfillment_type === "pickup"
+                    : order.fulfillment_type === FULFILLMENT_TYPE.PICKUP
                       ? Store
                       : Utensils
                 }
                 title={FULFILLMENT_LABELS[order.fulfillment_type]}
               >
-                {order.fulfillment_type === "delivery" ? (
+                {order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY ? (
                   <p className="break-words">
                     {order.delivery_address || "Address unavailable"}
                   </p>
-                ) : order.fulfillment_type === "dine_in" ? (
+                ) : order.fulfillment_type === FULFILLMENT_TYPE.DINE_IN ? (
                   <p>
                     Table:{" "}
                     <strong className="text-default-900">
@@ -514,7 +514,7 @@ export default function TrackOrder() {
                   bill={bill}
                   mode="final"
                   showHints={false}
-                  showDeliveryFee={order.fulfillment_type === "delivery"}
+                  showDeliveryFee={order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY}
                 />
               </section>
             </div>

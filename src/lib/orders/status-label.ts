@@ -1,10 +1,11 @@
+import { FULFILLMENT_TYPE } from "@/lib/constants";
 import type { FulfillmentType, OrderStatus } from "@/types/order";
 
 export function getTimelineLabels(fulfillment: FulfillmentType): string[] {
-  if (fulfillment === "delivery") {
+  if (fulfillment === FULFILLMENT_TYPE.DELIVERY) {
     return ["Pending", "Confirmed", "On the way", "Delivered"];
   }
-  if (fulfillment === "pickup") {
+  if (fulfillment === FULFILLMENT_TYPE.PICKUP) {
     return ["Pending", "Confirmed", "Preparing", "Ready for pickup"];
   }
   return ["Pending", "Confirmed", "Preparing", "Served"];

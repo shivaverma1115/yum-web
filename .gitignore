@@ -46,3 +46,5 @@ next-env.d.ts
 .vercel
 
 package-lock.json
+
+issues.txt

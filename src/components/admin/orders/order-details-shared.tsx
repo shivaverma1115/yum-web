@@ -10,7 +10,7 @@ import {
 } from "@/lib/cart/totals";
 import Badge from "@/components/ui/Badge";
 import { type BadgeColor } from "@/lib/badge-colors";
-import { formatCurrency, formatCustomerSince } from "@/lib/constants";
+import { formatCurrency, formatCustomerSince, FULFILLMENT_TYPE } from "@/lib/constants";
 import { formatOrderIdShort } from "@/lib/orders/order-number";
 import {
   getOrderStatusLabel,
@@ -32,9 +32,9 @@ export { getOrderStatusLabel, getOrderStatusOptions, getTimelineLabels };
 
 
 export const FULFILLMENT_LABELS: Record<FulfillmentType, string> = {
-  delivery: "Delivery",
-  pickup: "Pickup",
-  dine_in: "Dine in",
+  [FULFILLMENT_TYPE.DELIVERY]: "Delivery",
+  [FULFILLMENT_TYPE.PICKUP]: "Pickup",
+  [FULFILLMENT_TYPE.DINE_IN]: "Dine in",
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -85,7 +85,7 @@ export function getOrderCustomerSummary(order: IOrderWithItems): {
 } | null {
   const phone = hasValue(order.customer_phone) ? order.customer_phone.trim() : null;
 
-  if (order.fulfillment_type === "delivery") {
+  if (order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY) {
     const address = hasValue(order.delivery_address)
       ? order.delivery_address!.trim()
       : null;
@@ -96,7 +96,7 @@ export function getOrderCustomerSummary(order: IOrderWithItems): {
     };
   }
 
-  if (order.fulfillment_type === "pickup") {
+  if (order.fulfillment_type === FULFILLMENT_TYPE.PICKUP) {
     if (!phone) return null;
     return { primary: phone, secondary: "Pickup" };
   }
@@ -198,7 +198,7 @@ export function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
     : null;
   const partySize = hasValue(order.party_size) ? order.party_size!.trim() : null;
 
-  if (order.fulfillment_type === "delivery") {
+  if (order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY) {
     if (!phone && !address) return null;
     return (
       <DetailSection title="Delivery">
@@ -208,7 +208,7 @@ export function FulfillmentDetails({ order }: { order: IOrderWithItems }) {
     );
   }
 
-  if (order.fulfillment_type === "pickup") {
+  if (order.fulfillment_type === FULFILLMENT_TYPE.PICKUP) {
     if (!phone && !pickupTime) return null;
     return (
       <DetailSection title="Pickup">
@@ -571,7 +571,7 @@ export function OrderDetailsPanel({ order, className = "" }: OrderDetailsPanelPr
           bill={bill}
           className="h-fit"
           showHints
-          showDeliveryFee={order.fulfillment_type === "delivery"}
+          showDeliveryFee={order.fulfillment_type === FULFILLMENT_TYPE.DELIVERY}
         />
       </div>
     </div>

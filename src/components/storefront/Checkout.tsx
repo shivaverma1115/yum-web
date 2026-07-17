@@ -23,9 +23,10 @@ import {
     getStoreClosedMessage,
     isStoreOpen,
 } from "@/lib/business-settings/store-hours";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, FULFILLMENT_TYPE } from "@/lib/constants";
 import { loadTableQrContext } from "@/lib/table-qr/context";
 import { getNationalMobileDigits } from "@/lib/phone-otp/phone";
+import { getCartAllowedFulfillmentTypes } from "@/lib/order-types";
 import type { ICartItem } from "@/types/cart";
 import type { CheckoutFormValues } from "@/types/checkout";
 import { FulfillmentType, OnlinePaymentPhase } from "@/types/order";
@@ -83,6 +84,11 @@ export default function Checkout() {
     // Keep button disabled after success until this page unmounts (isSubmitting ends before redirect).
     const isCheckoutBusy = isSubmitting || isSubmitLocked || isPaying || orderCompleted;
 
+    const availableFulfillmentOptions = useMemo(() => {
+        const allowed = new Set(getCartAllowedFulfillmentTypes(items));
+        return FULFILLMENT_OPTIONS.filter((option) => allowed.has(option.value));
+    }, [items]);
+
     const checkoutBill = useMemo(() => {
         if (items.length === 0) return null;
 
@@ -101,7 +107,7 @@ export default function Checkout() {
         businessSettings,
         fulfillmentType,
     ]);
-    const isDelivery = fulfillmentType === "delivery";
+    const isDelivery = fulfillmentType === FULFILLMENT_TYPE.DELIVERY;
     const summaryItems = orderCompleted && placedItems ? placedItems : items;
     const summaryBill =
         orderCompleted && placedBill ? placedBill : checkoutBill;
@@ -109,7 +115,9 @@ export default function Checkout() {
 
     const paymentOptions = getPaymentOptionsForFulfillment(fulfillmentType);
     const fulfillmentLabel = FULFILLMENT_OPTIONS.find((o) => o.value === fulfillmentType)?.label;
-    const needsContact = fulfillmentType === "delivery" || fulfillmentType === "pickup";
+    const needsContact =
+        fulfillmentType === FULFILLMENT_TYPE.DELIVERY ||
+        fulfillmentType === FULFILLMENT_TYPE.PICKUP;
     const hasPhoneEntered = getNationalMobileDigits(phone).length > 0;
     const checkoutOtpRequired = isOtpRequiredFor(businessSettings, "checkout");
     const storeOpen = isStoreOpen(businessSettings);
@@ -122,19 +130,26 @@ export default function Checkout() {
         !phoneVerified &&
         hasPhoneEntered;
 
+    // useEffect(() => {
+    //     if (userLoading || orderCompleted) return;
+
+    //     const defaults = buildCheckoutDefaults(user);
+    //     const tableContext = loadTableQrContext();
+
+    //     if (tableContext) {
+    //         defaults.fulfillment_type = FULFILLMENT_TYPE.DINE_IN;
+    //         defaults.table_number = tableContext.table_number;
+    //     }
+
+    //     reset(defaults);
+    // }, [user, userLoading, reset, orderCompleted]);
+
     useEffect(() => {
-        if (userLoading || orderCompleted) return;
-
-        const defaults = buildCheckoutDefaults(user);
-        const tableContext = loadTableQrContext();
-
-        if (tableContext) {
-            defaults.fulfillment_type = "dine_in";
-            defaults.table_number = tableContext.table_number;
+        if (orderCompleted || availableFulfillmentOptions.length === 0) return;
+        if (!availableFulfillmentOptions.some((option) => option.value === fulfillmentType)) {
+            setValue("fulfillment_type", availableFulfillmentOptions[0].value);
         }
-
-        reset(defaults);
-    }, [user, userLoading, reset, orderCompleted]);
+    }, [availableFulfillmentOptions, fulfillmentType, setValue, orderCompleted]);
 
     useEffect(() => {
         if (orderCompleted) return;
@@ -262,6 +277,22 @@ export default function Checkout() {
                 return;
             }
 
+            if (availableFulfillmentOptions.length === 0) {
+                toast.error(
+                    "Items in your cart cannot share the same order type.",
+                );
+                return;
+            }
+
+            if (
+                !availableFulfillmentOptions.some(
+                    (option) => option.value === values.fulfillment_type,
+                )
+            ) {
+                toast.error("Selected order type is not available for your cart.");
+                return;
+            }
+
             const checkoutSession = await ensureCheckoutSession();
             await refreshUser();
 
@@ -355,7 +386,12 @@ export default function Checkout() {
         <button
             type={!storeOpen || showSendOtp ? "button" : "submit"}
             onClick={storeOpen && showSendOtp ? () => void handleSendOtp() : undefined}
-            disabled={!storeOpen || isCheckoutBusy || isSendingOtp}
+            disabled={
+                !storeOpen ||
+                isCheckoutBusy ||
+                isSendingOtp ||
+                availableFulfillmentOptions.length === 0
+            }
             className={`w-full inline-flex items-center justify-center rounded-full border border-primary bg-primary px-10 py-3 text-center text-sm font-medium text-white shadow-sm ${storeOpen
                     ? "transition-all duration-500 hover:bg-primary-500 disabled:opacity-60"
                     : "pointer-events-none opacity-60"
@@ -375,41 +411,57 @@ export default function Checkout() {
                                 <h4 className="text-lg font-medium text-default-800 mb-4">
                                     Order type
                                 </h4>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {FULFILLMENT_OPTIONS.map((option) => {
-                                        const inputId = `fulfillment-${option.value}`;
-                                        const isSelected = fulfillmentType === option.value;
+                                {availableFulfillmentOptions.length === 0 ? (
+                                    <p className="text-sm text-red-500">
+                                        Items in your cart cannot share the same order type.
+                                        Remove some items or choose products that support the
+                                        same fulfillment option.
+                                    </p>
+                                ) : (
+                                    <div
+                                        className={`grid gap-3 ${
+                                            availableFulfillmentOptions.length === 1
+                                                ? "grid-cols-1"
+                                                : availableFulfillmentOptions.length === 2
+                                                    ? "grid-cols-2"
+                                                    : "grid-cols-3"
+                                        }`}
+                                    >
+                                        {availableFulfillmentOptions.map((option) => {
+                                            const inputId = `fulfillment-${option.value}`;
+                                            const isSelected = fulfillmentType === option.value;
 
-                                        return (
-                                            <label
-                                                key={option.value}
-                                                htmlFor={inputId}
-                                                className={`flex flex-col items-center text-center gap-2 cursor-pointer rounded-lg border p-3 sm:p-4 hover:border-primary/50 ${isSelected
-                                                    ? "border-primary bg-primary/5"
-                                                    : "border-default-200"
-                                                    }`}
-                                            >
-                                                <input
-                                                    id={inputId}
-                                                    type="radio"
-                                                    value={option.value}
-                                                    className="text-primary w-5 h-5 border-default-200 focus:ring-0"
-                                                    {...register("fulfillment_type", {
-                                                        required: "Select an order type.",
-                                                    })}
-                                                />
-                                                <span>
-                                                    <span className="block text-xs sm:text-sm font-medium text-default-800">
-                                                        {option.label}
+                                            return (
+                                                <label
+                                                    key={option.value}
+                                                    htmlFor={inputId}
+                                                    className={`flex flex-col items-center text-center gap-2 cursor-pointer rounded-lg border p-3 sm:p-4 hover:border-primary/50 ${isSelected
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-default-200"
+                                                        }`}
+                                                >
+                                                    <input
+                                                        id={inputId}
+                                                        type="radio"
+                                                        value={option.value}
+                                                        className="text-primary w-5 h-5 border-default-200 focus:ring-0"
+                                                        {...register("fulfillment_type", {
+                                                            required: "Select an order type.",
+                                                        })}
+                                                    />
+                                                    <span>
+                                                        <span className="block text-xs sm:text-sm font-medium text-default-800">
+                                                            {option.label}
+                                                        </span>
+                                                        <span className="block text-[10px] sm:text-xs text-default-500 mt-0.5">
+                                                            {option.description}
+                                                        </span>
                                                     </span>
-                                                    <span className="block text-[10px] sm:text-xs text-default-500 mt-0.5">
-                                                        {option.description}
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                                 {errors.fulfillment_type?.message ? (
                                     <span className="text-red-500 text-sm">
                                         {errors.fulfillment_type.message}
@@ -453,7 +505,7 @@ export default function Checkout() {
                                 </div>
                             ) : null}
 
-                            {fulfillmentType === "delivery" ? (
+                            {fulfillmentType === FULFILLMENT_TYPE.DELIVERY ? (
                                 <div>
                                     <div>
                                         <label htmlFor="address" className="block text-sm text-default-700 mb-2">
@@ -467,7 +519,7 @@ export default function Checkout() {
                                             placeholder="Enter your street address"
                                             {...register("address", {
                                                 validate: (value, formValues) => {
-                                                    if (formValues.fulfillment_type !== "delivery") {
+                                                    if (formValues.fulfillment_type !== FULFILLMENT_TYPE.DELIVERY) {
                                                         return true;
                                                     }
                                                     return value?.trim()
@@ -483,7 +535,7 @@ export default function Checkout() {
                                 </div>
                             ) : null}
 
-                            {fulfillmentType === "dine_in" ? (
+                            {fulfillmentType === FULFILLMENT_TYPE.DINE_IN ? (
                                 <div>
                                     <h4 className="text-lg font-medium text-default-800 mb-6">
                                         Table details
@@ -501,7 +553,7 @@ export default function Checkout() {
                                             className={inputClass}
                                             {...register("table_number", {
                                                 validate: (value, formValues) => {
-                                                    if (formValues.fulfillment_type !== "dine_in") {
+                                                    if (formValues.fulfillment_type !== FULFILLMENT_TYPE.DINE_IN) {
                                                         return true;
                                                     }
                                                     return value?.trim()
@@ -700,17 +752,17 @@ export const FULFILLMENT_OPTIONS: {
     description: string;
 }[] = [
         {
-            value: "delivery",
+            value: FULFILLMENT_TYPE.DELIVERY,
             label: "Delivery",
             description: "We deliver to your address.",
         },
         {
-            value: "pickup",
+            value: FULFILLMENT_TYPE.PICKUP,
             label: "Pickup",
             description: "Pick up your order at the restaurant.",
         },
         {
-            value: "dine_in",
+            value: FULFILLMENT_TYPE.DINE_IN,
             label: "Dine In / On Table",
             description: "Enjoy your meal at your table.",
         },

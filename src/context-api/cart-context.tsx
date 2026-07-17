@@ -32,6 +32,7 @@ import type { AppliedCoupon } from "@/types/coupon";
 import type { ICartItem } from "@/types/cart";
 import type { IProduct } from "@/types/product";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
+import { normalizeOrderTypes } from "@/lib/order-types";
 
 type CartContextValue = {
   items: ICartItem[];
@@ -80,6 +81,7 @@ function productToCartItem(
     price: calculateCartUnitPrice(product, { variant, customizations }),
     quantity: Math.min(Math.max(1, quantity), MAX_CART_LINE_QUANTITY),
     maxQuantity: MAX_CART_LINE_QUANTITY,
+    order_type: normalizeOrderTypes(product.order_type),
     variant,
     customizations,
   };
@@ -99,7 +101,16 @@ function mergeItems(existing: ICartItem[], incoming: ICartItem): ICartItem[] {
   );
 
   return existing.map((item, i) =>
-    i === index ? { ...item, quantity: nextQty } : item,
+    i === index
+      ? {
+          ...item,
+          quantity: nextQty,
+          order_type:
+            incoming.order_type.length > 0
+              ? incoming.order_type
+              : item.order_type,
+        }
+      : item,
   );
 }
 
@@ -132,6 +143,7 @@ function normalizeStoredCartItems(items: ICartItem[]): ICartItem[] {
         MAX_CART_LINE_QUANTITY,
       ),
       maxQuantity: MAX_CART_LINE_QUANTITY,
+      order_type: normalizeOrderTypes(item.order_type),
       variant,
       customizations,
     });

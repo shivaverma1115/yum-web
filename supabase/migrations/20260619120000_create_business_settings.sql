@@ -9,16 +9,21 @@ values (
   'default',
   '{
     "general": {
-      "site_name": "Yum",
-      "site_url": "https://yum.com",
-      "currency": "INR",
-      "currency_symbol": "₹"
+      "site_name": "",
+      "site_url": "",
+      "currency": "",
+      "currency_symbol": ""
     },
     "order": {
       "cod_enabled": true,
       "online_payment_enabled": true,
       "min_order_amount": 100,
-      "delivery_charge": 40
+      "delivery_charge": 0,
+      "miscellaneous_fee": 0,
+      "store_hours_enabled": true,
+      "open_time": "",
+      "close_time": "",
+      "timezone": "Asia/Kolkata"
     },
     "phone_verification": {
       "mode": "test",
@@ -28,12 +33,21 @@ values (
         "profile_update": false
       }
     },
+    "auth": {
+      "email_login_register": true,
+      "google_login_register": true,
+      "phone_login_register": true
+    },
     "payment": {
       "razorpay_enabled": true
     },
     "support": {
-      "email": "support@yum.com",
-      "phone": "9876543210"
+      "email": "",
+      "phone": ""
+    },
+    "social": {
+      "instagram": "",
+      "twitter": ""
     }
   }'::jsonb
 )

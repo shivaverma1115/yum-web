@@ -7,7 +7,7 @@ import {
   getStoreClosedMessage,
   isStoreOpen,
 } from "@/lib/business-settings/store-hours";
-import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { ERROR_MESSAGE_GENERIC, FULFILLMENT_TYPE } from "@/lib/constants";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
 import { phonesMatch } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (
-      (fulfillment === "delivery" || fulfillment === "pickup") &&
+      (fulfillment === FULFILLMENT_TYPE.DELIVERY ||
+        fulfillment === FULFILLMENT_TYPE.PICKUP) &&
       isOtpRequiredFor(settings, "checkout") &&
       checkoutPhone &&
       !isCheckoutPhoneVerified(

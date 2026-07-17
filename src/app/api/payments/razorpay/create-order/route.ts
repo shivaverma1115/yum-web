@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/requireAuth";
-import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { ERROR_MESSAGE_GENERIC, FULFILLMENT_TYPES } from "@/lib/constants";
 import { logError } from "@/lib/utils/logError";
 import { buildServerOrderQuote } from "@/lib/orders/reprice-cart";
 import {
@@ -14,7 +14,7 @@ import { getBusinessSettings } from "@/lib/business-settings";
 import type { RazorpayQuoteRequest } from "@/types/checkout";
 import type { FulfillmentType } from "@/types/order";
 
-const FULFILLMENTS: FulfillmentType[] = ["delivery", "pickup", "dine_in"];
+const FULFILLMENTS: FulfillmentType[] = [...FULFILLMENT_TYPES];
 
 export async function POST(request: NextRequest) {
   try {
