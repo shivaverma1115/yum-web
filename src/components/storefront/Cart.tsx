@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { useForm } from "react-hook-form";
 import OrderSummary, {
   getOrderSummaryPayable,
 } from "@/components/common/OrderSummary";
@@ -23,6 +23,10 @@ import { formatCurrency } from "@/lib/constants";
 import type { ICartItem } from "@/types/cart";
 import Input from "@/components/ui/Input";
 import { useContextApi } from "@/context-api/use-context";
+
+type CouponFormValues = {
+  code: string;
+};
 
 function EmptyCart() {
   return (
@@ -170,30 +174,42 @@ function CouponSection({
   onApplied: (coupon: import("@/types/coupon").AppliedCoupon) => void;
   onRemove: () => void;
 }) {
-  const [code, setCode] = useState("");
   const [applying, setApplying] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<CouponFormValues>({
+    defaultValues: { code: "" },
+  });
 
-  const apply = async () => {
-    const trimmed = code.trim();
-    if (!trimmed) {
-      toast.error("Enter a coupon code.");
-      return;
-    }
+  const codeField = register("code", {
+    required: "Enter a coupon code.",
+    validate: (value) =>
+      value.trim().length > 0 || "Enter a coupon code.",
+  });
 
+  const onSubmit = handleSubmit(async ({ code }) => {
+    clearErrors("code");
     setApplying(true);
     try {
-      const result = await validateCouponCode(trimmed, subtotal);
+      const result = await validateCouponCode(code.trim(), subtotal);
       if (!result.ok || !result.data.data?.coupon) {
-        toast.error(result.data.message ?? "Invalid coupon code.");
+        setError("code", {
+          type: "server",
+          message: result.data.message ?? "Invalid coupon code.",
+        });
         return;
       }
       onApplied(result.data.data.coupon);
-      setCode("");
-      toast.success(result.data.message ?? "Coupon applied.");
+      reset({ code: "" });
     } finally {
       setApplying(false);
     }
-  };
+  });
 
   if (appliedCode) {
     return (
@@ -235,30 +251,35 @@ function CouponSection({
           Have a coupon?
         </h3>
       </div>
-      <div className="flex gap-2">
-        <Input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Enter coupon code"
-          className="rounded-full"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void apply();
-            }
-          }}
-          aria-label="Coupon code"
-        />
-        <button
-          type="button"
-          disabled={applying}
-          onClick={() => void apply()}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-60"
-        >
-          {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Apply
-        </button>
-      </div>
+      <form onSubmit={onSubmit} noValidate>
+        <div className="flex gap-2">
+          <Input
+            {...codeField}
+            onChange={(e) => {
+              e.target.value = e.target.value.toUpperCase();
+              void codeField.onChange(e);
+              clearErrors("code");
+            }}
+            placeholder="Enter coupon code"
+            className="rounded-full"
+            aria-label="Coupon code"
+            aria-invalid={Boolean(errors.code)}
+          />
+          <button
+            type="submit"
+            disabled={applying}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-60"
+          >
+            {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Apply
+          </button>
+        </div>
+        {errors.code ? (
+          <p className="mt-1.5 text-sm text-red-500" role="alert">
+            {errors.code.message}
+          </p>
+        ) : null}
+      </form>
     </div>
   );
 }

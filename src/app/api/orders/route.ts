@@ -9,6 +9,7 @@ import {
 } from "@/lib/business-settings/store-hours";
 import { ERROR_MESSAGE_GENERIC, FULFILLMENT_TYPE } from "@/lib/constants";
 import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
+import { clearPhoneOtpCookiesOnResponse } from "@/lib/otp/clear-verification-cookies";
 import { phonesMatch } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
 import { notifyOrderPlaced } from "@/lib/notifications/notify";
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest) {
     const settings = await getCachedBusinessSettings();
     const fulfillment = body.fulfillment_type;
     const checkoutPhone = body.phone?.trim() || auth.profile?.phone?.trim() || "";
+    const usedPhoneOtpCookie = Boolean(
+      checkoutPhone && isPhoneVerifiedOnRequest(request, checkoutPhone),
+    );
 
     if (!isStoreOpen(settings)) {
       return NextResponse.json(
@@ -110,7 +114,7 @@ export async function POST(request: NextRequest) {
       await notifyOrderPlaced(result.order);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: isPendingOnline
         ? "Order created. Complete payment to confirm."
@@ -123,6 +127,12 @@ export async function POST(request: NextRequest) {
           : `/${auth.profile?.role ?? "user"}/orders`,
       },
     });
+
+    if (usedPhoneOtpCookie) {
+      clearPhoneOtpCookiesOnResponse(response);
+    }
+
+    return response;
   } catch (error) {
     logError(error, {
       context: "Create Order API",

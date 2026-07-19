@@ -28,3 +28,5 @@ export function clearPhoneOtpCookies() {
     { name: PHONE_OTP_VERIFIED_COOKIE, value: "", maxAge: 0 },
   ] as const;
 }
+
+export { clearPhoneOtpCookiesOnResponse } from "@/lib/otp/clear-verification-cookies";

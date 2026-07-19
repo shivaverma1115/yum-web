@@ -8,6 +8,8 @@ import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import {
   getOtpDisabledMessage,
   getOtpProductionBlockedInDevMessage,
+  getLocalTestOtpBlockedInProductionMessage,
+  isLocalTestOtpBlockedInProduction,
   isProductionOtpBlockedInDev,
 } from "@/lib/business-settings/phone-verification";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
@@ -40,6 +42,13 @@ export async function POST(request: NextRequest) {
     if (isProductionOtpBlockedInDev(mode)) {
       return NextResponse.json(
         { success: false, message: getOtpProductionBlockedInDevMessage() },
+        { status: 403 },
+      );
+    }
+
+    if (isLocalTestOtpBlockedInProduction(mode)) {
+      return NextResponse.json(
+        { success: false, message: getLocalTestOtpBlockedInProductionMessage() },
         { status: 403 },
       );
     }

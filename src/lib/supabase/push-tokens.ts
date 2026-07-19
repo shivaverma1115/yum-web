@@ -93,6 +93,17 @@ export async function upsertPushTokenForUser(
     };
   }
 
+  // One device token → one user: drop any other owner's row first.
+  const { error: reclaimError } = await supabase
+    .from("user_push_tokens")
+    .delete()
+    .eq("token", trimmed)
+    .neq("user_id", userId);
+
+  if (reclaimError) {
+    return { success: false, message: reclaimError.message };
+  }
+
   const { error } = await supabase.from("user_push_tokens").upsert(
     {
       user_id: userId,

@@ -7,14 +7,24 @@ import {
   type ChangePasswordPayload,
 } from "@/lib/supabase/auth";
 
-function shouldRequireCurrentPassword(
-  providers: string[] | undefined,
-): boolean {
-  const normalized = (providers ?? []).map((provider) => provider.toLowerCase());
+function shouldRequireCurrentPassword(user: {
+  app_metadata?: { providers?: string[] };
+  identities?: Array<{ provider?: string | null }> | null;
+}): boolean {
+  const fromMeta = (user.app_metadata?.providers ?? []).map((p) =>
+    p.toLowerCase(),
+  );
+  const fromIdentities = (user.identities ?? [])
+    .map((identity) => identity.provider?.toLowerCase())
+    .filter((provider): provider is string => Boolean(provider));
+
+  const providers = fromMeta.length > 0 ? fromMeta : fromIdentities;
+
   // OAuth-only accounts (e.g. google) can set a password for the first time.
-  if (normalized.length > 0 && !normalized.includes("email")) {
+  if (providers.length > 0 && !providers.includes("email")) {
     return false;
   }
+
   return true;
 }
 
@@ -29,8 +39,7 @@ export async function GET() {
       );
     }
 
-    const providers = (auth.user.app_metadata?.providers ?? []) as string[];
-    const requireCurrentPassword = shouldRequireCurrentPassword(providers);
+    const requireCurrentPassword = shouldRequireCurrentPassword(auth.user);
 
     return NextResponse.json({
       success: true,
@@ -67,10 +76,12 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = (await request.json().catch(() => ({}))) as ChangePasswordPayload;
+    const requireCurrentPassword = shouldRequireCurrentPassword(auth.user);
     const result = await changePasswordWithSupabase(
       auth.supabase,
       auth.user.email!,
       payload,
+      { requireCurrentPassword },
     );
 
     if (!result.success) {

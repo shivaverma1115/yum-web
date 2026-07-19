@@ -5,10 +5,8 @@ import {
 } from "@/lib/business-settings/auth-methods";
 import { getCachedBusinessSettings } from "@/lib/business-settings/cache";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
-import {
-  clearEmailVerifiedCookie,
-  emailOtpRequiredResponse,
-} from "@/lib/email-otp/request";
+import { emailOtpRequiredResponse } from "@/lib/email-otp/request";
+import { clearEmailOtpCookies } from "@/lib/otp/clear-verification-cookies";
 import { logError } from "@/lib/utils/logError";
 import {
   loginWithSupabase,
@@ -75,7 +73,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    clearEmailVerifiedCookie(response);
+    clearEmailOtpCookies(response);
     return response;
   } catch (error) {
     logError(error, {

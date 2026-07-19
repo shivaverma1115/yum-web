@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EMAIL_OTP_VERIFIED_COOKIE } from "@/lib/email-otp/constants";
 import { emailsMatch } from "@/lib/email-otp/email";
+import { clearEmailOtpCookies } from "@/lib/otp/clear-verification-cookies";
 import { readVerifiedEmailToken } from "@/lib/email-otp/tokens";
 
 export function getVerifiedEmailFromRequest(
@@ -39,12 +40,7 @@ export function emailOtpRequiredResponse(
   );
 }
 
+/** Clears pending + verified email OTP cookies after successful use. */
 export function clearEmailVerifiedCookie(response: NextResponse): void {
-  response.cookies.set(EMAIL_OTP_VERIFIED_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  clearEmailOtpCookies(response);
 }

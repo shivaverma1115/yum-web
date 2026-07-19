@@ -4,43 +4,63 @@ import type { ICartItem } from "@/types/cart";
 const CART_STORAGE_KEY = "yum-cart";
 const COUPON_STORAGE_KEY = "yum-cart-coupon";
 
-export function loadCartFromStorage(): ICartItem[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as ICartItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+/** Scope cart/coupon localStorage by auth user (or guest). */
+export function cartAccountId(userId: string | null | undefined): string {
+  return userId?.trim() || "guest";
 }
 
-export function saveCartToStorage(items: ICartItem[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+function scopedKey(base: string, accountId: string) {
+  return `${base}:${accountId}`;
 }
 
-export function loadCouponFromStorage(): AppliedCoupon | null {
+function readJson<T>(key: string, legacyKey?: string): T | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(COUPON_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(key) ??
+      (legacyKey ? window.localStorage.getItem(legacyKey) : null);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as AppliedCoupon;
-    if (!parsed?.id || !parsed?.code) return null;
-    return parsed;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
 }
 
-export function saveCouponToStorage(coupon: AppliedCoupon | null) {
+export function loadCartFromStorage(accountId: string): ICartItem[] {
+  const parsed = readJson<ICartItem[]>(
+    scopedKey(CART_STORAGE_KEY, accountId),
+    accountId === "guest" ? CART_STORAGE_KEY : undefined,
+  );
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+export function saveCartToStorage(accountId: string, items: ICartItem[]) {
   if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    scopedKey(CART_STORAGE_KEY, accountId),
+    JSON.stringify(items),
+  );
+}
+
+export function loadCouponFromStorage(accountId: string): AppliedCoupon | null {
+  const parsed = readJson<AppliedCoupon>(
+    scopedKey(COUPON_STORAGE_KEY, accountId),
+    accountId === "guest" ? COUPON_STORAGE_KEY : undefined,
+  );
+  if (!parsed?.id || !parsed?.code) return null;
+  return parsed;
+}
+
+export function saveCouponToStorage(
+  accountId: string,
+  coupon: AppliedCoupon | null,
+) {
+  if (typeof window === "undefined") return;
+  const key = scopedKey(COUPON_STORAGE_KEY, accountId);
   if (!coupon) {
-    window.localStorage.removeItem(COUPON_STORAGE_KEY);
+    window.localStorage.removeItem(key);
     return;
   }
-  window.localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(coupon));
+  window.localStorage.setItem(key, JSON.stringify(coupon));
 }

@@ -12,6 +12,7 @@ import {
   sendAuthPhoneOtpClient,
   signInWithGoogleClient,
   verifyAuthPhoneOtpClient,
+  verifyEmailCredentialsClient,
 } from "@/lib/auth/client";
 import { sendEmailOtp, verifyEmailOtp } from "@/lib/email-otp/client";
 import { createAuthEmailOtpModalSession } from "@/lib/otp/modal-options";
@@ -23,6 +24,14 @@ type UseAuthActionsOptions = {
 };
 
 type EmailAuthMode = "login" | "register";
+
+export type EmailAuthActionResult =
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      errors?: Record<string, string>;
+    };
 
 function authApiFailureToOtpResult(result: {
   success: false;
@@ -67,15 +76,34 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
   );
 
   /**
-   * Shared email auth: send OTP → verify modal → login or register.
-   * Uses the same /api/email-otp/* endpoints for both modes.
+   * Email auth:
+   * - login: verify email+password first → only then send OTP → login
+   * - register: send OTP first → verify → create account
    */
   const authenticateWithEmail = useCallback(
-    async (mode: EmailAuthMode, email: string, password: string) => {
+    async (
+      mode: EmailAuthMode,
+      email: string,
+      password: string,
+    ): Promise<EmailAuthActionResult> => {
+      if (mode === "login") {
+        const credentials = await verifyEmailCredentialsClient(email, password);
+        if (!credentials.success) {
+          return {
+            success: false,
+            message: credentials.message,
+            errors: credentials.errors,
+          };
+        }
+      }
+
       const sent = await sendEmailOtp(email);
       if (!sent.success) {
-        toast.error(sent.message);
-        return false;
+        return {
+          success: false,
+          message: sent.message,
+          errors: sent.errors ?? { email: sent.message },
+        };
       }
 
       toast.success(sent.message);
@@ -129,7 +157,7 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
         ),
       );
 
-      return verified;
+      return verified ? { success: true } : { success: false, message: "Verification cancelled." };
     },
     [finishAuth, openOtpModal],
   );

@@ -15,7 +15,11 @@ import { isPhoneVerifiedOnRequest } from "@/lib/phone-otp/request";
 import { isValidPhoneNumber, normalizeProfilePhone } from "@/lib/phone-otp/phone";
 import { logError } from "@/lib/utils/logError";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncProfileAuthContact } from "@/lib/profile/sync-contact";
+import {
+  clearEmailOtpCookies,
+  clearPhoneOtpCookiesOnResponse,
+} from "@/lib/otp/clear-verification-cookies";
+import { runWithAuthContactFirst } from "@/lib/profile/sync-contact";
 import {
   getProfileByUserId,
   updateOwnProfileWithSupabase,
@@ -131,50 +135,60 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const result = await updateOwnProfileWithSupabase(
-      auth.supabase,
+    const synced = await runWithAuthContactFirst(
+      admin,
       auth.user.id,
-      payload as UpdateOwnProfileInput,
+      {
+        mode: "self",
+        previousProfile: profile,
+        verification,
+        nextEmail,
+        nextPhone: nextPhone ? normalizeProfilePhone(nextPhone) : "",
+        emailVerifiedOnRequest,
+        phoneVerifiedOnRequest,
+        requirePhoneOtpForUpdate: isOtpRequiredFor(settings, "profile_update"),
+      },
+      async () => {
+        const result = await updateOwnProfileWithSupabase(
+          admin,
+          auth.user.id,
+          payload as UpdateOwnProfileInput,
+        );
+
+        if (!result.success) {
+          return {
+            success: false as const,
+            message: result.message,
+            status: result.status,
+            errors: result.errors ?? {},
+          };
+        }
+
+        return { success: true as const, data: result.user };
+      },
     );
 
-    if (!result.success) {
+    if (!synced.success) {
       return NextResponse.json(
         {
           success: false,
-          message: result.message,
-          errors: result.errors ?? {},
+          message: synced.message,
+          errors: synced.errors ?? {},
         },
-        { status: result.status },
+        { status: synced.status },
       );
     }
 
-    const syncResult = await syncProfileAuthContact(admin, auth.user.id, {
-      mode: "self",
-      previousProfile: profile,
-      verification,
-      nextEmail,
-      nextPhone: nextPhone ? normalizeProfilePhone(nextPhone) : "",
-      emailVerifiedOnRequest,
-      phoneVerifiedOnRequest,
-      requirePhoneOtpForUpdate: isOtpRequiredFor(settings, "profile_update"),
-    });
-
-    if (!syncResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: syncResult.message,
-          errors: syncResult.errors ?? {},
-        },
-        { status: syncResult.status },
-      );
-    }
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Profile updated successfully.",
-      data: { user: result.user },
+      data: { user: synced.data },
     });
+
+    if (emailVerifiedOnRequest) clearEmailOtpCookies(response);
+    if (phoneVerifiedOnRequest) clearPhoneOtpCookiesOnResponse(response);
+
+    return response;
   } catch (error) {
     logError(error, {
       context: "Account Update Profile API",

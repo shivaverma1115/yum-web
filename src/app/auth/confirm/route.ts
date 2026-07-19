@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { setPasswordRecoveryCookie } from "@/lib/auth/recovery-session";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
-
-function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/home";
-  }
-  return value;
-}
 
 function loginWithError(origin: string, message?: string) {
   const url = new URL("/login", origin);
@@ -47,13 +42,18 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.verifyOtp({
     token_hash,
     type: type as EmailOtpType,
   });
 
   if (error) {
     return loginWithError(origin, error.message);
+  }
+
+  // Only password-recovery links may use /api/auth/reset-password.
+  if (type === "recovery" && data.user?.id) {
+    setPasswordRecoveryCookie(response, data.user.id);
   }
 
   return response;

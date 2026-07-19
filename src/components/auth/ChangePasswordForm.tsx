@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import { MIN_PASSWORD_LENGTH, passwordMinLengthMessage } from "@/lib/constants";
 
 type ChangePasswordValues = {
   currentPassword: string;
@@ -191,8 +192,8 @@ export default function ChangePasswordForm() {
         registration={register("newPassword", {
           required: "New password is required.",
           minLength: {
-            value: 6,
-            message: "Password must be at least 6 characters.",
+            value: MIN_PASSWORD_LENGTH,
+            message: passwordMinLengthMessage(),
           },
         })}
       />

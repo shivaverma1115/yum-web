@@ -9,17 +9,12 @@ import {
   clearAnonymousMergeCookie,
   mergeAnonymousUserIntoAccount,
   mergeSuccessMessage,
+  readAnonymousMergeUserId,
 } from "@/lib/auth/anonymous-upgrade";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { createSupabaseServerClient } from "@/lib/supabase/ssr-server";
 import { logError } from "@/lib/utils/logError";
-
-function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/home";
-  }
-  return value;
-}
 
 function mapOAuthCallbackError(
   errorCode: string | null,
@@ -71,7 +66,9 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const next = safeNextPath(requestUrl.searchParams.get("next"));
   const origin = requestUrl.origin;
-  const mergeFromId = request.cookies.get(ANONYMOUS_MERGE_COOKIE)?.value ?? null;
+  const mergeFromId = readAnonymousMergeUserId(
+    request.cookies.get(ANONYMOUS_MERGE_COOKIE)?.value,
+  );
   const oauthError = requestUrl.searchParams.get("error");
   const errorCode = requestUrl.searchParams.get("error_code");
   const errorDescription = requestUrl.searchParams.get("error_description");

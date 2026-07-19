@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { isAnonymousUser } from "@/lib/auth/anonymous-user";
 import {
   getAnonymousUserId,
@@ -6,8 +7,9 @@ import {
   mergeSuccessMessage,
 } from "@/lib/auth/anonymous-upgrade";
 import { profileEmailFromAuth } from "@/lib/auth/verification";
+import { getSupabasePublicEnv } from "@/lib/supabase/ssr-server";
 import { UserRole, type IUser } from "@/types/user";
-import { ERROR_MESSAGE_GENERIC } from "../constants";
+import { ERROR_MESSAGE_GENERIC, MIN_PASSWORD_LENGTH, passwordMinLengthMessage } from "../constants";
 import { findProfileIdByEmail } from "./contact-lookup";
 import { getProfileByUserId } from "./account/profile";
 
@@ -55,7 +57,7 @@ export async function loginWithSupabase(
       success: false,
       message: mapAuthErrorMessage(error.message),
       status: normalizeHttpStatus(error.status),
-      errors: {},
+      errors: mapCredentialFieldErrors(error.message),
     };
   }
 
@@ -111,6 +113,10 @@ export type RegisterResult =
 export function mapAuthErrorMessage(message: string): string {
   const lower = message.toLowerCase();
 
+  if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+    return "Incorrect email or password.";
+  }
+
   if (lower.includes("email not confirmed")) {
     return "Please verify your email with the OTP sent to your inbox, then try again.";
   }
@@ -122,6 +128,79 @@ export function mapAuthErrorMessage(message: string): string {
     return "This email is already registered. Sign in or use forgot password.";
   }
   return message;
+}
+
+/** Field errors for login credential failures (shown under inputs). */
+export function mapCredentialFieldErrors(
+  message: string,
+): Record<string, string> {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+    return { password: "Incorrect email or password." };
+  }
+
+  if (lower.includes("email not confirmed")) {
+    return { email: "Please verify your email before signing in." };
+  }
+
+  return { password: mapAuthErrorMessage(message) };
+}
+
+/**
+ * Checks email + password without touching the browser session cookies.
+ * Used so login OTP is only sent after credentials are valid.
+ */
+export async function verifyEmailPasswordCredentials(
+  email: string,
+  password: string,
+): Promise<
+  | { success: true }
+  | {
+      success: false;
+      message: string;
+      status: number;
+      errors: Record<string, string>;
+    }
+> {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail || !password) {
+    return {
+      success: false,
+      message: "Email and password are required.",
+      status: 400,
+      errors: {
+        ...(!trimmedEmail ? { email: "Email is required." } : {}),
+        ...(!password ? { password: "Password is required." } : {}),
+      },
+    };
+  }
+
+  const { url, anonKey } = getSupabasePublicEnv();
+  const ephemeral = createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+
+  const { error } = await ephemeral.auth.signInWithPassword({
+    email: trimmedEmail,
+    password,
+  });
+
+  if (error) {
+    return {
+      success: false,
+      message: mapAuthErrorMessage(error.message),
+      status: normalizeHttpStatus(error.status, 401),
+      errors: mapCredentialFieldErrors(error.message),
+    };
+  }
+
+  await ephemeral.auth.signOut({ scope: "local" });
+  return { success: true };
 }
 
 function buildRegisterUserStub(
@@ -202,8 +281,8 @@ export async function registerWithSupabase(
   const errors: Record<string, string> = {};
   if (!email) errors.email = "Email is required.";
   if (!password) errors.password = "Password is required.";
-  if (password && password.length < 6) {
-    errors.password = "Password must be at least 6 characters.";
+  if (password && password.length < MIN_PASSWORD_LENGTH) {
+    errors.password = passwordMinLengthMessage();
   }
 
   if (Object.keys(errors).length > 0) {
@@ -335,26 +414,57 @@ export async function registerWithSupabase(
       email_confirm: true,
     });
 
-  if (createError) {
-    return {
-      success: false,
-      message: mapAuthErrorMessage(createError.message),
-      status: normalizeHttpStatus(createError.status),
-      errors: {},
-    };
+  let userId = created.user?.id ?? null;
+  let sessionReady = false;
+
+  if (createError || !userId) {
+    const alreadyExists = /already|registered|exists/i.test(
+      createError?.message ?? "",
+    );
+    if (!alreadyExists) {
+      return {
+        success: false,
+        message: mapAuthErrorMessage(
+          createError?.message ?? ERROR_MESSAGE_GENERIC,
+        ),
+        status: normalizeHttpStatus(createError?.status),
+        errors: {},
+      };
+    }
+
+    // Orphan Auth user (created earlier, profile missing): resume if password matches.
+    const { error: resumeError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (resumeError) {
+      return {
+        success: false,
+        message:
+          "This email is already registered. Sign in or use forgot password.",
+        status: 400,
+        errors: { email: "Email already in use." },
+      };
+    }
+
+    const {
+      data: { user: resumed },
+    } = await supabase.auth.getUser();
+    if (!resumed?.id) {
+      return {
+        success: false,
+        message: ERROR_MESSAGE_GENERIC,
+        status: 400,
+        errors: {},
+      };
+    }
+
+    userId = resumed.id;
+    sessionReady = true;
   }
 
-  if (!created.user?.id) {
-    return {
-      success: false,
-      message: ERROR_MESSAGE_GENERIC,
-      status: 400,
-      errors: {},
-    };
-  }
-
-  const userId = created.user.id;
   const phone = input.phone?.trim() ?? "";
+  const createdFresh = Boolean(created.user?.id && created.user.id === userId);
 
   const profileError = await upsertProfileWithAdmin(
     options.adminClient,
@@ -365,6 +475,9 @@ export async function registerWithSupabase(
   );
 
   if (profileError) {
+    if (createdFresh) {
+      await options.adminClient.auth.admin.deleteUser(userId);
+    }
     return {
       success: false,
       message: profileError,
@@ -391,18 +504,20 @@ export async function registerWithSupabase(
 
   const anonymousId = await getAnonymousUserId(supabase);
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  if (!sessionReady) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (signInError) {
-    return {
-      success: false,
-      message: mapAuthErrorMessage(signInError.message),
-      status: normalizeHttpStatus(signInError.status),
-      errors: {},
-    };
+    if (signInError) {
+      return {
+        success: false,
+        message: mapAuthErrorMessage(signInError.message),
+        status: normalizeHttpStatus(signInError.status),
+        errors: {},
+      };
+    }
   }
 
   if (anonymousId && anonymousId !== userId) {
@@ -512,12 +627,12 @@ export async function updatePasswordWithSupabase(
   supabase: SupabaseClient,
   password: string,
 ): Promise<ResetPasswordResult> {
-  if (!password || password.length < 6) {
+  if (!password || password.length < MIN_PASSWORD_LENGTH) {
     return {
       success: false,
-      message: "Password must be at least 6 characters.",
+      message: passwordMinLengthMessage(),
       status: 400,
-      errors: { password: "Password must be at least 6 characters." },
+      errors: { password: passwordMinLengthMessage() },
     };
   }
 
@@ -546,7 +661,7 @@ export async function updatePasswordWithSupabase(
     };
   }
 
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "global" });
 
   return { success: true };
 }
@@ -556,20 +671,26 @@ export type ChangePasswordPayload = {
   newPassword?: string;
 };
 
+export type ChangePasswordOptions = {
+  /** When true, current password must be present and verified (email/password accounts). */
+  requireCurrentPassword: boolean;
+};
+
 export async function changePasswordWithSupabase(
   supabase: SupabaseClient,
   email: string,
   input: ChangePasswordPayload,
+  options: ChangePasswordOptions,
 ): Promise<ResetPasswordResult> {
   const currentPassword = input.currentPassword ?? "";
   const newPassword = input.newPassword ?? "";
 
-  if (!newPassword || newPassword.length < 6) {
+  if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
     return {
       success: false,
-      message: "Password must be at least 6 characters.",
+      message: passwordMinLengthMessage(),
       status: 400,
-      errors: { newPassword: "Password must be at least 6 characters." },
+      errors: { newPassword: passwordMinLengthMessage() },
     };
   }
 
@@ -587,7 +708,16 @@ export async function changePasswordWithSupabase(
     };
   }
 
-  if (currentPassword.trim()) {
+  if (options.requireCurrentPassword) {
+    if (!currentPassword.trim()) {
+      return {
+        success: false,
+        message: "Current password is required.",
+        status: 400,
+        errors: { currentPassword: "Current password is required." },
+      };
+    }
+
     const { error: verifyError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: currentPassword,

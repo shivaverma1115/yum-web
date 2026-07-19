@@ -3,15 +3,9 @@
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useContextApi } from "@/context-api/use-context";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 import Preloader from "@/components/layout/Preloader";
-
-function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/home";
-  }
-  return value;
-}
 
 export default function AuthCallbackPage() {
   const router = useRouter();

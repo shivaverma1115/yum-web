@@ -16,6 +16,7 @@ import { useBusinessSettings } from "@/context-api/business-settings-context";
 import { getPhoneDigits, validatePhoneValue } from "@/lib/phone-otp/phone";
 import { deepMergeBusinessSettings } from "@/lib/business-settings/validate";
 import { getAuthMethodDisabledMessage } from "@/lib/business-settings/auth-methods";
+import { isProductionAppEnv } from "@/lib/app-env";
 
 const errorClassName = "text-red-500 text-sm mt-1";
 
@@ -471,14 +472,21 @@ export default function BusinessSettingsForm() {
             disabled={isSubmitting}
           >
             <option value="off">Off</option>
-            <option value="test_local">Test (local)</option>
+            {!isProductionAppEnv() ? (
+              <option value="test_local">Test (local)</option>
+            ) : null}
             <option value="test">Test (Supabase test numbers)</option>
             <option value="production">Production (real SMS)</option>
           </Input>
           <p className="mt-2 text-xs text-default-500">
-            Test (local) accepts OTP 000000 for any valid phone number — no SMS is sent.
+            {!isProductionAppEnv()
+              ? "Test (local) accepts OTP 000000 for any valid phone number — no SMS is sent. "
+              : null}
             Test (Supabase) uses fixed OTP numbers from Supabase Dashboard → Auth → Phone.
             Production sends real SMS through your Supabase phone provider.
+            {isProductionAppEnv()
+              ? " Local test OTP (000000) is disabled in production."
+              : null}
           </p>
         </FieldGroup>
 

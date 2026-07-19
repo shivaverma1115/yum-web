@@ -21,6 +21,7 @@ import { createAuthPhoneOtpModalSession } from "@/lib/otp/modal-options";
 import { verifyAuthPhoneOtpClient } from "@/lib/auth/client";
 import { validatePhoneValue } from "@/lib/phone-otp/phone";
 import type { IUser } from "@/types/user";
+import { MIN_PASSWORD_LENGTH, passwordMinLengthMessage } from "@/lib/constants";
 import { useBusinessSettings } from "@/context-api/business-settings-context";
 
 export type AuthFormMode = "login" | "register";
@@ -75,6 +76,7 @@ export default function AuthForm({
   const {
     register,
     handleSubmit,
+    setError,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<EmailFormValues>({
@@ -107,7 +109,27 @@ export default function AuthForm({
     showEmailForm || showPhoneForm || (!emailAuthEnabled && !phoneAuthEnabled);
   const googleButtonDisabled = !googleAuthEnabled || googleBusy || isSubmitting;
   const onEmailSubmit = handleSubmit(async ({ email, password }) => {
-    await authenticateWithEmail(isLogin ? "login" : "register", email, password);
+    const result = await authenticateWithEmail(
+      isLogin ? "login" : "register",
+      email,
+      password,
+    );
+
+    if (result.success) return;
+
+    if (result.errors?.email) {
+      setError("email", { type: "server", message: result.errors.email });
+    }
+    if (result.errors?.password) {
+      setError("password", {
+        type: "server",
+        message: result.errors.password,
+      });
+    }
+
+    if (!result.errors?.email && !result.errors?.password) {
+      toast.error(result.message);
+    }
   });
 
   const handleSendPhoneOtp = async () => {
@@ -321,8 +343,8 @@ export default function AuthForm({
                   required: "Password is required.",
                   minLength: !isLogin
                     ? {
-                      value: 6,
-                      message: "Password must be at least 6 characters.",
+                      value: MIN_PASSWORD_LENGTH,
+                      message: passwordMinLengthMessage(),
                     }
                     : undefined,
                 })}
