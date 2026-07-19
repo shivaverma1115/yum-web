@@ -76,13 +76,30 @@ export function resolveSiteUrl(
   request?: NextRequest,
 ): string {
   const trimmed = configuredUrl?.trim();
+  const requestOrigin = request
+    ? normalizeSiteUrl(new URL(request.url).origin)
+    : null;
+  const deploymentOrigin = resolveDeploymentSiteOrigin();
+
+  // Prefer a real public origin over a leftover localhost Site URL in settings.
+  if (trimmed && isValidSiteUrl(trimmed) && !isLocalhostSiteUrl(trimmed)) {
+    return normalizeSiteUrl(trimmed);
+  }
+
+  if (requestOrigin && !isLocalhostSiteUrl(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  if (deploymentOrigin && !isLocalhostSiteUrl(deploymentOrigin)) {
+    return normalizeSiteUrl(deploymentOrigin);
+  }
 
   if (trimmed && isValidSiteUrl(trimmed)) {
     return normalizeSiteUrl(trimmed);
   }
 
-  if (request) {
-    return normalizeSiteUrl(new URL(request.url).origin);
+  if (requestOrigin) {
+    return requestOrigin;
   }
 
   const defaultUrl = DEFAULT_BUSINESS_SETTINGS.general.site_url;
