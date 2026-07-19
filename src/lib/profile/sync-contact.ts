@@ -6,6 +6,7 @@ import {
   normalizeProfilePhone,
   phonesMatch,
 } from "@/lib/phone-otp/phone";
+import { logError } from "@/lib/utils/logError";
 import type { IUser, UserVerificationStatus } from "@/types/user";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -21,6 +22,15 @@ export type ContactSyncContext = {
   phoneVerifiedOnRequest?: boolean;
   requirePhoneOtpForUpdate?: boolean;
 };
+
+export type ContactSyncFailure = {
+  success: false;
+  message: string;
+  status: number;
+  errors?: Record<string, string>;
+};
+
+export type ContactSyncResult = { success: true } | ContactSyncFailure;
 
 export function normalizeProfileContactPatch<
   T extends Partial<Pick<IUser, "email" | "phone">>,
@@ -103,15 +113,7 @@ export async function syncAuthContactWithAdmin(
   admin: SupabaseClient,
   userId: string,
   input: { email?: string; phone?: string },
-): Promise<
-  | { success: true }
-  | {
-      success: false;
-      message: string;
-      status: number;
-      errors?: Record<string, string>;
-    }
-> {
+): Promise<ContactSyncResult> {
   const patch: {
     email?: string;
     email_confirm?: boolean;
@@ -156,19 +158,107 @@ export async function syncAuthContactWithAdmin(
   return { success: true };
 }
 
+/**
+ * Restores Auth email/phone to the previous profile values after a failed
+ * profile write that followed a successful Auth contact update.
+ */
+export async function rollbackAuthContactToPrevious(
+  admin: SupabaseClient,
+  userId: string,
+  previousProfile: Pick<IUser, "email" | "phone"> | null,
+  applied: { email?: string; phone?: string },
+): Promise<ContactSyncResult> {
+  const patch: {
+    email?: string;
+    email_confirm?: boolean;
+    phone?: string;
+    phone_confirm?: boolean;
+  } = {};
+
+  if (applied.email) {
+    const previousEmail = previousProfile?.email?.trim();
+    if (previousEmail) {
+      patch.email = normalizeEmail(previousEmail);
+      patch.email_confirm = true;
+    }
+  }
+
+  if (applied.phone) {
+    const previousPhone = previousProfile?.phone?.trim();
+    if (previousPhone && isValidPhoneNumber(previousPhone)) {
+      patch.phone = getPhoneDigits(previousPhone);
+      patch.phone_confirm = true;
+    }
+  }
+
+  if (!Object.keys(patch).length) {
+    return { success: true };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, patch);
+  if (error) {
+    return {
+      success: false,
+      message: error.message,
+      status: error.status ?? 500,
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Updates Auth contact first, then runs the profile writer.
+ * If the profile write fails after Auth changed, Auth is rolled back.
+ */
+export async function runWithAuthContactFirst<T>(
+  admin: SupabaseClient,
+  userId: string,
+  ctx: ContactSyncContext,
+  runProfile: () => Promise<{ success: true; data: T } | ContactSyncFailure>,
+): Promise<{ success: true; data: T } | ContactSyncFailure> {
+  const payload = buildAuthContactSyncPayload(ctx);
+  const authResult = await syncAuthContactWithAdmin(admin, userId, payload);
+  if (!authResult.success) {
+    return authResult;
+  }
+
+  const profileResult = await runProfile();
+  if (profileResult.success) {
+    return profileResult;
+  }
+
+  if (payload.email || payload.phone) {
+    const rollback = await rollbackAuthContactToPrevious(
+      admin,
+      userId,
+      ctx.previousProfile,
+      payload,
+    );
+
+    if (!rollback.success) {
+      logError(new Error(rollback.message), {
+        context: "Auth contact rollback after profile failure",
+        meta: { userId, payload, profileError: profileResult.message },
+      });
+
+      return {
+        success: false,
+        message: `${profileResult.message} Contact was updated in Auth but could not be reverted automatically. Please retry or contact support.`,
+        status: profileResult.status,
+        errors: profileResult.errors,
+      };
+    }
+  }
+
+  return profileResult;
+}
+
 export async function syncProfileAuthContact(
   admin: SupabaseClient,
   userId: string,
   ctx: ContactSyncContext,
-): Promise<
-  | { success: true }
-  | {
-      success: false;
-      message: string;
-      status: number;
-      errors?: Record<string, string>;
-    }
-> {
+): Promise<ContactSyncResult> {
   const payload = buildAuthContactSyncPayload(ctx);
   return syncAuthContactWithAdmin(admin, userId, payload);
 }

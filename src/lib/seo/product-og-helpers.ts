@@ -1,5 +1,6 @@
 import { calculateDiscountedPrice } from "@/lib/products/discount";
 import { getProductBasePrice } from "@/lib/cart/line";
+import { FULFILLMENT_TYPE } from "@/lib/constants";
 import { richTextToPlainText } from "@/lib/rich-text";
 import type { IProduct } from "@/types/product";
 
@@ -88,7 +89,7 @@ export function getOgProductFeatures(product: IProduct): OgFeaturePill[] {
     { icon: "★", label: "4.8+ Customer Rating" },
   ];
 
-  if (product.order_type.includes("delivery")) {
+  if (product.order_type.includes(FULFILLMENT_TYPE.DELIVERY)) {
     features.push({ icon: "⚡", label: "Fast Delivery" });
   } else if (product.preparation_time_minutes) {
     features.push({

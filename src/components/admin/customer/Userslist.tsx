@@ -9,7 +9,7 @@ import { getUserDisplayName } from "@/lib/user/display-name";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import { TableSkeleton } from "@/components/skeleton";
 import { Eye, Pencil, Trash } from "lucide-react";
-import HtmlContent from "@/components/common/HtmlContent";
+import { richTextToPlainText } from "@/lib/rich-text";
 
 const DEFAULT_LIMIT = 10;
 
@@ -113,7 +113,7 @@ export default function Userslist() {
 
     const name = getUserDisplayName(user);
     const confirmed = window.confirm(
-      `Delete "${name}"?\n\nThis permanently removes:\n- Their orders and order items\n- Products they created (including images)\n- Addresses, push tokens, and coupon redemptions\n- Their account and profile\n\nThis cannot be undone.`,
+      `Delete "${name}"?\n\nThis permanently removes:\n- Products they created (including images)\n- Addresses, push tokens, and coupon redemptions\n- Their account and profile\n\nOrders are kept (customer link cleared).\n\nThis cannot be undone.`,
     );
 
     if (!confirmed) return;
@@ -307,8 +307,10 @@ export default function Userslist() {
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.zip_code || "—"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
-                        <HtmlContent html={user.description} className="text-sm text-default-600" />
+                      <td className="px-6 py-4 text-base text-default-800 max-w-xs">
+                        <span className="line-clamp-2 whitespace-normal break-words">
+                          {richTextToPlainText(user.description) || "—"}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-base text-default-800">
                         {user.role || "—"}

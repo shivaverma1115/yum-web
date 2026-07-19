@@ -1,5 +1,6 @@
 import { roundMoney } from "@/lib/coupons/discount";
 import type { ICartItem } from "@/types/cart";
+import { FULFILLMENT_TYPE } from "@/lib/constants";
 import type { FulfillmentType } from "@/types/order";
 import {
   DEFAULT_BUSINESS_SETTINGS,
@@ -66,7 +67,7 @@ export function feeConfigForFulfillment(
 ): CartFeeConfig {
   const base = feeConfigFromBusinessSettings(settings);
   return {
-    deliveryFee: fulfillment === "delivery" ? base.deliveryFee : 0,
+    deliveryFee: fulfillment === FULFILLMENT_TYPE.DELIVERY ? base.deliveryFee : 0,
     miscellaneousFee: base.miscellaneousFee,
   };
 }

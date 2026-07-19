@@ -56,25 +56,27 @@ export function ContextApiProvider({ children }: { children: ReactNode }) {
         cache: "no-store",
       });
 
-      const data = await response.json().catch(() => ({})) as MeApiResponse;
+      const data = (await response.json().catch(() => ({}))) as MeApiResponse;
 
-      if (!response.ok || !data.success) {
-        setUser(null);
-        setVerification(null);
-        setIsAnonymous(false);
-        if (response.status !== 401) {
-          setError((data as { message: string })?.message ?? ERROR_MESSAGE_GENERIC);
-        }
+      if (response.ok && data.success) {
+        setUser(data.data.user ?? null);
+        setVerification(data.data.verification ?? null);
+        setIsAnonymous(Boolean(data.data.is_anonymous));
         return;
       }
 
-      setUser(data.data.user ?? null);
-      setVerification(data.data.verification ?? null);
-      setIsAnonymous(Boolean(data.data.is_anonymous));
+      // Only a real unauthenticated response clears the session in the UI.
+      if (response.status === 401) {
+        setUser(null);
+        setVerification(null);
+        setIsAnonymous(false);
+        return;
+      }
+
+      setError(
+        (!data.success && data.message) || ERROR_MESSAGE_GENERIC,
+      );
     } catch (err) {
-      setUser(null);
-      setVerification(null);
-      setIsAnonymous(false);
       setError(
         err instanceof Error ? err.message : "Failed to load current user.",
       );

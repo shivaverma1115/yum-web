@@ -1,4 +1,5 @@
 import type { BusinessSettings, PhoneOtpMode } from "@/types/business-settings";
+import { isProductionAppEnv } from "@/lib/app-env";
 import { isValidStoreTime } from "@/lib/business-settings/store-hours";
 import { isValidEmail } from "../email-otp/email";
 
@@ -213,6 +214,9 @@ export function validateBusinessSettingsPatch(
       const mode = patch.phone_verification.mode;
       if (!PHONE_OTP_MODES.includes(mode)) {
         errors["phone_verification.mode"] = "Select a valid OTP mode.";
+      } else if (mode === "test_local" && isProductionAppEnv()) {
+        errors["phone_verification.mode"] =
+          "Local test OTP is not allowed in production.";
       } else {
         phoneVerification.mode = mode;
       }

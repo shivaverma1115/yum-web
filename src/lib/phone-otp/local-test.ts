@@ -1,8 +1,13 @@
+import { isProductionAppEnv } from "@/lib/app-env";
 import { PHONE_OTP_LENGTH, PHONE_OTP_TTL_MS } from "@/lib/phone-otp/constants";
 
 export const LOCAL_TEST_OTP = "000000";
 
 export function matchesLocalTestOtp(otp: string): boolean {
+  if (isProductionAppEnv()) {
+    return false;
+  }
+
   const token = otp.trim();
   return token === LOCAL_TEST_OTP && token.length === PHONE_OTP_LENGTH;
 }

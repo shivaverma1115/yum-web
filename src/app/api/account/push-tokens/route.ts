@@ -7,6 +7,7 @@ import {
 import { isFirebaseClientConfigured } from "@/lib/firebase/config";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { getFirebasePushDiagnostics } from "@/lib/notifications/send-push";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   countEnabledPushTokensForUser,
   disablePushTokenForUser,
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await upsertPushTokenForUser(
-      auth.supabase,
+      createAdminClient(),
       auth.user.id,
       body.token ?? "",
       platform ?? "web",

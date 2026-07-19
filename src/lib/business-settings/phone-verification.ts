@@ -5,6 +5,7 @@ import type {
   PhoneVerificationFlow,
 } from "@/types/business-settings";
 import { DEFAULT_BUSINESS_SETTINGS } from "@/types/business-settings";
+import { isProductionAppEnv } from "@/lib/app-env";
 
 const OTP_MODES: PhoneOtpMode[] = ["off", "test", "test_local", "production"];
 
@@ -27,9 +28,17 @@ export function normalizePhoneVerificationSettings(
     "required_for" in raw
   ) {
     const current = raw as BusinessSettingsPhoneVerification;
+    let mode: PhoneOtpMode = OTP_MODES.includes(current.mode)
+      ? current.mode
+      : defaults.mode;
+
+    // Never honor fixed-OTP local test mode on a production deployment.
+    if (mode === "test_local" && isProductionAppEnv()) {
+      mode = "off";
+    }
 
     return {
-      mode: OTP_MODES.includes(current.mode) ? current.mode : defaults.mode,
+      mode,
       required_for: {
         registration:
           current.required_for?.registration ?? defaults.required_for.registration,
@@ -79,8 +88,14 @@ export function isOtpRequiredFor(
   return settings.phone_verification.required_for[flow];
 }
 
+/** True only when local fixed-OTP mode is active and the app is not production. */
 export function isLocalTestOtpMode(mode: PhoneOtpMode): boolean {
-  return mode === "test_local";
+  return mode === "test_local" && !isProductionAppEnv();
+}
+
+/** Saved as test_local but running on a production deployment — must not use 000000. */
+export function isLocalTestOtpBlockedInProduction(mode: PhoneOtpMode): boolean {
+  return mode === "test_local" && isProductionAppEnv();
 }
 
 export function isProductionOtpBlockedInDev(mode: PhoneOtpMode): boolean {
@@ -90,7 +105,7 @@ export function isProductionOtpBlockedInDev(mode: PhoneOtpMode): boolean {
 export function getOtpSendSuccessMessage(mode: PhoneOtpMode): string {
   const base = "OTP sent to your phone.";
 
-  if (mode === "test_local") {
+  if (isLocalTestOtpMode(mode)) {
     return `${base} Local test mode is active — enter OTP ${"000000"} for any number.`;
   }
 
@@ -107,4 +122,8 @@ export function getOtpDisabledMessage(): string {
 
 export function getOtpProductionBlockedInDevMessage(): string {
   return "Production OTP is disabled in development. Switch to Test (local) or Test (Supabase) in Business Settings.";
+}
+
+export function getLocalTestOtpBlockedInProductionMessage(): string {
+  return "Local test OTP (000000) is not allowed in production. Switch OTP mode to Production or Test (Supabase) in Business Settings.";
 }

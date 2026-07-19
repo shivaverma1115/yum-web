@@ -1,5 +1,6 @@
+import type { FulfillmentTypeValue } from "@/lib/constants";
 
-export type FulfillmentType = "delivery" | "pickup" | "dine_in";
+export type FulfillmentType = FulfillmentTypeValue;
 
 export type PaymentMethod =
   | "cash_on_delivery"

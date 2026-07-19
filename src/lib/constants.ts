@@ -1,5 +1,29 @@
 export const ERROR_MESSAGE_GENERIC = 'Something went wrong. Please try again later.';
 
+/** Minimum length for account passwords (register, reset, change). */
+export const MIN_PASSWORD_LENGTH = 8;
+
+export function passwordMinLengthMessage(
+  min = MIN_PASSWORD_LENGTH,
+): string {
+  return `Password must be at least ${min} characters.`;
+}
+
+/** Canonical fulfillment / order-type values — use these instead of string literals. */
+export const FULFILLMENT_TYPE = {
+  DELIVERY: "delivery",
+  PICKUP: "pickup",
+  DINE_IN: "dine_in",
+} as const;
+
+export const FULFILLMENT_TYPES = [
+  FULFILLMENT_TYPE.DELIVERY,
+  FULFILLMENT_TYPE.PICKUP,
+  FULFILLMENT_TYPE.DINE_IN,
+] as const;
+
+export type FulfillmentTypeValue = (typeof FULFILLMENT_TYPES)[number];
+
 export function formatCustomerSince(createdAt?: string) {
     if (!createdAt) return "—";
     const date = new Date(createdAt);

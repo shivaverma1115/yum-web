@@ -7,10 +7,11 @@ import { mapAuthContactDuplicateError } from "@/lib/profile/contact-duplicate-er
 import { assertContactAvailable } from "@/lib/profile/contact-uniqueness";
 import {
   normalizeProfileContactPatch,
-  syncProfileAuthContact,
+  runWithAuthContactFirst,
 } from "@/lib/profile/sync-contact";
 import { UserRole, type IUser, type IUserWithVerification } from "@/types/user";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { richTextToPlainText } from "@/lib/rich-text";
 import { deleteProductWithSupabase } from "@/lib/supabase/product/products";
 
 const PROFILE_COLUMNS =
@@ -176,9 +177,9 @@ export type DeleteCustomerResult =
 
 /**
  * Permanently deletes a customer and all user-owned data:
- * products (+ storage images), orders (+ items), profile, addresses,
- * push tokens, coupon redemptions. Table QR codes are restaurant-wide
- * and are not tied to a customer, so they are left alone.
+ * products (+ storage images), profile, addresses,
+ * push tokens, coupon redemptions. Orders are retained (user_id set null).
+ * Table QR codes are restaurant-wide and are left alone.
  */
 export async function deleteCustomerWithSupabase(
   supabase: SupabaseClient,
@@ -224,38 +225,7 @@ export async function deleteCustomerWithSupabase(
     }
   }
 
-  const { data: orders, error: ordersError } = await supabase
-    .from("orders")
-    .select("id")
-    .eq("user_id", userId);
-
-  if (ordersError) {
-    return {
-      success: false,
-      message: ordersError.message,
-      status: 400,
-    };
-  }
-
-  const orderIds = (orders ?? [])
-    .map((row) => row.id)
-    .filter((id): id is string => Boolean(id));
-
-  if (orderIds.length > 0) {
-    const { error: deleteOrdersError } = await supabase
-      .from("orders")
-      .delete()
-      .in("id", orderIds);
-
-    if (deleteOrdersError) {
-      return {
-        success: false,
-        message: deleteOrdersError.message,
-        status: 400,
-      };
-    }
-  }
-
+  // Orders are retained (user_id nullified by FK on auth delete).
   const { error } = await supabase.auth.admin.deleteUser(userId);
 
   if (error) {
@@ -428,30 +398,57 @@ export async function updateCustomerWithSupabase(
       email: input.email,
       phone: input.phone,
     }),
+    ...(input.description !== undefined
+      ? { description: richTextToPlainText(input.description).trim() }
+      : {}),
   };
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .update(profilePatch)
-    .eq("id", userId)
-    .select("*")
-    .single();
+  const synced = await runWithAuthContactFirst(
+    supabase,
+    userId,
+    {
+      mode: "admin",
+      previousProfile: (previousProfile as IUser | null) ?? null,
+      nextEmail: normalizeEmail(profilePatch.email),
+      nextPhone: profilePatch.phone?.trim() ?? "",
+    },
+    async () => {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .update(profilePatch)
+        .eq("id", userId)
+        .select("*")
+        .single();
 
-  if (profileError || !profile) {
-    if (profileError?.code === "23505") {
-      return {
-        success: false,
-        message: "This email is already registered to another account.",
-        status: 409,
-        errors: { email: "This email is already registered to another account." },
-      };
-    }
+      if (profileError || !profile) {
+        if (profileError?.code === "23505") {
+          return {
+            success: false as const,
+            message: "This email is already registered to another account.",
+            status: 409,
+            errors: {
+              email: "This email is already registered to another account.",
+            } satisfies Record<string, string>,
+          };
+        }
 
+        return {
+          success: false as const,
+          message: profileError?.message ?? ERROR_MESSAGE_GENERIC,
+          status: 400,
+        };
+      }
+
+      return { success: true as const, data: profile as IUser };
+    },
+  );
+
+  if (!synced.success) {
     return {
       success: false,
-      message: profileError?.message ?? ERROR_MESSAGE_GENERIC,
-      status: 400,
-      errors: {},
+      message: synced.message,
+      status: synced.status,
+      errors: synced.errors ?? {},
     };
   }
 
@@ -471,24 +468,8 @@ export async function updateCustomerWithSupabase(
     }
   }
 
-  const syncResult = await syncProfileAuthContact(supabase, userId, {
-    mode: "admin",
-    previousProfile: (previousProfile as IUser | null) ?? null,
-    nextEmail: normalizeEmail(profilePatch.email),
-    nextPhone: profilePatch.phone?.trim() ?? "",
-  });
-
-  if (!syncResult.success) {
-    return {
-      success: false,
-      message: syncResult.message,
-      status: syncResult.status,
-      errors: syncResult.errors ?? {},
-    };
-  }
-
   return {
     success: true,
-    user: profile as IUser,
+    user: synced.data,
   };
 }

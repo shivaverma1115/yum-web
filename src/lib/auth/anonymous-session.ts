@@ -35,17 +35,18 @@ export async function ensureAnonymousSessionWithSupabase(
   supabase: SupabaseClient,
   admin: SupabaseClient,
 ): Promise<AnonymousSessionResult> {
+  // Prefer getUser() over getSession() — cookie storage is not trusted for identity.
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user: existingUser },
+  } = await supabase.auth.getUser();
 
-  if (session?.user) {
+  if (existingUser) {
     const profile =
-      (await getProfileByUserId(supabase, session.user.id)) ??
-      (await getProfileByUserIdAdmin(admin, session.user.id));
+      (await getProfileByUserId(supabase, existingUser.id)) ??
+      (await getProfileByUserIdAdmin(admin, existingUser.id));
 
     if (!profile) {
-      const ensured = await ensureProfileForUserId(admin, session.user.id);
+      const ensured = await ensureProfileForUserId(admin, existingUser.id);
       if (!ensured.ok) {
         return {
           success: false,
@@ -55,8 +56,8 @@ export async function ensureAnonymousSessionWithSupabase(
       }
 
       const createdProfile =
-        (await getProfileByUserId(supabase, session.user.id)) ??
-        (await getProfileByUserIdAdmin(admin, session.user.id));
+        (await getProfileByUserId(supabase, existingUser.id)) ??
+        (await getProfileByUserIdAdmin(admin, existingUser.id));
 
       if (!createdProfile) {
         return {
@@ -69,7 +70,7 @@ export async function ensureAnonymousSessionWithSupabase(
       return {
         success: true,
         user: createdProfile,
-        isAnonymous: isAnonymousUser(session.user),
+        isAnonymous: isAnonymousUser(existingUser),
         created: false,
       };
     }
@@ -77,7 +78,7 @@ export async function ensureAnonymousSessionWithSupabase(
     return {
       success: true,
       user: profile,
-      isAnonymous: isAnonymousUser(session.user),
+      isAnonymous: isAnonymousUser(existingUser),
       created: false,
     };
   }

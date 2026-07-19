@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { isProductionAppEnv } from "@/lib/app-env";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
 import { sendPushToUser } from "@/lib/notifications/send-push";
 import { logError } from "@/lib/utils/logError";
 
 export async function POST() {
   try {
+    if (isProductionAppEnv()) {
+      return NextResponse.json(
+        { success: false, message: "Not available in production." },
+        { status: 404 },
+      );
+    }
+
     const auth = await requireAuth();
 
     if (!auth.authorized) {

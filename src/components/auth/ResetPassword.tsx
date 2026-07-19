@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import { MIN_PASSWORD_LENGTH, passwordMinLengthMessage } from "@/lib/constants";
 
 type ResetFormValues = {
   password: string;
@@ -98,8 +99,8 @@ export default function ResetPassword() {
                       {...register("password", {
                         required: "Password is required.",
                         minLength: {
-                          value: 6,
-                          message: "Password must be at least 6 characters.",
+                          value: MIN_PASSWORD_LENGTH,
+                          message: passwordMinLengthMessage(),
                         },
                       })}
                     />

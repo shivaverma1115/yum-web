@@ -47,6 +47,21 @@ export async function loginWithEmailClient(
   );
 }
 
+/** Checks email + password before sending login OTP (no lasting session). */
+export async function verifyEmailCredentialsClient(
+  email: string,
+  password: string,
+): Promise<ApiResult<Record<string, never>>> {
+  const response = await fetch("/api/auth/verify-credentials", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
+  });
+
+  return parseApiResponse<Record<string, never>>(response);
+}
+
 export type RegisterEmailPayload = {
   email: string;
   password: string;

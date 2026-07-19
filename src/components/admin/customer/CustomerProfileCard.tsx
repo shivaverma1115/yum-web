@@ -10,7 +10,7 @@ import {
 import { formatCustomerSince } from "@/lib/constants";
 import VerificationBadge from "@/components/admin/customer/VerificationBadge";
 import UserAvatar from "@/components/common/UserAvatar";
-import HtmlContent from "@/components/common/HtmlContent";
+import { richTextToPlainText } from "@/lib/rich-text";
 import type { IUserWithVerification } from "@/types/user";
 
 function displayValue(value: string | null | undefined) {
@@ -82,12 +82,9 @@ export default function CustomerProfileCard({ customer }: CustomerProfileCardPro
             <h5 className="text-xs uppercase tracking-wide text-default-500 mb-2">
               About
             </h5>
-            <p className="text-sm text-default-600">
-              {customer.description ? (
-                <HtmlContent html={customer.description} className="text-sm text-default-600" />
-              ) : (
-                "No description provided."
-              )}
+            <p className="text-sm text-default-600 whitespace-pre-wrap break-words">
+              {richTextToPlainText(customer.description) ||
+                "No description provided."}
             </p>
           </div>
 

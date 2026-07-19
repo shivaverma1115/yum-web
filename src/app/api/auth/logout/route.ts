@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAnonymousUser } from "@/lib/auth/anonymous-user";
+import { clearPasswordRecoveryCookie } from "@/lib/auth/recovery-session";
 import { ERROR_MESSAGE_GENERIC } from "@/lib/constants";
+import { clearContactVerificationCookies } from "@/lib/otp/clear-verification-cookies";
 import { logError } from "@/lib/utils/logError";
 import { logoutWithSupabase } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -34,10 +36,13 @@ export async function POST() {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Logged out successfully.",
     });
+    clearPasswordRecoveryCookie(response);
+    clearContactVerificationCookies(response);
+    return response;
   } catch (error) {
     logError(error, {
       context: "Auth Logout API",

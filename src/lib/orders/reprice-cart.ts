@@ -13,6 +13,10 @@ import {
 import { roundMoney } from "@/lib/coupons/discount";
 import { getBusinessSettings } from "@/lib/business-settings";
 import { validateCouponForUser } from "@/lib/supabase/coupons/coupons";
+import {
+  getOrderTypeLabel,
+  normalizeOrderTypes,
+} from "@/lib/order-types";
 import type { FulfillmentType } from "@/types/order";
 import type { IProduct } from "@/types/product";
 import { mapProductRow } from "@/lib/supabase/product/products";
@@ -245,6 +249,22 @@ export async function buildServerOrderQuote(
         message: "One or more products are no longer available.",
         status: 400,
         errors: { items: "Product not found." },
+      };
+    }
+
+    const productOrderTypes = normalizeOrderTypes(product.order_type);
+    if (
+      productOrderTypes.length > 0 &&
+      !productOrderTypes.includes(input.fulfillment_type)
+    ) {
+      const label = getOrderTypeLabel(input.fulfillment_type);
+      return {
+        success: false,
+        message: `${product.name} is not available for ${label}.`,
+        status: 400,
+        errors: {
+          fulfillment_type: `${product.name} is not available for ${label}.`,
+        },
       };
     }
 

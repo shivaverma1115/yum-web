@@ -2,6 +2,7 @@ import { IUser, UserRole } from "@/types/user";
 import { profileEmailFromAuth } from "@/lib/auth/verification";
 import { normalizeProfileContactPatch } from "@/lib/profile/sync-contact";
 import { normalizeProfilePhone } from "@/lib/phone-otp/phone";
+import { richTextToPlainText } from "@/lib/rich-text";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 const PROFILE_COLUMNS =
@@ -142,7 +143,8 @@ export async function updateOwnProfileWithSupabase(
     updates.zip_code = (input.zip_code ?? "").trim();
   }
   if (input.description !== undefined) {
-    updates.description = (input.description ?? "").trim();
+    // Profile descriptions are plain text only (prevent stored XSS in admin UI).
+    updates.description = richTextToPlainText(input.description ?? "").trim();
   }
 
   if (Object.keys(updates).length === 0) {
