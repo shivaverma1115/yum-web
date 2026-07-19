@@ -112,6 +112,37 @@ export async function verifyAuthPhoneOtpClient(
   }>(response);
 }
 
+/** Prefer the live browser origin; fall back to NEXT_PUBLIC_SITE_URL if needed. */
+function getOAuthRedirectOrigin(): string {
+  const browserOrigin = window.location.origin;
+  try {
+    const host = new URL(browserOrigin).hostname;
+    if (host !== "localhost" && host !== "127.0.0.1" && host !== "[::1]") {
+      return browserOrigin;
+    }
+  } catch {
+    // fall through
+  }
+
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      if (
+        parsed.hostname !== "localhost" &&
+        parsed.hostname !== "127.0.0.1" &&
+        parsed.hostname !== "[::1]"
+      ) {
+        return parsed.origin;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return browserOrigin;
+}
+
 /**
  * Guest users: prepare-merge cookie + signInWithOAuth (orders merge on callback).
  * Avoids linkIdentity, which fails when the Google email already exists.
@@ -121,7 +152,7 @@ export async function signInWithGoogleClient(
   options?: { linkAnonymous?: boolean },
 ): Promise<{ success: true } | { success: false; message: string }> {
   const supabase = createClient();
-  const redirectUrl = new URL("/api/auth/callback", window.location.origin);
+  const redirectUrl = new URL("/api/auth/callback", getOAuthRedirectOrigin());
   redirectUrl.searchParams.set("next", nextPath);
 
   if (options?.linkAnonymous) {

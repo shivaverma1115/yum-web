@@ -122,8 +122,10 @@ export async function POST(request: NextRequest) {
       data: {
         order: result.order,
         items: result.items,
-        redirectTo: result.order.id
-          ? `/track-order?orderId=${encodeURIComponent(result.order.id)}`
+        redirectTo: result.order.order_number || result.order.id
+          ? `/track-order?orderId=${encodeURIComponent(
+              result.order.order_number ?? result.order.id ?? "",
+            )}`
           : `/${auth.profile?.role ?? "user"}/orders`,
       },
     });
