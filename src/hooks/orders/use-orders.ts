@@ -195,7 +195,7 @@ export function useOrders(
       active = false;
       controller.abort();
     };
-  }, [filters, userRole, page, limit]);
+  }, [filters, userRole, page, limit, user?.id]);
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders((current) =>

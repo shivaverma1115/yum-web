@@ -12,12 +12,18 @@ export default function AuthCallbackAlerts() {
 
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
+    const merged = searchParams.get("merged");
     const error = searchParams.get("error");
     const message = searchParams.get("message");
 
-    if (confirmed === "1" || searchParams.get("merged") === "1") {
-      if (searchParams.get("merged") === "1") {
+    if (confirmed === "1" || merged === "1" || merged === "0") {
+      if (merged === "1") {
         toast.success("Your guest orders were linked to your account.");
+      } else if (merged === "0") {
+        toast.success("Signed in successfully.");
+        toast.warning(
+          "Your guest orders could not be linked. Track them with your order number on Track Order.",
+        );
       } else {
         toast.success("Signed in successfully.");
       }
@@ -32,7 +38,7 @@ export default function AuthCallbackAlerts() {
       toast.error("Invalid or expired link. Please try again or contact support.");
     }
 
-    if (confirmed || error || searchParams.get("merged") === "1") {
+    if (confirmed || error || merged === "1" || merged === "0") {
       const url = new URL(window.location.href);
       url.searchParams.delete("confirmed");
       url.searchParams.delete("merged");

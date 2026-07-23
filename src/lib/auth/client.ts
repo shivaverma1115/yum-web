@@ -144,22 +144,31 @@ function getOAuthRedirectOrigin(): string {
 }
 
 /**
- * Guest users: prepare-merge cookie + signInWithOAuth (orders merge on callback).
+ * Always prepare-merge before OAuth (API no-ops if not anonymous).
  * Avoids linkIdentity, which fails when the Google email already exists.
  */
 export async function signInWithGoogleClient(
   nextPath = "/home",
-  options?: { linkAnonymous?: boolean },
 ): Promise<{ success: true } | { success: false; message: string }> {
   const supabase = createClient();
   const redirectUrl = new URL("/api/auth/callback", getOAuthRedirectOrigin());
   redirectUrl.searchParams.set("next", nextPath);
 
-  if (options?.linkAnonymous) {
-    await fetch("/api/auth/anonymous/prepare-merge", {
-      method: "POST",
-      credentials: "include",
-    });
+  // Always call prepare-merge — do not gate on client isAnonymous (race with /me).
+  const prepareResponse = await fetch("/api/auth/anonymous/prepare-merge", {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!prepareResponse.ok && prepareResponse.status !== 401) {
+    const prepareBody = (await prepareResponse.json().catch(() => ({}))) as {
+      message?: string;
+    };
+    return {
+      success: false,
+      message:
+        prepareBody.message ??
+        "Could not prepare guest order linking. Please try again.",
+    };
   }
 
   const { error } = await supabase.auth.signInWithOAuth({
