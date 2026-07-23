@@ -116,6 +116,7 @@ export async function GET(request: NextRequest) {
   }
 
   let ordersMerged = false;
+  let mergeFailed = false;
   const targetUserId = data.user?.id;
 
   if (mergeFromId && targetUserId && mergeFromId !== targetUserId) {
@@ -128,6 +129,7 @@ export async function GET(request: NextRequest) {
       );
       ordersMerged = Boolean(mergeSuccessMessage(merge));
     } catch (mergeError) {
+      mergeFailed = true;
       logError(mergeError, {
         context: "OAuth Anonymous Merge",
         meta: { mergeFromId, targetUserId },
@@ -139,6 +141,9 @@ export async function GET(request: NextRequest) {
   successUrl.searchParams.set("confirmed", "1");
   if (ordersMerged) {
     successUrl.searchParams.set("merged", "1");
+  } else if (mergeFailed) {
+    // Login succeeded; guest data was not linked — surface to the UI.
+    successUrl.searchParams.set("merged", "0");
   }
 
   const response = NextResponse.redirect(successUrl);

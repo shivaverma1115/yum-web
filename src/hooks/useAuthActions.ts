@@ -52,7 +52,7 @@ function authApiFailureToOtpResult(result: {
 
 export function useAuthActions(options: UseAuthActionsOptions = {}) {
   const router = useRouter();
-  const { setUser, refresh, isAnonymous } = useContextApi();
+  const { setUser, refresh } = useContextApi();
   const { openOtpModal } = useOtpModal();
 
   const finishAuth = useCallback(
@@ -210,9 +210,7 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
 
   const signInWithGoogle = useCallback(async () => {
     const nextPath = options.redirectTo ?? "/home";
-    const result = await signInWithGoogleClient(nextPath, {
-      linkAnonymous: isAnonymous,
-    });
+    const result = await signInWithGoogleClient(nextPath);
 
     if (!result.success) {
       toast.error(result.message);
@@ -220,7 +218,7 @@ export function useAuthActions(options: UseAuthActionsOptions = {}) {
     }
 
     return true;
-  }, [isAnonymous, options.redirectTo]);
+  }, [options.redirectTo]);
 
   return {
     authenticateWithEmail,

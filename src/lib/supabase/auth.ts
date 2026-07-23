@@ -294,6 +294,9 @@ export async function registerWithSupabase(
     };
   }
 
+  // Capture before any sign-in / session swap (orphan-resume path).
+  const anonymousId = await getAnonymousUserId(supabase);
+
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
@@ -501,8 +504,6 @@ export async function registerWithSupabase(
       };
     }
   }
-
-  const anonymousId = await getAnonymousUserId(supabase);
 
   if (!sessionReady) {
     const { error: signInError } = await supabase.auth.signInWithPassword({
